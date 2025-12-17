@@ -2,23 +2,18 @@
 
 set -e
 
-# Создание базы данных если её нет
-if [ ! -f /app/db.sqlite3 ]; then
-    echo "Создание базы данных..."
-    touch /app/db.sqlite3
-    chmod 666 /app/db.sqlite3
-fi
+# Создание директории для базы данных
+mkdir -p /app/data
 
-# Убеждаемся что файл существует и доступен
-if [ -d /app/db.sqlite3 ]; then
-    echo "Удаление директории db.sqlite3 (ошибка монтирования)..."
-    rm -rf /app/db.sqlite3
-    touch /app/db.sqlite3
-    chmod 666 /app/db.sqlite3
+# Создание базы данных если её нет
+if [ ! -f /app/data/db.sqlite3 ]; then
+    echo "Создание базы данных..."
+    touch /app/data/db.sqlite3
+    chmod 666 /app/data/db.sqlite3
 fi
 
 # Проверка прав доступа
-chmod 666 /app/db.sqlite3 2>/dev/null || true
+chmod 666 /app/data/db.sqlite3 2>/dev/null || true
 
 echo "Выполнение миграций..."
 python manage.py migrate --noinput

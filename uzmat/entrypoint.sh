@@ -9,6 +9,17 @@ if [ ! -f /app/db.sqlite3 ]; then
     chmod 666 /app/db.sqlite3
 fi
 
+# Убеждаемся что файл существует и доступен
+if [ -d /app/db.sqlite3 ]; then
+    echo "Удаление директории db.sqlite3 (ошибка монтирования)..."
+    rm -rf /app/db.sqlite3
+    touch /app/db.sqlite3
+    chmod 666 /app/db.sqlite3
+fi
+
+# Проверка прав доступа
+chmod 666 /app/db.sqlite3 2>/dev/null || true
+
 echo "Выполнение миграций..."
 python manage.py migrate --noinput
 

@@ -1,0 +1,193 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Подтверждение входа — Uzmat</title>
+  <link rel="icon" type="image/svg+xml" href="{% static 'uzmat/logo-uzmat.svg' %}">
+  {% include 'uzmat/theme-init.html' %}
+  <link rel="stylesheet" href="{% static 'uzmat/styles.css' %}">
+  <script defer src="{% static 'uzmat/app.js' %}"></script>
+  {% include 'uzmat/toast-container.html' %}
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const codeInputs = document.querySelectorAll('.uz-code-input');
+      const codeForm = document.getElementById('codeForm');
+      const codeValue = document.getElementById('codeValue');
+      
+      // Автозаполнение кодом 1234
+      if (codeInputs.length >= 4) {
+        codeInputs[0].value = '1';
+        codeInputs[1].value = '2';
+        codeInputs[2].value = '3';
+        codeInputs[3].value = '4';
+        
+        // Собираем код в скрытое поле
+        updateCodeValue();
+      }
+      
+      // Функция для обновления скрытого поля с кодом
+      function updateCodeValue() {
+        let code = '';
+        codeInputs.forEach(input => {
+          code += input.value || '';
+        });
+        if (codeValue) {
+          codeValue.value = code;
+        }
+      }
+      
+      // Обработка ввода в поля кода
+      codeInputs.forEach((input, index) => {
+        // При вводе символа
+        input.addEventListener('input', function(e) {
+          const value = e.target.value;
+          
+          // Оставляем только цифры
+          if (value && !/^\d$/.test(value)) {
+            e.target.value = '';
+            return;
+          }
+          
+          // Обновляем скрытое поле
+          updateCodeValue();
+          
+          // Переход к следующему полю
+          if (value && index < codeInputs.length - 1) {
+            codeInputs[index + 1].focus();
+          }
+          
+          // Если все поля заполнены, автоматически отправляем форму
+          if (codeValue && codeValue.value.length === 4) {
+            setTimeout(() => {
+              codeForm.submit();
+            }, 100);
+          }
+        });
+        
+        // Обработка Backspace
+        input.addEventListener('keydown', function(e) {
+          if (e.key === 'Backspace' && !e.target.value && index > 0) {
+            codeInputs[index - 1].focus();
+          }
+        });
+        
+        // Обработка вставки (paste)
+        input.addEventListener('paste', function(e) {
+          e.preventDefault();
+          const pastedData = (e.clipboardData || window.clipboardData).getData('text').trim();
+          
+          // Если вставлен 4-значный код
+          if (/^\d{4}$/.test(pastedData)) {
+            for (let i = 0; i < Math.min(4, pastedData.length); i++) {
+              if (codeInputs[i]) {
+                codeInputs[i].value = pastedData[i];
+              }
+            }
+            updateCodeValue();
+            
+            // Автоматически отправляем форму
+            if (codeValue && codeValue.value.length === 4) {
+              setTimeout(() => {
+                codeForm.submit();
+              }, 100);
+            }
+          }
+        });
+      });
+      
+      // Обработка отправки формы
+      codeForm.addEventListener('submit', function(e) {
+        updateCodeValue();
+        if (!codeValue.value || codeValue.value.length !== 4) {
+          e.preventDefault();
+          alert('Введите 4-значный код');
+          return false;
+        }
+      });
+      
+      // Фокус на первом поле
+      if (codeInputs[0]) {
+        codeInputs[0].focus();
+      }
+    });
+  </script>
+</head>
+
+<body class="uz-body">
+
+  <!-- Floating Header -->
+  <header class="uz-header">
+    <div class="uz-header-inner">
+      <a href="{% url 'uzmat:index' %}" class="uz-logo">
+        <img src="{% static 'uzmat/logo-uzmat.svg' %}" alt="Uzmat" class="uz-logo-mark">
+        <span>Uzmat</span>
+      </a>
+      <a href="{% url 'uzmat:auth' %}" class="uz-btn uz-btn-ghost">Назад</a>
+    </div>
+  </header>
+
+  <main class="uz-container" style="min-height: 80vh; display: flex; align-items: center; justify-content: center;">
+
+    <div class="uz-card" style="width: 100%; max-width: 400px; padding: 40px; text-align: center;">
+      <h1 style="font-size: 24px; font-weight: 700; margin-bottom: 12px;">Введите код</h1>
+      <p style="color: var(--uz-text-dim); margin-bottom: 32px;">Мы отправили 4-значный код на вашу почту. Введите его
+        для подтверждения.</p>
+
+      <form action="{% url 'uzmat:auth_code' %}" method="post" id="codeForm">
+        {% csrf_token %}
+        <input type="hidden" name="code" id="codeValue">
+
+        <div class="uz-flex" style="justify-content: center; gap: 12px; margin-bottom: 32px;">
+          <input type="text" maxlength="1" class="uz-input uz-code-input"
+            style="width: 56px; height: 64px; text-align: center; font-size: 24px; font-weight: 600;"
+            data-code-digit="0" autofocus>
+          <input type="text" maxlength="1" class="uz-input uz-code-input"
+            style="width: 56px; height: 64px; text-align: center; font-size: 24px; font-weight: 600;"
+            data-code-digit="1">
+          <input type="text" maxlength="1" class="uz-input uz-code-input"
+            style="width: 56px; height: 64px; text-align: center; font-size: 24px; font-weight: 600;"
+            data-code-digit="2">
+          <input type="text" maxlength="1" class="uz-input uz-code-input"
+            style="width: 56px; height: 64px; text-align: center; font-size: 24px; font-weight: 600;"
+            data-code-digit="3">
+        </div>
+
+        <button type="submit" class="uz-btn uz-btn-primary" style="width: 100%;">Подтвердить</button>
+
+        <div style="margin-top: 24px; font-size: 13px; color: var(--uz-text-muted);">
+          Не получили код? <button type="button" class="uz-btn-ghost"
+            style="padding: 0; color: var(--uz-primary);">Отправить снова</button>
+        </div>
+      </form>
+
+    </div>
+
+  </main>
+
+  <!-- Django Messages to Toast -->
+  {% if messages %}
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      {% for message in messages %}
+        {% if 'auth' in message.extra_tags %}
+          {% if message.tags == 'error' %}
+            window.showToast('{{ message|escapejs }}', 'error');
+          {% elif message.tags == 'success' %}
+            window.showToast('{{ message|escapejs }}', 'success');
+          {% elif message.tags == 'warning' %}
+            window.showToast('{{ message|escapejs }}', 'warning');
+          {% else %}
+            window.showToast('{{ message|escapejs }}', 'info');
+          {% endif %}
+        {% endif %}
+      {% endfor %}
+    });
+  </script>
+  {% endif %}
+
+</body>
+
+</html>

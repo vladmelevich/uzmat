@@ -1,0 +1,924 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Фронтальные погрузчики, LiuGong 835H — Uzmat</title>
+  <link rel="icon" type="image/svg+xml" href="{% static 'uzmat/logo-uzmat.svg' %}">
+  {% include 'uzmat/theme-init.html' %}
+  <link rel="stylesheet" href="{% static 'uzmat/styles.css' %}">
+  <script defer src="{% static 'uzmat/app.js' %}"></script>
+</head>
+
+<body class="uz-body">
+  {% include 'uzmat/toast-container.html' %}
+
+  <!-- Floating Header -->
+  <header class="uz-header">
+    <div class="uz-header-inner">
+      <a href="{% url 'uzmat:index' %}" class="uz-logo">
+        <img src="{% static 'uzmat/logo-uzmat.svg' %}" alt="Uzmat" class="uz-logo-mark">
+        <span>Uzmat</span>
+      </a>
+
+      {% include 'uzmat/nav.html' %}
+
+      <div class="uz-flex">
+        {% include 'uzmat/country-selector.html' %}
+        {% include 'uzmat/create-ad-button.html' %}
+        <button class="uz-btn uz-btn-ghost uz-hidden-mobile" data-theme-toggle>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+        </button>
+        {% include 'uzmat/user-avatar.html' %}
+      </div>
+    </div>
+  </header>
+
+  <main class="uz-container">
+
+    <!-- Breadcrumbs -->
+    <nav class="uz-breadcrumbs">
+      <a href="{% url 'uzmat:index' %}">Главная</a>
+      <span>/</span>
+      <a href="{% url 'uzmat:catalog' %}">Каталог объявлений</a>
+      <span>/</span>
+      <span class="uz-breadcrumb-current">{{ ad.title }}</span>
+    </nav>
+
+    <div class="uz-grid uz-ad-detail-grid" style="grid-template-columns: 1fr 360px; align-items: start;">
+
+      <!-- Main Content -->
+      <div class="uz-flex-col" style="gap: 32px;">
+
+        <!-- Gallery -->
+        <div class="uz-card uz-ad-detail-gallery" style="padding: 0; overflow: hidden;">
+          <div class="uz-ad-detail-gallery-main" id="gallery-main" style="height: 600px; background: var(--uz-bg-hover); width: 100%; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden;">
+            {% if ad.image %}
+              <img id="main-gallery-image" src="{{ ad.image.url }}" alt="{{ ad.title }}" style="width: 100%; height: 100%; object-fit: cover; object-position: center; cursor: pointer; display: block;">
+            {% elif ad.images.exists %}
+              {% with main_image=ad.images.first %}
+                <img id="main-gallery-image" src="{{ main_image.image.url }}" alt="{{ ad.title }}" style="width: 100%; height: 100%; object-fit: cover; object-position: center; cursor: pointer; display: block;">
+              {% endwith %}
+            {% else %}
+              <svg class="uz-ad-image-icon" viewBox="0 0 775 775" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 200px; height: 200px;">
+                <path d="M209.896 678.125C290.15 678.125 355.208 613.066 355.208 532.812C355.208 452.559 290.15 387.5 209.896 387.5C129.642 387.5 64.5833 452.559 64.5833 532.812C64.5833 613.066 129.642 678.125 209.896 678.125Z" stroke="currentColor" stroke-width="48.4375" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M613.542 678.125C667.044 678.125 710.417 634.753 710.417 581.25C710.417 527.747 667.044 484.375 613.542 484.375C560.039 484.375 516.667 527.747 516.667 581.25C516.667 634.753 560.039 678.125 613.542 678.125Z" stroke="currentColor" stroke-width="48.4375" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M64.5833 339.059C101.195 311.596 144.839 295.068 190.459 291.392C236.079 287.716 281.807 297.042 322.344 318.288C362.881 339.535 396.568 371.834 419.501 411.441C442.434 451.048 453.675 496.343 451.922 542.077C451.179 561.581 450.824 571.366 455.571 576.306C460.318 581.247 469.133 581.247 486.732 581.247H516.667M419.792 290.622L520.089 309.416C595.652 323.624 633.466 330.696 655.779 357.595C678.125 384.494 678.125 423.147 678.125 500.518M645.833 387.497H613.542" stroke="currentColor" stroke-width="48.4375" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M419.792 403.646V309.58C419.792 296.943 417.973 284.565 414.334 272.445L371.354 96.875M129.167 290.625V96.875M96.875 96.875H419.792M581.25 306.771V258.333C581.25 241.205 588.054 224.778 600.166 212.666C612.278 200.554 628.705 193.75 645.833 193.75M226.042 290.625V96.875" stroke="currentColor" stroke-width="48.4375" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            {% endif %}
+            {% if ad.image and ad.images.count > 0 or ad.images.count > 1 or ad.image %}
+            <!-- Стрелка влево -->
+            <button type="button" id="gallery-prev" class="uz-gallery-nav-btn" style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); width: 48px; height: 48px; background: rgba(0, 0, 0, 0.6); border: none; border-radius: 50%; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10; transition: all 0.2s; backdrop-filter: blur(4px);">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+            </button>
+            <!-- Стрелка вправо -->
+            <button type="button" id="gallery-next" class="uz-gallery-nav-btn" style="position: absolute; right: 16px; top: 50%; transform: translateY(-50%); width: 48px; height: 48px; background: rgba(0, 0, 0, 0.6); border: none; border-radius: 50%; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10; transition: all 0.2s; backdrop-filter: blur(4px);">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            </button>
+            {% endif %}
+          </div>
+          {% if ad.image and ad.images.count > 0 or ad.images.count > 1 %}
+          <div class="uz-gallery-thumbnails" style="display: flex; gap: 8px; padding: 16px; overflow-x: auto; background: var(--uz-bg-card);">
+            {% if ad.image %}
+            <button type="button" class="gallery-thumbnail active" data-image-index="0" data-image-url="{{ ad.image.url }}" style="flex-shrink: 0; width: 100px; height: 100px; border: 2px solid var(--uz-primary); border-radius: 8px; overflow: hidden; cursor: pointer; padding: 0; background: none; transition: all 0.2s; opacity: 1;">
+              <img src="{{ ad.image.url }}" alt="Основное фото" style="width: 100px; height: 100px; object-fit: cover; object-position: center; display: block;">
+            </button>
+            {% endif %}
+            {% for img in ad.images.all %}
+            <button type="button" class="gallery-thumbnail" data-image-index="{% if ad.image %}{{ forloop.counter }}{% else %}{{ forloop.counter0 }}{% endif %}" data-image-url="{{ img.image.url }}" style="flex-shrink: 0; width: 100px; height: 100px; border: 2px solid transparent; border-radius: 8px; overflow: hidden; cursor: pointer; padding: 0; background: none; transition: all 0.2s; opacity: 0.7;">
+              <img src="{{ img.image.url }}" alt="Фото {{ forloop.counter }}" style="width: 100px; height: 100px; object-fit: cover; object-position: center; display: block;">
+            </button>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- Header Info -->
+        <div class="uz-ad-detail-header">
+          <div class="uz-flex uz-ad-detail-header-inner" style="justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+            <div class="uz-ad-detail-header-left">
+              <h1 class="uz-ad-detail-title" style="font-size: 32px; font-weight: 700; margin-bottom: 8px;">{{ ad.title }}</h1>
+              <div class="uz-flex" style="gap: 8px; flex-wrap: wrap; align-items: center;">
+                <span class="uz-badge">{{ ad.get_ad_type_display }}</span>
+            {% if ad.with_operator %}<span class="uz-badge">С оператором</span>{% endif %}
+            <span id="ad-status-badge" class="uz-badge" style="background: rgba(239, 68, 68, 0.1); color: rgb(239, 68, 68); border: 1px solid rgba(239, 68, 68, 0.3); {% if ad.is_active %}display:none;{% endif %}">Неактивно</span>
+                <span style="color: var(--uz-text-dim); font-size: 14px;">Опубликовано {{ ad.created_at|date:"d M Y" }}</span>
+              </div>
+            </div>
+            <div class="uz-ad-detail-price" style="text-align: right;">
+              <div style="font-size: 24px; font-weight: 700; color: var(--uz-primary);">{{ ad.get_price_display }}</div>
+              {% if ad.min_order %}
+              <div style="margin-top: 6px; display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: var(--uz-radius-sm); background: rgba(59, 130, 246, 0.14); color: rgb(59, 130, 246); border: 1px solid rgba(59, 130, 246, 0.35); font-size: 13px; font-weight: 600;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <path d="M12 6v6l3 3"></path>
+                </svg>
+                <span>Мин. заказ {{ ad.min_order }}</span>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+          
+          <!-- Управление объявлением (только для владельца) -->
+          {% if user.is_authenticated and ad.user == user %}
+          <div class="uz-ad-management" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--uz-border);">
+            <div class="uz-flex" style="gap: 12px; flex-wrap: wrap;">
+              <a href="{% url 'uzmat:edit_ad' slug=ad.slug %}" class="uz-btn uz-btn-outline" style="display: inline-flex; align-items: center; gap: 8px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+                Редактировать
+              </a>
+              <button id="toggle-status-btn" type="button" class="uz-btn uz-btn-outline" onclick="toggleAdStatus('{{ ad.slug }}')" style="display: inline-flex; align-items: center; gap: 8px; {% if not ad.is_active %}background: rgba(16, 185, 129, 0.1); color: rgb(16, 185, 129); border-color: rgba(16, 185, 129, 0.3);{% endif %}">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  {% if ad.is_active %}
+                  <path d="M18 6L6 18M6 6l12 12"></path>
+                  {% else %}
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                  {% endif %}
+                </svg>
+                <span id="toggle-status-label">{% if ad.is_active %}Неактивно{% else %}Активировать{% endif %}</span>
+              </button>
+              <a href="{% url 'uzmat:delete_ad' slug=ad.slug %}" class="uz-btn uz-btn-outline" style="display: inline-flex; align-items: center; gap: 8px; color: var(--uz-danger); border-color: rgba(239, 68, 68, 0.3);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+                Удалить
+              </a>
+            </div>
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- Specs -->
+        {% if ad.equipment_type or ad.brand or ad.year or ad.power or ad.weight or ad.condition or ad.hours %}
+        <div class="uz-card">
+          <h2 style="font-size: 18px; font-weight: 600; margin-bottom: 20px;">Характеристики</h2>
+          <div class="uz-grid uz-ad-detail-specs" style="grid-template-columns: repeat(2, 1fr); gap: 20px;">
+            {% if ad.equipment_type %}
+            <div>
+              <div style="font-size: 13px; color: var(--uz-text-muted); margin-bottom: 4px;">Тип техники</div>
+              <div style="font-weight: 500;">{{ ad.equipment_type }}</div>
+            </div>
+            {% endif %}
+            {% if ad.brand %}
+            <div>
+              <div style="font-size: 13px; color: var(--uz-text-muted); margin-bottom: 4px;">Марка</div>
+              <div style="font-weight: 500;">{{ ad.brand }}</div>
+            </div>
+            {% endif %}
+            {% if ad.model %}
+            <div>
+              <div style="font-size: 13px; color: var(--uz-text-muted); margin-bottom: 4px;">Модель</div>
+              <div style="font-weight: 500;">{{ ad.model }}</div>
+            </div>
+            {% endif %}
+            {% if ad.year %}
+            <div>
+              <div style="font-size: 13px; color: var(--uz-text-muted); margin-bottom: 4px;">Год выпуска</div>
+              <div style="font-weight: 500;">{{ ad.year }}</div>
+            </div>
+            {% endif %}
+            {% if ad.power %}
+            <div>
+              <div style="font-size: 13px; color: var(--uz-text-muted); margin-bottom: 4px;">Мощность</div>
+              <div style="font-weight: 500;">{{ ad.power }} л.с.</div>
+            </div>
+            {% endif %}
+            {% if ad.weight %}
+            <div>
+              <div style="font-size: 13px; color: var(--uz-text-muted); margin-bottom: 4px;">Вес</div>
+              <div style="font-weight: 500;">{{ ad.weight }} т</div>
+            </div>
+            {% endif %}
+            {% if ad.condition %}
+            <div>
+              <div style="font-size: 13px; color: var(--uz-text-muted); margin-bottom: 4px;">Состояние</div>
+              <div style="font-weight: 500;">{{ ad.get_condition_display }}</div>
+            </div>
+            {% endif %}
+            {% if ad.hours %}
+            <div>
+              <div style="font-size: 13px; color: var(--uz-text-muted); margin-bottom: 4px;">Часы работы</div>
+              <div style="font-weight: 500;">{{ ad.hours }}</div>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Description -->
+        <div class="uz-card">
+          <h2 style="font-size: 18px; font-weight: 600; margin-bottom: 20px;">Описание</h2>
+          <div style="color: var(--uz-text-dim); line-height: 1.8;">
+            {{ ad.description|linebreaks }}
+          </div>
+        </div>
+
+        <!-- Местоположение -->
+        <div class="uz-card">
+          <h2 style="font-size: 18px; font-weight: 600; margin-bottom: 12px;">Местоположение</h2>
+          <div style="font-size: 14px; color: var(--uz-text-muted);">{{ ad.city }}, {{ ad.get_country_display }}</div>
+          <div id="ad-map" style="margin-top: 12px; height: 340px; border-radius: var(--uz-radius-md); overflow: hidden; background: var(--uz-bg-hover);"></div>
+          <div style="font-size: 12px; color: var(--uz-text-muted); margin-top: 8px;">Карту можно масштабировать и перемещать</div>
+        </div>
+
+      </div>
+
+      <!-- Sidebar -->
+      <aside class="uz-ad-detail-sidebar" style="position: sticky; top: 100px;">
+        <div class="uz-card">
+          <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 20px;">Продавец</h3>
+          
+          <div class="uz-seller-info">
+            <div class="uz-seller-header">
+              <a href="{% url 'uzmat:user_profile' user_id=ad.user.id %}" style="text-decoration: none; color: inherit;">
+                <div class="uz-seller-avatar" style="cursor: pointer;">
+                  {% if ad.user.avatar %}
+                    <img src="{{ ad.user.avatar.url }}" alt="{% if ad.user.account_type == 'company' %}{{ ad.user.company_name }}{% else %}{{ ad.user.first_name }}{% endif %}" style="width: 100%; height: 100%; object-fit: cover;">
+                  {% else %}
+                    <span>
+                      {% if ad.user.account_type == 'company' %}
+                        {% if ad.user.company_name %}{{ ad.user.company_name|first|upper }}{% else %}C{% endif %}
+                      {% else %}
+                        {% if ad.user.first_name %}{{ ad.user.first_name|first|upper }}{% else %}U{% endif %}
+                      {% endif %}
+                    </span>
+                  {% endif %}
+                </div>
+              </a>
+              <div class="uz-seller-details">
+                <a href="{% url 'uzmat:user_profile' user_id=ad.user.id %}" style="text-decoration: none; color: inherit;">
+                  <div class="uz-seller-name" style="cursor: pointer;">
+                    {% if ad.user.account_type == 'company' %}
+                      {{ ad.user.company_name|default:ad.user.username }}{% include 'uzmat/verified-check.html' with u=ad.user %}
+                    {% else %}
+                      {{ ad.user.first_name|default:ad.user.username }}{% include 'uzmat/verified-check.html' with u=ad.user %}
+                    {% endif %}
+                  </div>
+                </a>
+                <div class="uz-seller-stats">
+                  {% if ad.user.is_verified_active %}
+                    <span class="uz-seller-badge">Проверенный</span>
+                  {% endif %}
+                  <div class="uz-seller-meta">На Uzmat с {{ ad.user.created_at|date:"Y" }}</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="uz-seller-stats-grid">
+              <div class="uz-seller-stat">
+                <div class="uz-seller-stat-value">{{ user_ads_count }}</div>
+                <div class="uz-seller-stat-label">Объявления</div>
+              </div>
+              <div class="uz-seller-stat">
+                <div class="uz-seller-stat-value">{{ ad.views_count }}</div>
+                <div class="uz-seller-stat-label">Просмотры</div>
+              </div>
+            </div>
+
+            <div class="uz-seller-location">
+              <svg class="uz-seller-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                <circle cx="12" cy="10" r="3"></circle>
+              </svg>
+              <span>{{ ad.city }}, {{ ad.get_country_display }}</span>
+            </div>
+          </div>
+
+          <div class="uz-flex-col" style="gap: 12px; margin-top: 20px; position: relative;">
+            <button class="uz-btn uz-btn-primary" style="width: 100%; position: relative; z-index: 2;" onclick="showPhone(event)" id="show-phone-btn">Показать телефон</button>
+            <div id="phone-display" style="display: none; position: absolute; top: 100%; left: 0; right: 0; margin-top: 8px; background: var(--uz-bg-card); border: 1px solid var(--uz-border); border-radius: var(--uz-radius-md); padding: 16px; box-shadow: var(--uz-shadow-popover); z-index: 10; animation: slideDown 0.3s ease-out;">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+                <div style="flex: 1;">
+                  <div style="font-size: 12px; color: var(--uz-text-dim); margin-bottom: 4px;">Телефон</div>
+                  <div style="font-size: 18px; font-weight: 600; color: var(--uz-text);" id="phone-number">
+                    {% if ad.user.account_type == 'company' %}
+                      {{ ad.user.company_phone|default:ad.phone }}
+                    {% else %}
+                      {{ ad.phone|default:ad.user.phone }}
+                    {% endif %}
+                  </div>
+                </div>
+                <button onclick="copyPhone()" style="padding: 8px 12px; background: var(--uz-primary-alpha); color: var(--uz-primary); border: 1px solid var(--uz-primary); border-radius: var(--uz-radius-sm); cursor: pointer; font-size: 12px; font-weight: 500; transition: all 0.2s;" onmouseover="this.style.background='var(--uz-primary)'; this.style.color='white';" onmouseout="this.style.background='var(--uz-primary-alpha)'; this.style.color='var(--uz-primary)';">
+                  Копировать
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <style>
+            @keyframes slideDown {
+              from {
+                opacity: 0;
+                transform: translateY(-10px);
+              }
+              to {
+                opacity: 1;
+                transform: translateY(0);
+              }
+            }
+            
+            #phone-display.show {
+              display: block !important;
+            }
+          </style>
+            {% if user.is_authenticated %}
+              <a class="uz-btn uz-btn-outline" style="width: 100%; margin-top: 20px;" href="{% url 'uzmat:chat_start' ad_id=ad.id %}">Написать сообщение</a>
+            {% else %}
+              <a class="uz-btn uz-btn-outline" style="width: 100%; margin-top: 20px;" href="{% url 'uzmat:onboarding' %}">Написать сообщение</a>
+            {% endif %}
+            {% if user.is_authenticated %}
+            <button class="uz-btn uz-btn-ghost" style="width: 100%; text-align: center; font-size: 13px;" onclick="toggleFavoriteDetail({{ ad.id }})" id="favorite-btn">
+              {% if is_favorited %}Удалить из избранного{% else %}Добавить в избранное{% endif %}
+            </button>
+            {% endif %}
+            <a href="{% url 'uzmat:user_profile' user_id=ad.user.id %}" class="uz-btn uz-btn-ghost" style="width: 100%; text-align: center; font-size: 13px;">
+              Все объявления продавца
+            </a>
+          </div>
+        </div>
+      </aside>
+
+    </div>
+  </main>
+
+  {% include 'uzmat/footer.html' %}
+
+  <!-- Mobile Navigation -->
+  <nav class="uz-bottom-nav uz-show-mobile">
+    <a href="{% url 'uzmat:index' %}" class="uz-bottom-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+      </svg>
+      <span>Главная</span>
+    </a>
+    <a href="{% url 'uzmat:chats' %}" class="uz-bottom-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+      </svg>
+      <span>Чаты</span>
+    </a>
+    <a href="{% url 'uzmat:create_ad' %}" class="uz-bottom-item" style="color: var(--uz-primary);">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="16"></line>
+        <line x1="8" y1="12" x2="16" y2="12"></line>
+      </svg>
+      <span>Создать</span>
+    </a>
+    {% if user.is_authenticated %}
+    <a href="{% url 'uzmat:profile' %}" class="uz-bottom-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+        <circle cx="12" cy="7" r="4"></circle>
+      </svg>
+      <span>Профиль</span>
+    </a>
+    {% else %}
+    <a href="{% url 'uzmat:onboarding' %}" class="uz-bottom-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+        <circle cx="12" cy="7" r="4"></circle>
+      </svg>
+      <span>Профиль</span>
+    </a>
+    {% endif %}
+    <a href="{% url 'uzmat:settings' %}" class="uz-bottom-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"></circle>
+        <path
+          d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+        </path>
+      </svg>
+      <span>Меню</span>
+    </a>
+  </nav>
+
+  <script src="https://api-maps.yandex.ru/2.1/?lang=ru_RU" type="text/javascript"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const mapContainer = document.getElementById('ad-map');
+      if (!mapContainer || typeof ymaps === 'undefined') return;
+
+      const countryNames = {
+        'kz': 'Казахстан',
+        'uz': 'Узбекистан',
+        'ru': 'Россия',
+        'by': 'Беларусь'
+      };
+
+      const countryBounds = {
+        // Прямоугольники для более точного геокодирования
+        'by': [[51.2, 23.0], [56.2, 32.8]],
+        'kz': [[40.5, 46.5], [55.5, 87.5]],
+        'uz': [[37.0, 55.0], [46.0, 73.0]],
+      };
+
+      const city = '{{ ad.city|escapejs }}';
+      const countryCode = ('{{ ad.country|escapejs }}' || '').toLowerCase();
+      const country = countryNames[countryCode] || '{{ ad.get_country_display|escapejs }}';
+      const normalizedCity = (city || '').trim().toLowerCase();
+      const address = [city, country].filter(Boolean).join(', ');
+
+      // Предустановленные координаты популярных городов (чтобы не падать на геокодере)
+      const cityCoords = {
+        // Беларусь
+        'by:минск': [53.902284, 27.561831],
+        'by:гродно': [53.669353, 23.813131],
+        'by:гомель': [52.425163, 31.015039],
+        'by:витебск': [55.190432, 30.204859],
+        'by:могилёв': [53.894548, 30.330654],
+        'by:могилев': [53.894548, 30.330654],
+        'by:брест': [52.097621, 23.734051],
+        'by:барановичи': [53.133889, 26.013611],
+        'by:пинск': [52.115, 26.095833],
+        'by:орша': [54.515278, 30.405],
+        'by:лида': [53.8875, 25.302778],
+        'by:молодечно': [54.316667, 26.85],
+        'by:полоцк': [55.485556, 28.803889],
+        'by:новополоцк': [55.531389, 28.598333],
+
+        // Казахстан
+        'kz:астана': [51.169392, 71.449074],
+        'kz:нур-султан': [51.169392, 71.449074],
+        'kz:алматы': [43.238949, 76.889709],
+        'kz:шымкент': [42.315514, 69.586907],
+        'kz:караганда': [49.806092, 73.085001],
+        'kz:актобе': [50.283937, 57.166978],
+        'kz:тараз': [42.9, 71.366667],
+        'kz:павлодар': [52.287303, 76.967402],
+        'kz:оскемен': [49.948333, 82.627778],
+        'kz:семей': [50.411111, 80.2275],
+        'kz:костанай': [53.21435, 63.62463],
+        'kz:кызылорда': [44.8479, 65.499722],
+        'kz:петропавл': [54.875278, 69.162778],
+        'kz:орал': [51.233333, 51.383333],
+        'kz:актау': [43.648056, 51.172222],
+        'kz:атырау': [47.116667, 51.883333],
+        'kz:талдыкорган': [45.016667, 78.366667],
+
+        // Россия (крупные города)
+        'ru:москва': [55.755814, 37.617635],
+        'ru:санкт-петербург': [59.939095, 30.315868],
+        'ru:спб': [59.939095, 30.315868],
+        'ru:новосибирск': [55.008352, 82.935733],
+        'ru:екатеринбург': [56.838011, 60.597474],
+        'ru:нижний новгород': [56.296504, 43.936059],
+        'ru:казань': [55.796289, 49.108795],
+        'ru:челябинск': [55.164441, 61.436843],
+        'ru:омск': [54.98848, 73.324236],
+        'ru:самара': [53.195878, 50.100202],
+        'ru:ростов-на-дону': [47.235714, 39.701505],
+        'ru:уфа': [54.734773, 55.957829],
+        'ru:красноярск': [56.015283, 92.893248],
+        'ru:пермь': [58.010455, 56.229443],
+        'ru:воронеж': [51.660781, 39.200296],
+        'ru:волгоград': [48.707103, 44.516939],
+        'ru:краснодар': [45.03547, 38.975313],
+        'ru:саратов': [51.533103, 46.034158],
+        'ru:тюмень': [57.153033, 65.534328],
+        'ru:тольятти': [53.520556, 49.389167],
+        'ru:ижевск': [56.852593, 53.204843],
+        'ru:барнаул': [53.346785, 83.776856],
+        'ru:иркутск': [52.287054, 104.281047],
+        'ru:хабаровск': [48.480224, 135.071917],
+        'ru:владивосток': [43.115536, 131.885485],
+        'ru:калининград': [54.710426, 20.452214],
+        'ru:мурманск': [68.958524, 33.082656],
+        'ru:сочи': [43.585472, 39.723089],
+
+        // Узбекистан
+        'uz:ташкент': [41.299496, 69.240073],
+        'uz:самарканд': [39.654167, 66.959722],
+        'uz:бухара': [39.767457, 64.423053],
+        'uz:андижан': [40.78206, 72.344245],
+        'uz:наманган': [41.0, 71.666667],
+        'uz:фергана': [40.389167, 71.784167],
+        'uz:коканд': [40.532915, 70.942835],
+        'uz:карши': [38.860556, 65.789167],
+        'uz:нукус': [42.466667, 59.6],
+        'uz:ургенч': [41.55, 60.633333],
+        'uz:термез': [37.224167, 67.278333],
+        'uz:джизак': [40.115833, 67.842222],
+        'uz:гулистан': [40.495, 68.773889],
+        'uz:навои': [40.084444, 65.379167],
+        'uz:ангрен': [41.016667, 70.143611]
+      };
+
+      // Фолбэк по стране (столицы) + общий дефолт (Минск)
+      const countryFallback = {
+        'by': [53.902284, 27.561831],
+        'kz': [51.169392, 71.449074],
+        'ru': [55.755814, 37.617635],
+        'uz': [41.299496, 69.240073],
+      };
+      const defaultFallback = [53.902284, 27.561831];
+
+      function placePoint(map, coords, caption) {
+        const placemark = new ymaps.Placemark(
+          coords,
+          { balloonContent: caption || 'Местоположение объявления' },
+          { preset: 'islands#redDotIcon' }
+        );
+        map.geoObjects.add(placemark);
+      }
+
+      function initMap() {
+        const presetCoords = cityCoords[`${countryCode}:${normalizedCity}`];
+        const fallbackCoords = presetCoords || countryFallback[countryCode] || defaultFallback;
+
+        const map = new ymaps.Map('ad-map', {
+          center: fallbackCoords,
+          zoom: 11,
+          controls: ['zoomControl', 'fullscreenControl']
+        });
+
+        // Если есть готовые координаты города — ставим их и не перезаписываем геокодом
+        if (presetCoords) {
+          placePoint(map, presetCoords, address || city || 'Местоположение');
+          return;
+        }
+
+        if (!address) {
+          placePoint(map, fallbackCoords, 'Минск');
+          return;
+        }
+
+        // Пытаемся геокодировать: сначала город + страна, потом только город
+        function geocodeAndPlace(query) {
+          const geocodeOpts = { results: 1, kind: 'locality' };
+          if (countryBounds[countryCode]) {
+            geocodeOpts.boundedBy = countryBounds[countryCode];
+            geocodeOpts.strictBounds = false;
+          }
+
+          return ymaps.geocode(query, geocodeOpts).then(function(res) {
+            const first = res.geoObjects.get(0);
+            if (!first) return null;
+            const coords = first.geometry.getCoordinates();
+            map.setCenter(coords, 12);
+            placePoint(map, coords, query);
+            return coords;
+          });
+        }
+
+        geocodeAndPlace(address)
+          .then(function(found) {
+            if (found) return;
+            return geocodeAndPlace(city);
+          })
+          .then(function(found) {
+            if (found) return;
+            map.setCenter(fallbackCoords, 11);
+            placePoint(map, fallbackCoords, address || city || 'Местоположение');
+          })
+          .catch(function() {
+            map.setCenter(fallbackCoords, 11);
+            placePoint(map, fallbackCoords, address || city || 'Местоположение');
+          });
+      }
+
+      ymaps.ready(initMap);
+    });
+  </script>
+
+  <script>
+    let phoneNumber = '{% if ad.user.account_type == "company" %}{{ ad.user.company_phone|default:ad.phone }}{% else %}{{ ad.phone|default:ad.user.phone }}{% endif %}';
+    
+    function showPhone(event) {
+      event.preventDefault();
+      const phoneDisplay = document.getElementById('phone-display');
+      const button = document.getElementById('show-phone-btn');
+      
+      if (phoneDisplay.style.display === 'none' || !phoneDisplay.classList.contains('show')) {
+        // Показываем телефон с анимацией
+        phoneDisplay.style.display = 'block';
+        phoneDisplay.classList.add('show');
+        button.textContent = 'Скрыть телефон';
+      } else {
+        // Скрываем телефон
+        phoneDisplay.style.display = 'none';
+        phoneDisplay.classList.remove('show');
+        button.textContent = 'Показать телефон';
+      }
+    }
+    
+    function copyPhone() {
+      const phoneText = document.getElementById('phone-number').textContent.trim();
+      navigator.clipboard.writeText(phoneText).then(function() {
+        // Без toast: короткая индикация на кнопке
+        const btn = document.querySelector('#phone-display button');
+        if (btn) {
+          const prev = btn.textContent;
+          btn.textContent = 'Скопировано';
+          setTimeout(() => (btn.textContent = prev), 1200);
+        }
+      }).catch(function(err) {
+        console.error('Ошибка копирования:', err);
+        alert('Не удалось скопировать номер');
+      });
+    }
+    
+    // Закрытие при клике вне блока
+    document.addEventListener('click', function(event) {
+      const phoneDisplay = document.getElementById('phone-display');
+      const button = document.getElementById('show-phone-btn');
+      
+      if (phoneDisplay && button && 
+          !phoneDisplay.contains(event.target) && 
+          !button.contains(event.target) &&
+          phoneDisplay.classList.contains('show')) {
+        phoneDisplay.style.display = 'none';
+        phoneDisplay.classList.remove('show');
+        button.textContent = 'Показать телефон';
+      }
+    });
+    
+    function getCookie(name) {
+      let cookieValue = null;
+      if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+          const cookie = cookies[i].trim();
+          if (cookie.substring(0, name.length + 1) === (name + '=')) {
+            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+            break;
+          }
+        }
+      }
+      return cookieValue;
+    }
+    
+    function toggleFavoriteDetail(adId) {
+      {% if not user.is_authenticated %}
+      window.location.href = "{% url 'uzmat:auth' %}";
+      return;
+      {% endif %}
+      
+      const button = document.getElementById('favorite-btn');
+      const url = "{% url 'uzmat:toggle_favorite' ad_id=0 %}".replace('0', adId);
+      const csrftoken = getCookie('csrftoken');
+      
+      fetch(url, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': csrftoken,
+          'Content-Type': 'application/json',
+        },
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        return response.json();
+      })
+      .then(data => {
+        if (data.is_favorited !== undefined) {
+          if (data.is_favorited) {
+            button.textContent = 'Удалить из избранного';
+          } else {
+            button.textContent = 'Добавить в избранное';
+          }
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('Ошибка при добавлении в избранное. Попробуйте обновить страницу.');
+      });
+    }
+
+    function toggleAdStatus(slug) {
+      const btn = document.getElementById('toggle-status-btn');
+      const label = document.getElementById('toggle-status-label');
+      const badge = document.getElementById('ad-status-badge');
+      if (!btn || !label) return;
+
+      const url = "{% url 'uzmat:toggle_ad_status' slug='__slug__' %}".replace('__slug__', slug);
+      const csrftoken = getCookie('csrftoken');
+
+      btn.disabled = true;
+      btn.classList.add('is-loading');
+
+      fetch(url, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': csrftoken,
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      })
+      .then(response => {
+        if (!response.ok) throw new Error('Network error');
+        return response.json();
+      })
+      .then(data => {
+        if (typeof data.is_active === 'boolean') {
+          label.textContent = data.button_label || (data.is_active ? 'Неактивно' : 'Активировать');
+          if (data.is_active) {
+            btn.style.background = '';
+            btn.style.color = '';
+            btn.style.borderColor = '';
+            if (badge) badge.style.display = 'none';
+          } else {
+            btn.style.background = 'rgba(16, 185, 129, 0.1)';
+            btn.style.color = 'rgb(16, 185, 129)';
+            btn.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+            if (badge) badge.style.display = 'inline-flex';
+          }
+          // Без toast
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        alert('Не удалось обновить статус');
+      })
+      .finally(() => {
+        btn.disabled = false;
+        btn.classList.remove('is-loading');
+      });
+    }
+
+    // Галерея фотографий и полноэкранный просмотр
+    document.addEventListener('DOMContentLoaded', function() {
+      const mainImage = document.getElementById('main-gallery-image');
+      const thumbnails = document.querySelectorAll('.gallery-thumbnail');
+      const prevBtn = document.getElementById('gallery-prev');
+      const nextBtn = document.getElementById('gallery-next');
+      
+      // Массив URL всех изображений (сначала основное изображение, затем дополнительные)
+      const imageUrls = [];
+      {% if ad.image %}
+      imageUrls.push('{{ ad.image.url }}');
+      {% endif %}
+      {% for img in ad.images.all %}
+      imageUrls.push('{{ img.image.url }}');
+      {% endfor %}
+      
+      // Если нет миниатюр, но есть изображения, создаем массив из основного изображения
+      if (imageUrls.length === 0 && thumbnails.length > 0) {
+        imageUrls.push(...Array.from(thumbnails).map(thumb => thumb.getAttribute('data-image-url')));
+      }
+      
+      let currentImageIndex = 0;
+      
+      // Функция для обновления главного изображения
+      function updateMainImage(index) {
+        if (imageUrls.length === 0 || !mainImage) return;
+        
+        currentImageIndex = index;
+        if (currentImageIndex < 0) currentImageIndex = imageUrls.length - 1;
+        if (currentImageIndex >= imageUrls.length) currentImageIndex = 0;
+        
+        mainImage.src = imageUrls[currentImageIndex];
+        
+        // Обновляем выделение миниатюр
+        thumbnails.forEach((thumb, idx) => {
+          // Учитываем, что если есть ad.image, то индекс сдвигается на 1
+          const thumbIndex = {% if ad.image %}idx + 1{% else %}idx{% endif %};
+          if (thumbIndex === currentImageIndex) {
+            thumb.style.borderColor = 'var(--uz-primary)';
+            thumb.style.opacity = '1';
+          } else {
+            thumb.style.borderColor = 'transparent';
+            thumb.style.opacity = '0.7';
+          }
+        });
+      }
+      
+      // Обработчик для стрелки влево
+      if (prevBtn) {
+        prevBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          updateMainImage(currentImageIndex - 1);
+        });
+        prevBtn.onmouseover = function() { 
+          this.style.background = 'rgba(0, 0, 0, 0.8)'; 
+          this.style.transform = 'translateY(-50%) scale(1.1)';
+        };
+        prevBtn.onmouseout = function() { 
+          this.style.background = 'rgba(0, 0, 0, 0.6)'; 
+          this.style.transform = 'translateY(-50%) scale(1)';
+        };
+      }
+      
+      // Обработчик для стрелки вправо
+      if (nextBtn) {
+        nextBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          updateMainImage(currentImageIndex + 1);
+        });
+        nextBtn.onmouseover = function() { 
+          this.style.background = 'rgba(0, 0, 0, 0.8)'; 
+          this.style.transform = 'translateY(-50%) scale(1.1)';
+        };
+        nextBtn.onmouseout = function() { 
+          this.style.background = 'rgba(0, 0, 0, 0.6)'; 
+          this.style.transform = 'translateY(-50%) scale(1)';
+        };
+      }
+      
+      // Создаем модальное окно для полноэкранного просмотра
+      const modal = document.createElement('div');
+      modal.id = 'image-modal';
+      modal.style.cssText = 'display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.95); z-index: 10000; cursor: pointer; align-items: center; justify-content: center;';
+      
+      const modalImage = document.createElement('img');
+      modalImage.style.cssText = 'max-width: 98%; max-height: 98%; width: auto; height: auto; object-fit: contain; cursor: pointer;';
+      modalImage.alt = '{{ ad.title }}';
+      
+      const closeBtn = document.createElement('button');
+      closeBtn.innerHTML = '×';
+      closeBtn.style.cssText = 'position: absolute; top: 20px; right: 20px; width: 40px; height: 40px; background: rgba(255, 255, 255, 0.2); border: none; border-radius: 50%; color: white; font-size: 30px; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10001; transition: background 0.2s;';
+      closeBtn.onmouseover = function() { this.style.background = 'rgba(255, 255, 255, 0.3)'; };
+      closeBtn.onmouseout = function() { this.style.background = 'rgba(255, 255, 255, 0.2)'; };
+      
+      modal.appendChild(modalImage);
+      modal.appendChild(closeBtn);
+      document.body.appendChild(modal);
+      
+      // Функция открытия модального окна
+      function openModal(imageSrc) {
+        modalImage.src = imageSrc;
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+      }
+      
+      // Функция закрытия модального окна
+      function closeModal() {
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
+      }
+      
+      // Обработчик клика на главное изображение
+      if (mainImage) {
+        mainImage.addEventListener('click', function() {
+          openModal(this.src);
+        });
+      }
+      
+      // Обработчик клика на миниатюры для переключения главного изображения
+      if (thumbnails.length > 0) {
+        // Выделяем первую миниатюру
+        updateMainImage(0);
+        
+        thumbnails.forEach((thumb, index) => {
+          thumb.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const imageIndex = parseInt(this.getAttribute('data-image-index'));
+            updateMainImage(imageIndex);
+          });
+        });
+      }
+      
+      // Обработчики закрытия модального окна
+      modal.addEventListener('click', function(e) {
+        if (e.target === modal || e.target === modalImage) {
+          closeModal();
+        }
+      });
+      
+      closeBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        closeModal();
+      });
+      
+      // Закрытие по Escape
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && modal.style.display === 'flex') {
+          closeModal();
+        }
+      });
+      
+    });
+  </script>
+
+</body>
+
+</html>

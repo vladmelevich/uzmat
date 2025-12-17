@@ -1,0 +1,1803 @@
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth import login, authenticate, logout
+from django.contrib.auth.decorators import login_required
+from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib import messages
+from django.http import JsonResponse
+from django.urls import reverse
+from django.db.models import Q, Count, Sum
+from django.db.models.functions import Coalesce
+from django.core.paginator import Paginator
+from django.utils.text import slugify
+from django.utils import timezone
+from django.db import transaction
+from django.db.models import Case, When, Value, IntegerField
+from django.conf import settings as django_settings
+import os
+from .models import (
+    User,
+    Advertisement,
+    Favorite,
+    Category,
+    AdvertisementImage,
+    VerificationRequest,
+    ChatThread,
+    ChatMessage,
+    ChatImage,
+)
+from decimal import Decimal, InvalidOperation
+from itertools import chain
+
+
+def index(request):
+    """Главная страница со списком объявлений (только продажа и аренда)"""
+    now = timezone.now()
+    
+    # Автоподнятие каждые 3 часа (bulk, ограничиваем партию)
+    bump_candidates = list(
+        Advertisement.objects.filter(
+            is_active=True
+        ).filter(
+            Q(last_bumped_at__isnull=True) | Q(last_bumped_at__lte=now - timezone.timedelta(hours=3))
+        ).values_list('id', flat=True)[:500]
+    )
+    if bump_candidates:
+        Advertisement.objects.filter(id__in=bump_candidates).update(last_bumped_at=now)
+    
+    # На /catalog/ фильтрация работает через get_filtered_ads(). На главной тоже применяем те же GET-фильтры
+    # (в первую очередь country/city из селектора), но оставляем только sale/rent.
+    base_active = (get_filtered_ads(request)
+                   .filter(ad_type__in=['sale', 'rent'])
+                   .annotate(bump_order=Coalesce('last_bumped_at', 'created_at')))
+    
+    promoted_active = base_active.filter(
+        is_promoted=True,
+        promotion_until__gte=now
+    )
+    
+    verified_active = base_active.filter(
+        user__is_verified=True,
+        user__verified_until__gte=now
+    )
+    
+    plan_priority = Case(
+        When(promotion_plan='vip', then=Value(1)),
+        When(promotion_plan='premium', then=Value(2)),
+        When(promotion_plan='gold', then=Value(3)),
+        default=Value(4),
+        output_field=IntegerField()
+    )
+    
+    HOT_LIMIT = 16
+    POPULAR_LIMIT = 10
+    
+    # Горячие предложения: до 16 по приоритету тарифа, затем по времени продвижения; дальше проверенные
+    hot_promoted = list(promoted_active.annotate(plan_priority=plan_priority).order_by('plan_priority', '-promoted_at', '-created_at')[:HOT_LIMIT])
+    hot_ids = [ad.id for ad in hot_promoted]
+    slots_left = max(0, HOT_LIMIT - len(hot_promoted))
+    hot_verified = []
+    if slots_left > 0:
+        hot_verified = list(
+            verified_active.exclude(id__in=hot_ids).order_by('-user__verified_until', '-bump_order')[:slots_left]
+        )
+        hot_ids.extend([ad.id for ad in hot_verified])
+    hot_offers = hot_promoted + hot_verified
+    
+    if not hot_offers:
+        hot_offers = base_active.order_by('-bump_order')[:7]
+    
+    # Популярные: до 10, GOLD держится в топ-4 первые 12 часов, далее общий приоритет VIP > PREMIUM > GOLD, затем проверенные
+    fresh_gold = list(
+        promoted_active.filter(
+            promotion_plan='gold',
+            promoted_at__gte=now - timezone.timedelta(hours=12)
+        ).order_by('-promoted_at')[:4]
+    )
+    
+    exclude_ids = [ad.id for ad in fresh_gold]
+    rest_popular = list(
+        promoted_active.exclude(id__in=exclude_ids)
+        .annotate(plan_priority=plan_priority)
+        .order_by('plan_priority', '-promoted_at', '-created_at')[: max(0, POPULAR_LIMIT - len(fresh_gold))]
+    )
+    exclude_ids.extend([ad.id for ad in rest_popular])
+    
+    verified_popular = list(
+        verified_active.exclude(id__in=exclude_ids).order_by('-user__verified_until', '-bump_order')[: max(0, POPULAR_LIMIT - len(fresh_gold) - len(rest_popular))]
+    )
+    
+    popular_ads = (fresh_gold + rest_popular + verified_popular)[:POPULAR_LIMIT]
+    
+    # Общая подборка на главной (превью)
+    ads = base_active.order_by('-bump_order')[:8]
+    
+    # Подсчитываем непрочитанные сообщения для авторизованных пользователей
+    unread_count = 0
+    if request.user.is_authenticated:
+        me = request.user
+        threads = ChatThread.objects.filter(Q(buyer=me) | Q(seller=me))
+        for thread in threads:
+            last_read = thread.buyer_last_read_at if me.id == thread.buyer_id else thread.seller_last_read_at
+            if last_read and thread.last_message_at and thread.last_message_at > last_read:
+                unread = ChatMessage.objects.filter(
+                    thread=thread,
+                    created_at__gt=last_read
+                ).exclude(sender=me).count()
+                unread_count += unread
+            elif not last_read and thread.last_message_at:
+                unread = ChatMessage.objects.filter(
+                    thread=thread
+                ).exclude(sender=me).count()
+                unread_count += unread
+    
+    context = {
+        'user': request.user,
+        'ads': ads,
+        'hot_offers': hot_offers,
+        'popular_ads': popular_ads,
+        'unread_messages_count': unread_count,
+    }
+    return render(request, 'uzmat/index.html', context)
+
+
+def ad_detail(request, slug):
+    """Страница детального просмотра объявления"""
+    # Получаем объявление без фильтра по is_active
+    ad = get_object_or_404(Advertisement, slug=slug)
+    
+    # Проверяем доступ: если объявление неактивно, только владелец может его просматривать
+    if not ad.is_active:
+        if not request.user.is_authenticated or ad.user != request.user:
+            from django.http import Http404
+            raise Http404("Объявление не найдено")
+    
+    # Увеличиваем счетчик просмотров только для активных объявлений или для владельца
+    if ad.is_active or (request.user.is_authenticated and ad.user == request.user):
+        ad.views_count += 1
+        ad.save(update_fields=['views_count'])
+    
+    # Проверяем, добавлено ли в избранное
+    is_favorited = False
+    if request.user.is_authenticated:
+        is_favorited = Favorite.objects.filter(user=request.user, advertisement=ad).exists()
+    
+    # Получаем другие объявления того же пользователя (только активные для публичного просмотра)
+    if request.user.is_authenticated and ad.user == request.user:
+        # Владелец видит все свои объявления
+        other_ads = Advertisement.objects.filter(
+            user=ad.user
+        ).exclude(pk=ad.pk).exclude(slug='').exclude(slug__isnull=True).select_related('user')[:3]
+    else:
+        # Другие пользователи видят только активные объявления
+        other_ads = Advertisement.objects.filter(
+            user=ad.user, 
+            is_active=True
+        ).exclude(pk=ad.pk).exclude(slug='').exclude(slug__isnull=True).select_related('user')[:3]
+    
+    # Количество объявлений пользователя (для владельца - все, для других - только активные)
+    if request.user.is_authenticated and ad.user == request.user:
+        user_ads_count = Advertisement.objects.filter(user=ad.user).count()
+    else:
+        user_ads_count = Advertisement.objects.filter(user=ad.user, is_active=True).count()
+    
+    context = {
+        'ad': ad,
+        'user': request.user,
+        'is_favorited': is_favorited,
+        'other_ads': other_ads,
+        'user_ads_count': user_ads_count,
+    }
+    return render(request, 'uzmat/ad_detail.html', context)
+
+
+def onboarding(request):
+    """Страница выбора типа регистрации"""
+    if request.user.is_authenticated:
+        return redirect('uzmat:profile')
+    return render(request, 'uzmat/onboarding.html')
+
+
+def auth(request):
+    """Страница входа"""
+    if request.user.is_authenticated:
+        return redirect('uzmat:profile')
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        if action == 'login':
+            # Вход
+            email = request.POST.get('email', '').strip()
+            password = request.POST.get('password', '').strip()
+            
+            if not email or not password:
+                messages.error(request, 'Заполните все поля', extra_tags='auth')
+                return render(request, 'uzmat/auth.html')
+            
+            user = authenticate(request, username=email, password=password)
+            if user:
+                login(request, user)
+                messages.success(request, 'Вход выполнен успешно!', extra_tags='auth')
+                return redirect('uzmat:profile')
+            else:
+                messages.error(request, 'Неверный email или пароль', extra_tags='auth')
+                return render(request, 'uzmat/auth.html')
+    
+    return render(request, 'uzmat/auth.html')
+
+
+def register_individual(request):
+    """Регистрация физического лица"""
+    if request.user.is_authenticated:
+        return redirect('uzmat:profile')
+    
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        email = request.POST.get('email', '').strip()
+        password = request.POST.get('password', '').strip()
+        
+        if not name or not email or not password:
+            messages.error(request, 'Заполните все обязательные поля', extra_tags='auth')
+            return render(request, 'uzmat/auth.html', {'show_register': True})
+        
+        if User.objects.filter(email=email).exists():
+            messages.error(request, 'Пользователь с таким email уже существует', extra_tags='auth')
+            return render(request, 'uzmat/auth.html', {'show_register': True})
+        
+        # Создаем пользователя (но не логиним сразу)
+        user = User.objects.create_user(
+            username=email,
+            email=email,
+            password=password,
+            first_name=name,
+            account_type='individual'
+        )
+        
+        # Сохраняем email в сессии для проверки кода
+        request.session['registration_email'] = email
+        request.session['registration_user_id'] = user.id
+        
+        # Редиректим на страницу ввода кода
+        messages.info(request, 'Код подтверждения отправлен на вашу почту', extra_tags='auth')
+        return redirect('uzmat:auth_code')
+    
+    # Если GET запрос, показываем страницу регистрации
+    return render(request, 'uzmat/auth.html', {'show_register': True})
+
+
+def register_company(request):
+    """Регистрация компании"""
+    if request.user.is_authenticated:
+        return redirect('uzmat:profile')
+    
+    if request.method == 'POST':
+        company_name = request.POST.get('company_name', '').strip()
+        company_inn = request.POST.get('company_inn', '').strip()
+        company_director = request.POST.get('company_director', '').strip()
+        company_phone = request.POST.get('company_phone', '').strip()
+        company_email = request.POST.get('company_email', '').strip()
+        company_address = request.POST.get('company_address', '').strip()
+        company_legal_address = request.POST.get('company_legal_address', '').strip()
+        company_website = request.POST.get('company_website', '').strip()
+        email = request.POST.get('email', '').strip()
+        password = request.POST.get('password', '').strip()
+        
+        # Проверка обязательных полей
+        if not all([company_name, company_inn, company_director, company_phone, company_email, email, password]):
+            messages.error(request, 'Заполните все обязательные поля', extra_tags='auth')
+            return render(request, 'uzmat/register_company.html')
+        
+        if User.objects.filter(email=email).exists():
+            messages.error(request, 'Пользователь с таким email уже существует', extra_tags='auth')
+            return render(request, 'uzmat/register_company.html')
+        
+        # Создаем пользователя для компании
+        user = User.objects.create_user(
+            username=email,
+            email=email,
+            password=password,
+            first_name=company_director,
+            account_type='company',
+            company_name=company_name,
+            company_inn=company_inn,
+            company_director=company_director,
+            company_phone=company_phone,
+            company_email=company_email,
+            company_address=company_address if company_address else None,
+            company_legal_address=company_legal_address if company_legal_address else None,
+            company_website=company_website if company_website else None,
+        )
+        
+        # Сохраняем email в сессии для проверки кода
+        request.session['registration_email'] = email
+        request.session['registration_user_id'] = user.id
+        
+        # Редиректим на страницу ввода кода
+        messages.info(request, 'Код подтверждения отправлен на вашу почту', extra_tags='auth')
+        return redirect('uzmat:auth_code')
+    
+    return render(request, 'uzmat/register_company.html')
+
+
+def auth_code(request):
+    """Страница ввода кода подтверждения"""
+    # Если пользователь уже авторизован, редиректим в профиль
+    if request.user.is_authenticated:
+        return redirect('uzmat:profile')
+    
+    # Проверяем, есть ли email в сессии (пользователь пришел с регистрации)
+    registration_email = request.session.get('registration_email')
+    registration_user_id = request.session.get('registration_user_id')
+    
+    if not registration_email or not registration_user_id:
+        # Если нет данных о регистрации, редиректим на страницу входа
+        messages.warning(request, 'Сначала пройдите регистрацию', extra_tags='auth')
+        return redirect('uzmat:auth')
+    
+    if request.method == 'POST':
+        code = request.POST.get('code', '').strip()
+        
+        # Проверка кода - базовый код для входа: 1234
+        if code == '1234':
+            # Код принят, логиним пользователя
+            try:
+                user = User.objects.get(id=registration_user_id, email=registration_email)
+                login(request, user)
+                
+                # Очищаем сессию
+                del request.session['registration_email']
+                del request.session['registration_user_id']
+                
+                # Сообщение об успешной регистрации
+                messages.success(request, 'Регистрация успешно завершена! Добро пожаловать в Uzmat!', extra_tags='auth')
+                return redirect('uzmat:profile')
+            except User.DoesNotExist:
+                messages.error(request, 'Ошибка при подтверждении регистрации', extra_tags='auth')
+                return redirect('uzmat:auth')
+        else:
+            messages.error(request, 'Неверный код подтверждения. Используйте код: 1234', extra_tags='auth')
+    
+    return render(request, 'uzmat/auth_code.html', {'email': registration_email})
+
+
+@login_required(login_url='/onboarding/')
+def profile(request):
+    """Страница профиля пользователя"""
+    if request.method == 'POST':
+        # Обновление профиля
+        user = request.user
+        
+        # Обработка загрузки аватара
+        if 'avatar' in request.FILES:
+            user.avatar = request.FILES['avatar']
+        
+        user.first_name = request.POST.get('name', user.first_name)
+        user.city = request.POST.get('city', user.city)
+        user.phone = request.POST.get('phone', user.phone)
+        
+        # Если это компания, обновляем данные компании
+        if user.account_type == 'company':
+            user.company_name = request.POST.get('company_name', user.company_name)
+            user.company_inn = request.POST.get('company_inn', user.company_inn)
+            user.company_director = request.POST.get('company_director', user.company_director)
+            user.company_phone = request.POST.get('company_phone', user.company_phone)
+            user.company_email = request.POST.get('company_email', user.company_email)
+            user.company_address = request.POST.get('company_address', user.company_address)
+            user.company_legal_address = request.POST.get('company_legal_address', user.company_legal_address)
+            user.company_website = request.POST.get('company_website', user.company_website)
+        
+        user.save()
+        messages.success(request, 'Профиль обновлен!')
+        return redirect('uzmat:profile')
+    
+    # Получаем объявления пользователя (включая неактивные - они видны только в профиле)
+    user_ads = Advertisement.objects.filter(user=request.user).exclude(slug='').exclude(slug__isnull=True).select_related('user').order_by('-created_at')
+    
+    # Получаем избранные объявления
+    favorites = Favorite.objects.filter(user=request.user).select_related('advertisement', 'advertisement__user').order_by('-created_at')
+    
+    context = {
+        'user': request.user,
+        'user_ads': user_ads,
+        'favorites': favorites,
+        'now_dt': timezone.now(),
+    }
+    return render(request, 'uzmat/profile.html', context)
+
+
+def user_profile(request, user_id):
+    """Публичный профиль пользователя/компании"""
+    profile_user = get_object_or_404(User, id=user_id)
+    
+    # Получаем объявления пользователя
+    user_ads = Advertisement.objects.filter(
+        user=profile_user, 
+        is_active=True
+    ).exclude(slug='').exclude(slug__isnull=True).select_related('user').order_by('-created_at')
+    
+    # Количество объявлений
+    ads_count = user_ads.count()
+    
+    # Общее количество просмотров всех объявлений
+    total_views = Advertisement.objects.filter(user=profile_user, is_active=True).aggregate(
+        total=Sum('views_count')
+    )['total'] or 0
+    
+    context = {
+        'profile_user': profile_user,
+        'user': request.user,
+        'user_ads': user_ads,
+        'ads_count': ads_count,
+        'total_views': total_views,
+    }
+    return render(request, 'uzmat/user_profile.html', context)
+
+
+def chats(request):
+    """Страница с переписками пользователя (мессенджер)"""
+    if not request.user.is_authenticated:
+        return redirect('uzmat:onboarding')
+
+    me = request.user
+
+    # Превью напоминания о продлении (для визуальной проверки)
+    # Открой /chats/?preview_badge_renew=1
+    if (request.GET.get('preview_badge_renew') or '').strip() == '1':
+        try:
+            now = timezone.now()
+            # не спамим при обновлении страницы
+            if not request.session.get('preview_badge_renew_sent'):
+                support_agent = User.objects.filter(is_staff=True, is_active=True).order_by('id').first()
+                if support_agent and support_agent.id != me.id:
+                    support_thread = (ChatThread.objects
+                                      .filter(thread_type='support', advertisement__isnull=True, buyer=me, seller=support_agent)
+                                      .order_by('id')
+                                      .first())
+                    if not support_thread:
+                        support_thread = ChatThread.objects.create(
+                            thread_type='support',
+                            advertisement=None,
+                            buyer=me,
+                            seller=support_agent,
+                            last_message_at=now,
+                        )
+
+                    msg = ChatMessage(
+                        thread=support_thread,
+                        sender=support_agent,
+                        system_action='renew_badge',
+                        system_url=reverse('uzmat:verify_renew'),
+                    )
+                    msg.set_text('Превью: срок действия галочки скоро истекает. Продлите её, чтобы она не пропала.')
+                    msg.save()
+
+                    support_thread.last_message_at = msg.created_at
+                    support_thread.save(update_fields=['last_message_at'])
+                request.session['preview_badge_renew_sent'] = True
+        except Exception:
+            pass
+
+    # Напоминание о продлении галочки: срабатывает при заходе в /chats/
+    try:
+        if me.is_verified_active and me.verified_until:
+            remind_days = 7
+            now = timezone.now()
+            if me.verified_until <= now + timezone.timedelta(days=remind_days):
+                if not me.badge_expiry_notified_until or me.badge_expiry_notified_until != me.verified_until:
+                    support_agent = User.objects.filter(is_staff=True, is_active=True).order_by('id').first()
+                    if support_agent:
+                        support_thread = (ChatThread.objects
+                                          .filter(thread_type='support', advertisement__isnull=True, buyer=me, seller=support_agent)
+                                          .order_by('id')
+                                          .first())
+                        if not support_thread:
+                            support_thread = ChatThread.objects.create(
+                                thread_type='support',
+                                advertisement=None,
+                                buyer=me,
+                                seller=support_agent,
+                                last_message_at=now,
+                            )
+
+                        txt = f"Срок действия галочки истекает {me.verified_until.strftime('%d.%m.%Y')}. Продлите её, чтобы она не пропала."
+                        msg = ChatMessage(thread=support_thread, sender=support_agent, system_action='renew_badge', system_url=reverse('uzmat:verify_renew'))
+                        msg.set_text(txt)
+                        msg.save()
+
+                        support_thread.last_message_at = msg.created_at
+                        support_thread.save(update_fields=['last_message_at'])
+
+                        me.badge_expiry_notified_until = me.verified_until
+                        me.save(update_fields=['badge_expiry_notified_until'])
+    except Exception:
+        # Не ломаем /chats/ из-за напоминаний
+        pass
+    threads_qs = (ChatThread.objects
+               .filter(Q(buyer=me) | Q(seller=me))
+               .select_related('advertisement', 'buyer', 'seller')
+               .order_by('-last_message_at', '-created_at'))
+    threads = list(threads_qs[:200])
+
+
+    active_thread = None
+    active_messages = []
+
+    t_id = request.GET.get('t')
+    if t_id:
+        try:
+            tid_int = int(t_id)
+            active_thread = next((t for t in threads if t.id == tid_int), None)
+        except (ValueError, TypeError):
+            active_thread = None
+
+    if not active_thread and threads:
+        active_thread = threads[0]
+
+    if active_thread:
+        active_messages = (ChatMessage.objects
+                           .filter(thread=active_thread)
+                           .select_related('sender')
+                           .prefetch_related('images')
+                           .order_by('-created_at')[:60])
+        active_messages = list(reversed(active_messages))
+        
+        # Помечаем тред как прочитанный при открытии
+        now = timezone.now()
+        if me.id == active_thread.buyer_id:
+            active_thread.buyer_last_read_at = now
+            active_thread.save(update_fields=['buyer_last_read_at'])
+        elif me.id == active_thread.seller_id:
+            active_thread.seller_last_read_at = now
+            active_thread.save(update_fields=['seller_last_read_at'])
+
+    # Подсчитываем непрочитанные сообщения для каждого треда
+    unread_counts = {}
+    for thread in threads:
+        last_read = thread.buyer_last_read_at if me.id == thread.buyer_id else thread.seller_last_read_at
+        if last_read and thread.last_message_at and thread.last_message_at > last_read:
+            unread = ChatMessage.objects.filter(
+                thread=thread,
+                created_at__gt=last_read
+            ).exclude(sender=me).count()
+            if unread > 0:
+                unread_counts[thread.id] = unread
+        elif not last_read and thread.last_message_at:
+            # Если никогда не читал, считаем все сообщения не от себя
+            unread = ChatMessage.objects.filter(
+                thread=thread
+            ).exclude(sender=me).count()
+            if unread > 0:
+                unread_counts[thread.id] = unread
+
+    context = {
+        'user': me,
+        'threads': threads,
+        'active_thread': active_thread,
+        'messages': active_messages,
+        'unread_counts': unread_counts,
+        'total_unread': sum(unread_counts.values()),
+    }
+    return render(request, 'uzmat/chats.html', context)
+
+
+@login_required
+def chat_start(request, ad_id: int):
+    """Старт диалога по объявлению (создать/открыть)"""
+    ad = get_object_or_404(Advertisement, id=ad_id)
+    if ad.user_id == request.user.id:
+        messages.error(request, 'Нельзя написать сообщение самому себе.')
+        return redirect('uzmat:ad_detail', slug=ad.slug)
+
+    seller = ad.user
+    buyer = request.user
+
+    thread, _ = ChatThread.objects.get_or_create(
+        thread_type='ad',
+        advertisement=ad,
+        buyer=buyer,
+        seller=seller,
+        defaults={'last_message_at': timezone.now()},
+    )
+    return redirect(f"{reverse('uzmat:chats')}?t={thread.id}")
+
+
+@login_required
+def chat_send(request, thread_id: int):
+    """Отправка сообщения/фото (AJAX)"""
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Метод не поддерживается'}, status=405)
+
+    me = request.user
+    thread = get_object_or_404(ChatThread.objects.select_related('advertisement', 'buyer', 'seller'), id=thread_id)
+    if me.id not in (thread.buyer_id, thread.seller_id):
+        return JsonResponse({'ok': False, 'error': 'Нет доступа'}, status=403)
+
+    text = (request.POST.get('text') or '').strip()
+    image = request.FILES.get('image')
+
+    if not text and not image:
+        return JsonResponse({'ok': False, 'error': 'Введите текст или прикрепите фото'}, status=400)
+
+    MAX_IMAGE_BYTES = 2 * 1024 * 1024  # 2 МБ
+
+    if image:
+        content_type = getattr(image, 'content_type', '') or ''
+        if not content_type.startswith('image/'):
+            return JsonResponse({'ok': False, 'error': 'Можно прикреплять только изображения'}, status=400)
+        if image.size and image.size > MAX_IMAGE_BYTES:
+            return JsonResponse({'ok': False, 'error': 'Размер фото слишком большой (макс. 2 МБ)'}, status=400)
+
+    with transaction.atomic():
+        msg = ChatMessage(thread=thread, sender=me)
+        msg.set_text(text)
+        msg.save()
+
+        if image:
+            ChatImage.objects.create(message=msg, image=image)
+
+        thread.last_message_at = timezone.now()
+        thread.save(update_fields=['last_message_at'])
+
+    return JsonResponse({
+        'ok': True,
+        'message': {
+            'id': msg.id,
+            'sender_id': msg.sender_id,
+            'text': msg.text,
+            'created_at': msg.created_at.strftime('%H:%M'),
+            'images': [img.image.url for img in msg.images.all()],
+            'system_action': msg.system_action,
+            'system_url': msg.system_url,
+        }
+    })
+
+
+@login_required
+def chat_poll(request, thread_id: int):
+    """Получение новых сообщений (AJAX polling)"""
+    me = request.user
+    thread = get_object_or_404(ChatThread, id=thread_id)
+    if me.id not in (thread.buyer_id, thread.seller_id):
+        return JsonResponse({'ok': False, 'error': 'Нет доступа'}, status=403)
+
+    after_id = request.GET.get('after_id')
+    try:
+        after_id = int(after_id) if after_id else 0
+    except (ValueError, TypeError):
+        after_id = 0
+
+    qs = (ChatMessage.objects
+          .filter(thread=thread, id__gt=after_id)
+          .select_related('sender')
+          .prefetch_related('images')
+          .order_by('id')[:100])
+
+    data = []
+    for m in qs:
+        data.append({
+            'id': m.id,
+            'sender_id': m.sender_id,
+            'text': m.text,
+            'created_at': m.created_at.strftime('%H:%M'),
+            'images': [img.image.url for img in m.images.all()],
+            'system_action': m.system_action,
+            'system_url': m.system_url,
+        })
+
+    return JsonResponse({'ok': True, 'messages': data})
+
+
+@login_required
+def chat_message_edit(request, message_id: int):
+    """Редактирование сообщения (только автор)"""
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Метод не поддерживается'}, status=405)
+
+    me = request.user
+    msg = get_object_or_404(ChatMessage.objects.select_related('thread'), id=message_id)
+    thread = msg.thread
+    if me.id not in (thread.buyer_id, thread.seller_id):
+        return JsonResponse({'ok': False, 'error': 'Нет доступа'}, status=403)
+    if msg.sender_id != me.id:
+        return JsonResponse({'ok': False, 'error': 'Можно редактировать только свои сообщения'}, status=403)
+
+    text = (request.POST.get('text') or '').strip()
+    if not text:
+        return JsonResponse({'ok': False, 'error': 'Текст не может быть пустым'}, status=400)
+
+    msg.set_text(text)
+    msg.save(update_fields=['encrypted_text'])
+    return JsonResponse({'ok': True, 'message': {'id': msg.id, 'text': msg.text}})
+
+
+@login_required
+def chat_message_delete(request, message_id: int):
+    """Удаление сообщения (только автор)"""
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Метод не поддерживается'}, status=405)
+
+    me = request.user
+    msg = get_object_or_404(ChatMessage.objects.select_related('thread'), id=message_id)
+    thread = msg.thread
+    if me.id not in (thread.buyer_id, thread.seller_id):
+        return JsonResponse({'ok': False, 'error': 'Нет доступа'}, status=403)
+    if msg.sender_id != me.id:
+        return JsonResponse({'ok': False, 'error': 'Можно удалять только свои сообщения'}, status=403)
+
+    thread_id = thread.id
+    msg.delete()
+
+    # Обновим last_message_at после удаления (если надо)
+    last = ChatMessage.objects.filter(thread_id=thread_id).order_by('-created_at').first()
+    if last:
+        ChatThread.objects.filter(id=thread_id).update(last_message_at=last.created_at)
+    else:
+        ChatThread.objects.filter(id=thread_id).update(last_message_at=None)
+
+    return JsonResponse({'ok': True, 'deleted_id': message_id})
+
+
+def settings(request):
+    """Страница настроек аккаунта"""
+    return render(request, 'uzmat/settings.html', {'user': request.user})
+
+
+@login_required
+def verify_renew(request):
+    """Страница продления галочки (пока заглушка, контент уточнит пользователь)"""
+    return render(request, 'uzmat/verify_renew.html', {'user': request.user})
+
+
+@login_required
+def logout_user(request):
+    """Выход из аккаунта"""
+    logout(request)
+    messages.success(request, 'Вы успешно вышли из аккаунта', extra_tags='auth')
+    return redirect('uzmat:index')
+
+
+def get_filtered_ads(request, limit=None, ad_type_filter=None):
+    """Вспомогательная функция для фильтрации объявлений"""
+    ads = Advertisement.objects.filter(is_active=True).exclude(slug='').exclude(slug__isnull=True).select_related('user')
+    
+    # Фильтр по пользователю (для просмотра объявлений конкретного пользователя)
+    user_id = request.GET.get('user')
+    if user_id:
+        try:
+            ads = ads.filter(user_id=int(user_id))
+        except (ValueError, TypeError):
+            pass
+    
+    # Фильтр по типу объявления (если передан явно, используем его, иначе из GET)
+    if ad_type_filter:
+        ads = ads.filter(ad_type=ad_type_filter)
+    else:
+        ad_type = request.GET.get('ad_type')
+        if ad_type:
+            ads = ads.filter(ad_type=ad_type)
+    
+    # Фильтр по стране - ПРИОРИТЕТНЫЙ
+    country = request.GET.get('country')
+    if country:
+        country = country.strip()
+        if country and country != 'all' and country != '':
+            # Отладочная информация
+            print(f"DEBUG: Фильтрация по стране: '{country}'")
+            ads = ads.filter(country=country)
+            print(f"DEBUG: Количество объявлений после фильтрации по стране: {ads.count()}")
+            
+            # Фильтр по городу - ТОЛЬКО если выбрана страна И выбран город
+            city = request.GET.get('city')
+            if city and city != 'all' and city.strip():
+                city = city.strip()
+                print(f"DEBUG: Дополнительная фильтрация по городу: '{city}'")
+                ads = ads.filter(city__icontains=city)
+                print(f"DEBUG: Количество объявлений после фильтрации по стране и городу: {ads.count()}")
+    else:
+        # Если страна НЕ выбрана, можно фильтровать только по городу
+        city = request.GET.get('city')
+        if city and city != 'all' and city.strip():
+            city = city.strip()
+            print(f"DEBUG: Фильтрация только по городу (страна не выбрана): '{city}'")
+            ads = ads.filter(city__icontains=city)
+            print(f"DEBUG: Количество объявлений после фильтрации по городу: {ads.count()}")
+    
+    # Фильтр по типу техники
+    equipment_type = request.GET.get('equipment_type')
+    if equipment_type:
+        ads = ads.filter(Q(equipment_type__icontains=equipment_type) | Q(part_equipment_type__icontains=equipment_type))
+    
+    # Фильтр по марке
+    brand = request.GET.get('brand')
+    if brand:
+        ads = ads.filter(Q(brand__icontains=brand) | Q(part_brand__icontains=brand))
+    
+    # Фильтр по цене
+    price_from = request.GET.get('price_from')
+    price_to = request.GET.get('price_to')
+    if price_from:
+        try:
+            ads = ads.filter(price__gte=Decimal(price_from))
+        except (ValueError, TypeError):
+            pass
+    if price_to:
+        try:
+            ads = ads.filter(price__lte=Decimal(price_to))
+        except (ValueError, TypeError):
+            pass
+    
+    # Поиск по тексту
+    search = request.GET.get('search')
+    if search:
+        ads = ads.filter(
+            Q(title__icontains=search) |
+            Q(description__icontains=search) |
+            Q(equipment_type__icontains=search) |
+            Q(brand__icontains=search) |
+            Q(part_name__icontains=search) |
+            Q(service_name__icontains=search)
+        )
+    
+    # Если нужен лимит, применяем его, но возвращаем QuerySet для пагинации
+    if limit:
+        return ads[:limit]
+    
+    return ads
+
+
+def parts_repair(request):
+    """Страница с запчастями"""
+    # Всегда показываем только запчасти
+    ad_type = 'parts'
+    
+    # Получаем объявления с применением всех фильтров
+    ads = get_filtered_ads(request, ad_type_filter=ad_type)
+    
+    # Сохраняем общее количество до пагинации
+    total_count = ads.count()
+    
+    # Пагинация
+    paginator = Paginator(ads, 12)
+    page_number = request.GET.get('page', 1)
+    try:
+        page_obj = paginator.get_page(page_number)
+    except:
+        page_obj = paginator.get_page(1)
+    
+    # Получаем уникальные города для фильтра
+    country = request.GET.get('country')
+    if country and country != 'all' and country.strip():
+        cities = Advertisement.objects.filter(
+            is_active=True,
+            country=country.strip(),
+            ad_type='parts'
+        ).values_list('city', flat=True).distinct().order_by('city')
+    else:
+        cities = Advertisement.objects.filter(
+            is_active=True,
+            ad_type='parts'
+        ).values_list('city', flat=True).distinct().order_by('city')
+    
+    context = {
+        'user': request.user,
+        'ads': page_obj,
+        'page_obj': page_obj,
+        'cities': cities,
+        'total_count': total_count,
+    }
+    return render(request, 'uzmat/parts_repair.html', context)
+
+
+def check_auth(request):
+    """Проверка авторизации пользователя (для AJAX)"""
+    return JsonResponse({
+        'authenticated': request.user.is_authenticated,
+        'username': request.user.first_name or request.user.username if request.user.is_authenticated else None
+    })
+
+
+def help_page(request):
+    """Страница помощи"""
+    return render(request, 'uzmat/help.html', {'user': request.user})
+
+
+def rules_page(request):
+    """Страница правил"""
+    return render(request, 'uzmat/rules.html', {'user': request.user})
+
+
+def safety_page(request):
+    """Страница безопасности"""
+    return render(request, 'uzmat/safety.html', {'user': request.user})
+
+
+def catalog(request):
+    """Страница каталога всех объявлений (только продажа и аренда, без услуг и запчастей)"""
+    # Отладочная информация
+    country_param = request.GET.get('country')
+    city_param = request.GET.get('city')
+    ad_type_param = request.GET.get('ad_type')
+    print(f"DEBUG catalog view: country={country_param}, city={city_param}, ad_type={ad_type_param}")
+    print(f"DEBUG catalog view: все GET параметры: {dict(request.GET)}")
+    
+    # Определяем, какие типы объявлений показывать
+    if not ad_type_param:
+        # Если ad_type не указан - показываем ВСЕ объявления по продаже И аренде вместе
+        ads = get_filtered_ads(request)
+        ads = ads.filter(ad_type__in=['sale', 'rent'])
+    elif ad_type_param in ['sale', 'rent']:
+        # Если указан конкретный тип (sale или rent) - показываем только его
+        ads = get_filtered_ads(request, ad_type_filter=ad_type_param)
+    else:
+        # Если указан другой тип (service, parts) - не показываем (или можно показать пустой список)
+        ads = get_filtered_ads(request)
+        ads = ads.none()  # Пустой QuerySet
+    
+    # Сохраняем общее количество до пагинации
+    total_count = ads.count()
+    
+    # Пагинация
+    paginator = Paginator(ads, 12)
+    page_number = request.GET.get('page', 1)
+    try:
+        page_obj = paginator.get_page(page_number)
+    except:
+        page_obj = paginator.get_page(1)
+    
+    # Получаем уникальные города для фильтра
+    # Учитываем только объявления о продаже и аренде (без услуг и запчастей)
+    country = request.GET.get('country')
+    if country and country != 'all' and country.strip():
+        cities_query = Advertisement.objects.filter(
+            is_active=True, 
+            country=country.strip(),
+            ad_type__in=['sale', 'rent']
+        )
+    else:
+        cities_query = Advertisement.objects.filter(
+            is_active=True,
+            ad_type__in=['sale', 'rent']
+        )
+    
+    # Если указан конкретный ad_type, фильтруем города по нему
+    if ad_type_param in ['sale', 'rent']:
+        cities_query = cities_query.filter(ad_type=ad_type_param)
+    
+    cities = cities_query.values_list('city', flat=True).distinct().order_by('city')
+    
+    context = {
+        'user': request.user,
+        'ads': page_obj,
+        'page_obj': page_obj,
+        'cities': cities,
+        'total_count': total_count,
+    }
+    return render(request, 'uzmat/catalog.html', context)
+
+
+@login_required
+def create_ad(request):
+    """Страница создания объявления"""
+    if request.method == 'POST':
+        try:
+            # Получаем данные формы
+            ad_type = request.POST.get('ad_type')
+            
+            # Получаем заголовок и описание в зависимости от типа
+            if ad_type == 'parts':
+                title = request.POST.get('part_title') or request.POST.get('part_name', '')
+                description = request.POST.get('part_description', '')
+            elif ad_type == 'service':
+                title = request.POST.get('service_name', '')
+                description = request.POST.get('service_description', '')
+            else:
+                title = request.POST.get('title', '')
+                description = request.POST.get('description', '')
+            
+            country = request.POST.get('country', 'kz').strip()
+            city = request.POST.get('city', '').strip()
+            phone = request.POST.get('phone', '').strip() or (request.user.phone if hasattr(request.user, 'phone') else '')
+            
+            # Валидация обязательных полей
+            errors = []
+            if not ad_type:
+                errors.append('Выберите тип объявления')
+            if not title or not title.strip():
+                errors.append('Укажите заголовок объявления')
+            if not description or not description.strip():
+                errors.append('Укажите описание')
+            if not country:
+                errors.append('Выберите страну')
+            if not city:
+                errors.append('Выберите город')
+            if not phone:
+                errors.append('Укажите телефон')
+            
+            # Дополнительная валидация в зависимости от типа
+            if ad_type in ('rent', 'sale'):
+                if not request.POST.get('equipment_type'):
+                    errors.append('Укажите тип техники')
+                if not request.POST.get('brand'):
+                    errors.append('Укажите марку')
+            
+            if errors:
+                for error in errors:
+                    messages.error(request, error)
+                context = {'user': request.user}
+                return render(request, 'uzmat/create_ad.html', context)
+            
+            # Создаем объявление
+            ad = Advertisement(
+                user=request.user,
+                ad_type=ad_type,
+                title=title.strip(),
+                description=description.strip(),
+                country=country,
+                city=city,
+                phone=phone,
+                is_active=True,  # Явно устанавливаем is_active=True
+            )
+            
+            # Заполняем поля в зависимости от типа
+            if ad_type in ('rent', 'sale'):
+                ad.equipment_type = request.POST.get('equipment_type', '').strip() or None
+                ad.brand = request.POST.get('brand', '').strip() or None
+                ad.model = request.POST.get('model', '').strip() or None
+                
+                year = request.POST.get('year', '').strip()
+                if year:
+                    try:
+                        ad.year = int(year)
+                    except (ValueError, TypeError):
+                        pass
+                
+                power = request.POST.get('power', '').strip()
+                if power:
+                    try:
+                        ad.power = int(power)
+                    except (ValueError, TypeError):
+                        pass
+                
+                weight = request.POST.get('weight', '').strip()
+                if weight:
+                    try:
+                        # Заменяем запятую на точку и убираем пробелы
+                        weight_clean = weight.replace(',', '.').replace(' ', '')
+                        if weight_clean:
+                            ad.weight = Decimal(weight_clean)
+                        else:
+                            ad.weight = None
+                    except (ValueError, TypeError, InvalidOperation):
+                        ad.weight = None
+                else:
+                    ad.weight = None
+                
+                ad.condition = request.POST.get('condition', '').strip() or None
+                
+                hours = request.POST.get('hours', '').strip()
+                if hours:
+                    try:
+                        ad.hours = int(hours)
+                    except (ValueError, TypeError):
+                        pass
+                
+                if ad_type == 'rent':
+                    ad.with_operator = request.POST.get('with_operator') == 'on'
+                    ad.min_order = request.POST.get('min_order', '').strip() or None
+            
+            elif ad_type == 'service':
+                ad.service_name = request.POST.get('service_name', '').strip() or None
+            
+            elif ad_type == 'parts':
+                ad.part_name = request.POST.get('part_name', '').strip() or None
+                ad.part_equipment_type = request.POST.get('part_equipment_type', '').strip() or None
+                ad.part_brand = request.POST.get('part_brand', '').strip() or None
+                ad.part_model = request.POST.get('part_model', '').strip() or None
+            
+            # Цена
+            price = request.POST.get('price', '').strip()
+            if price:
+                try:
+                    # Заменяем запятую на точку и убираем пробелы
+                    price_clean = price.replace(',', '.').replace(' ', '').replace('\xa0', '')
+                    if price_clean:
+                        ad.price = Decimal(price_clean)
+                    else:
+                        ad.price = None
+                except (ValueError, TypeError, InvalidOperation):
+                    ad.price = None
+            else:
+                ad.price = None
+            
+            ad.currency = request.POST.get('currency', 'kzt')
+            ad.price_type = request.POST.get('price_type', '').strip() or None
+            
+            # Создаем slug вручную, если его нет
+            if not ad.slug or ad.slug.strip() == '':
+                ad.slug = slugify(ad.title)
+                if not ad.slug or ad.slug.strip() == '':
+                    # Если slug все еще пустой (например, title содержит только спецсимволы)
+                    ad.slug = slugify(f"ad-{ad.ad_type}-{ad.pk or 'new'}")
+            
+            # Убеждаемся, что slug уникален
+            original_slug = ad.slug
+            counter = 1
+            while Advertisement.objects.filter(slug=ad.slug).exclude(pk=ad.pk).exists():
+                ad.slug = f"{original_slug}-{counter}"
+                counter += 1
+            
+            # Сохраняем объявление сначала, чтобы получить ID
+            try:
+                ad.save()
+                # Проверяем, что объявление действительно сохранилось
+                if ad.pk:
+                    # Обновляем slug после сохранения, если он все еще пустой
+                    if not ad.slug or ad.slug.strip() == '':
+                        ad.slug = slugify(ad.title)
+                        if not ad.slug:
+                            ad.slug = f"ad-{ad.pk}"
+                        # Проверяем уникальность
+                        original_slug = ad.slug
+                        counter = 1
+                        while Advertisement.objects.filter(slug=ad.slug).exclude(pk=ad.pk).exists():
+                            ad.slug = f"{original_slug}-{counter}"
+                            counter += 1
+                        ad.save(update_fields=['slug'])
+                    
+                    # Обработка загрузки фотографий (до 10 фотографий)
+                    photos = request.FILES.getlist('photos')
+                    if photos:
+                        if len(photos) > 10:
+                            messages.warning(request, 'Загружено больше 10 фотографий. Сохранены первые 10.')
+                        
+                        for index, photo in enumerate(photos[:10]):  # Ограничиваем до 10
+                            AdvertisementImage.objects.create(
+                                advertisement=ad,
+                                image=photo,
+                                is_main=(index == 0),  # Первая фотография - главная
+                                order=index
+                            )
+                    
+                    messages.success(request, f'Объявление "{ad.title}" успешно создано!')
+                    return redirect('uzmat:ad_detail', slug=ad.slug)
+                else:
+                    messages.error(request, 'Ошибка: объявление не было сохранено в базу данных')
+                    context = {'user': request.user}
+                    return render(request, 'uzmat/create_ad.html', context)
+            except Exception as save_error:
+                import traceback
+                error_detail = traceback.format_exc()
+                messages.error(request, f'Ошибка при сохранении объявления: {str(save_error)}')
+                if django_settings.DEBUG:
+                    messages.error(request, f'Детали ошибки: {error_detail}')
+                context = {'user': request.user}
+                return render(request, 'uzmat/create_ad.html', context)
+        
+        except Exception as e:
+            import traceback
+            error_detail = traceback.format_exc()
+            messages.error(request, f'Ошибка при создании объявления: {str(e)}')
+            # В режиме отладки выводим детали ошибки
+            if django_settings.DEBUG:
+                messages.error(request, f'Детали: {error_detail[:500]}')
+            context = {'user': request.user}
+            return render(request, 'uzmat/create_ad.html', context)
+    
+    context = {
+        'user': request.user,
+    }
+    return render(request, 'uzmat/create_ad.html', context)
+
+
+@login_required
+def edit_ad(request, slug):
+    """Редактирование объявления"""
+    ad = get_object_or_404(Advertisement, slug=slug)
+    
+    # Проверяем, что пользователь является владельцем объявления
+    if ad.user != request.user:
+        messages.error(request, 'У вас нет прав на редактирование этого объявления')
+        return redirect('uzmat:ad_detail', slug=slug)
+    
+    if request.method == 'POST':
+        try:
+            # Получаем данные формы
+            ad_type = request.POST.get('ad_type', ad.ad_type)
+            
+            # Получаем заголовок и описание в зависимости от типа
+            if ad_type == 'parts':
+                title = request.POST.get('part_title') or request.POST.get('part_name', '')
+                description = request.POST.get('part_description', '')
+            elif ad_type == 'service':
+                title = request.POST.get('service_name', '')
+                description = request.POST.get('service_description', '')
+            else:
+                title = request.POST.get('title', '')
+                description = request.POST.get('description', '')
+            
+            country = request.POST.get('country', 'kz').strip()
+            city = request.POST.get('city', '').strip()
+            phone = request.POST.get('phone', '').strip() or (request.user.phone if hasattr(request.user, 'phone') else '')
+            
+            # Валидация обязательных полей
+            errors = []
+            if not ad_type:
+                errors.append('Выберите тип объявления')
+            if not title or not title.strip():
+                errors.append('Укажите заголовок объявления')
+            if not description or not description.strip():
+                errors.append('Укажите описание')
+            if not country:
+                errors.append('Выберите страну')
+            if not city:
+                errors.append('Выберите город')
+            if not phone:
+                errors.append('Укажите телефон')
+            
+            # Дополнительная валидация в зависимости от типа
+            if ad_type in ('rent', 'sale'):
+                if not request.POST.get('equipment_type'):
+                    errors.append('Укажите тип техники')
+                if not request.POST.get('brand'):
+                    errors.append('Укажите марку')
+            
+            if errors:
+                for error in errors:
+                    messages.error(request, error)
+                context = {'user': request.user, 'ad': ad, 'edit_mode': True}
+                return render(request, 'uzmat/create_ad.html', context)
+            
+            # Обновляем объявление
+            ad.ad_type = ad_type
+            ad.title = title.strip()
+            ad.description = description.strip()
+            ad.country = country
+            ad.city = city
+            ad.phone = phone
+            
+            # Заполняем поля в зависимости от типа
+            if ad_type in ('rent', 'sale'):
+                ad.equipment_type = request.POST.get('equipment_type', '').strip() or None
+                ad.brand = request.POST.get('brand', '').strip() or None
+                ad.model = request.POST.get('model', '').strip() or None
+                
+                year = request.POST.get('year', '').strip()
+                if year:
+                    try:
+                        ad.year = int(year)
+                    except (ValueError, TypeError):
+                        ad.year = None
+                else:
+                    ad.year = None
+                
+                power = request.POST.get('power', '').strip()
+                if power:
+                    try:
+                        ad.power = int(power)
+                    except (ValueError, TypeError):
+                        ad.power = None
+                else:
+                    ad.power = None
+                
+                weight = request.POST.get('weight', '').strip()
+                if weight:
+                    try:
+                        weight_clean = weight.replace(',', '.').replace(' ', '')
+                        if weight_clean:
+                            ad.weight = Decimal(weight_clean)
+                        else:
+                            ad.weight = None
+                    except (ValueError, TypeError, InvalidOperation):
+                        ad.weight = None
+                else:
+                    ad.weight = None
+                
+                ad.condition = request.POST.get('condition', '').strip() or None
+                
+                hours = request.POST.get('hours', '').strip()
+                if hours:
+                    try:
+                        ad.hours = int(hours)
+                    except (ValueError, TypeError):
+                        ad.hours = None
+                else:
+                    ad.hours = None
+                
+                if ad_type == 'rent':
+                    ad.with_operator = request.POST.get('with_operator') == 'on'
+                    ad.min_order = request.POST.get('min_order', '').strip() or None
+                else:
+                    ad.with_operator = False
+                    ad.min_order = None
+            
+            elif ad_type == 'service':
+                ad.service_name = request.POST.get('service_name', '').strip() or None
+                # Очищаем поля техники
+                ad.equipment_type = None
+                ad.brand = None
+                ad.model = None
+                ad.year = None
+                ad.power = None
+                ad.weight = None
+                ad.condition = None
+                ad.hours = None
+                ad.with_operator = False
+                ad.min_order = None
+            
+            elif ad_type == 'parts':
+                ad.part_name = request.POST.get('part_name', '').strip() or None
+                ad.part_equipment_type = request.POST.get('part_equipment_type', '').strip() or None
+                ad.part_brand = request.POST.get('part_brand', '').strip() or None
+                ad.part_model = request.POST.get('part_model', '').strip() or None
+                # Очищаем поля техники
+                ad.equipment_type = None
+                ad.brand = None
+                ad.model = None
+                ad.year = None
+                ad.power = None
+                ad.weight = None
+                ad.condition = None
+                ad.hours = None
+                ad.with_operator = False
+                ad.min_order = None
+            
+            # Цена
+            price = request.POST.get('price', '').strip()
+            if price:
+                try:
+                    price_clean = price.replace(',', '.').replace(' ', '').replace('\xa0', '')
+                    if price_clean:
+                        ad.price = Decimal(price_clean)
+                    else:
+                        ad.price = None
+                except (ValueError, TypeError, InvalidOperation):
+                    ad.price = None
+            else:
+                ad.price = None
+            
+            ad.currency = request.POST.get('currency', 'kzt')
+            ad.price_type = request.POST.get('price_type', '').strip() or None
+            
+            # Обновляем slug, если изменился заголовок
+            new_slug = slugify(ad.title)
+            if new_slug and new_slug != ad.slug:
+                original_slug = new_slug
+                counter = 1
+                while Advertisement.objects.filter(slug=new_slug).exclude(pk=ad.pk).exists():
+                    new_slug = f"{original_slug}-{counter}"
+                    counter += 1
+                ad.slug = new_slug
+            
+            # Обработка изображений
+            # Основное изображение (если загружено)
+            if 'image' in request.FILES:
+                ad.image = request.FILES['image']
+            
+            # Дополнительные изображения (multiple files)
+            photos = request.FILES.getlist('photos')
+            if photos:
+                # Ограничиваем до 10 фотографий
+                if len(photos) > 10:
+                    messages.warning(request, 'Загружено больше 10 фотографий. Сохранены первые 10.')
+                
+                # Получаем текущее количество изображений
+                current_images_count = ad.images.count()
+                max_images = 10 - current_images_count
+                
+                if max_images > 0:
+                    for index, photo in enumerate(photos[:max_images]):
+                        AdvertisementImage.objects.create(
+                            advertisement=ad,
+                            image=photo,
+                            is_main=False,
+                            order=current_images_count + index
+                        )
+                else:
+                    messages.warning(request, 'Достигнут лимит в 10 фотографий. Удалите старые фотографии, чтобы добавить новые.')
+            
+            ad.save()
+            messages.success(request, 'Объявление успешно обновлено!')
+            return redirect('uzmat:ad_detail', slug=ad.slug)
+        
+        except Exception as e:
+            import traceback
+            error_detail = traceback.format_exc()
+            messages.error(request, f'Ошибка при обновлении объявления: {str(e)}')
+            if django_settings.DEBUG:
+                messages.error(request, f'Детали: {error_detail[:500]}')
+            context = {'user': request.user, 'ad': ad, 'edit_mode': True}
+            return render(request, 'uzmat/create_ad.html', context)
+    
+    # GET запрос - показываем форму редактирования
+    context = {
+        'user': request.user,
+        'ad': ad,
+        'edit_mode': True,
+    }
+    return render(request, 'uzmat/create_ad.html', context)
+
+
+@login_required
+def delete_ad(request, slug):
+    """Удаление объявления"""
+    ad = get_object_or_404(Advertisement, slug=slug)
+    
+    # Проверяем, что пользователь является владельцем объявления
+    if ad.user != request.user:
+        messages.error(request, 'У вас нет прав на удаление этого объявления')
+        return redirect('uzmat:ad_detail', slug=slug)
+    
+    if request.method == 'POST':
+        ad.delete()
+        messages.success(request, 'Объявление успешно удалено')
+        return redirect('uzmat:profile')
+    
+    # GET запрос - показываем страницу подтверждения
+    return render(request, 'uzmat/delete_ad_confirm.html', {'ad': ad})
+
+
+@login_required
+def toggle_ad_status(request, slug):
+    """Переключение статуса объявления (активно/неактивно)"""
+    ad = get_object_or_404(Advertisement, slug=slug)
+    
+    # Проверяем, что пользователь является владельцем объявления
+    if ad.user != request.user:
+        messages.error(request, 'У вас нет прав на изменение статуса этого объявления')
+        return redirect('uzmat:ad_detail', slug=slug)
+    
+    ad.is_active = not ad.is_active
+    ad.save()
+    
+    status_text = 'активировано' if ad.is_active else 'деактивировано'
+    
+    # Если это AJAX-запрос, возвращаем JSON без перезагрузки страницы
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({
+            'is_active': ad.is_active,
+            'status_text': status_text,
+            'button_label': 'Неактивно' if ad.is_active else 'Активировать'
+        })
+    
+    messages.success(request, f'Объявление успешно {status_text}')
+    # Редиректим на страницу объявления (владелец всегда может просмотреть свое объявление)
+    return redirect('uzmat:ad_detail', slug=slug)
+
+
+@login_required
+def promote_ad(request, slug):
+    """Продвигает объявление владельца и отправляет его в горячие предложения"""
+    ad = get_object_or_404(Advertisement, slug=slug)
+    
+    if ad.user != request.user:
+        messages.error(request, 'Можно продвигать только свои объявления')
+        return redirect('uzmat:ad_detail', slug=slug)
+    
+    if request.method == 'POST':
+        plan = request.POST.get('plan')
+        durations = {
+            'gold': 3,
+            'premium': 14,
+            'vip': 30,
+        }
+        days = durations.get(plan)
+        if not days:
+            messages.error(request, 'Неизвестный тариф продвижения')
+            return redirect('uzmat:promote_info', slug=slug)
+        
+        now = timezone.now()
+        ad.is_promoted = True
+        ad.promoted_at = now
+        ad.promotion_until = now + timezone.timedelta(days=days)
+        ad.promotion_plan = plan
+        ad.save(update_fields=['is_promoted', 'promoted_at', 'promotion_until', 'promotion_plan'])
+        messages.success(request, f'Тариф "{plan.upper()}" оформлен. Объявление в горячих предложениях до {ad.promotion_until.strftime("%d.%m.%Y")}')
+        return redirect('uzmat:profile')
+    
+    return redirect('uzmat:promote_info', slug=slug)
+
+
+@login_required
+def promote_info(request, slug):
+    """Страница выбора тарифа продвижения"""
+    ad = get_object_or_404(Advertisement, slug=slug, user=request.user)
+    return render(request, 'uzmat/promote_info.html', {'ad': ad, 'user': request.user})
+
+
+@login_required
+def verify_info(request):
+    """Информационная страница верификации (описание + кнопка)"""
+    user = request.user
+
+    if request.method == 'POST':
+        if user.verification_status == 'pending':
+            messages.info(request, 'Ваша заявка уже в обработке. Дождитесь решения модерации.')
+            return redirect('uzmat:verify_info')
+
+        v_type = (request.POST.get('verification_type') or '').strip()
+        if v_type not in {'individual', 'company'}:
+            v_type = 'company' if getattr(user, 'account_type', None) == 'company' else 'individual'
+
+        with transaction.atomic():
+            VerificationRequest.objects.create(
+                user=user,
+                verification_type=v_type,
+                status='pending',
+            )
+
+            user.verification_type = v_type
+            user.verification_status = 'pending'
+            user.is_verified = False
+            user.verified_until = None
+            user.save(update_fields=['verification_type', 'verification_status', 'is_verified', 'verified_until'])
+
+        messages.success(request, 'Заявка отправлена на верификацию. Статус обновится после проверки модератором.')
+        return redirect('uzmat:verify_info')
+
+    return render(request, 'uzmat/verify_info.html', {'user': user})
+
+
+@staff_member_required(login_url='/auth/')
+def verify_moderation_list(request):
+    """Панель для администраторов: список заявок на верификацию"""
+    status = (request.GET.get('status') or 'pending').strip()
+    allowed_status = {'pending', 'approved', 'rejected'}
+    if status not in allowed_status:
+        status = 'pending'
+
+    qs = (VerificationRequest.objects
+          .select_related('user')
+          .order_by('-created_at'))
+
+    if status:
+        qs = qs.filter(status=status)
+
+    counts = {
+        'pending': VerificationRequest.objects.filter(status='pending').count(),
+        'approved': VerificationRequest.objects.filter(status='approved').count(),
+        'rejected': VerificationRequest.objects.filter(status='rejected').count(),
+    }
+
+    return render(request, 'uzmat/verify_moderation_list.html', {
+        'user': request.user,
+        'requests': qs[:200],
+        'status': status,
+        'counts': counts,
+    })
+
+
+@staff_member_required(login_url='/auth/')
+def verify_moderation_detail(request, request_id: int):
+    """Панель для администраторов: просмотр заявки + решение"""
+    v_request = get_object_or_404(
+        VerificationRequest.objects.select_related('user'),
+        id=request_id
+    )
+    target_user = v_request.user
+
+    if request.method == 'POST':
+        action = (request.POST.get('action') or '').strip()
+        comment = (request.POST.get('comment') or '').strip()
+
+        if action not in {'approve', 'reject'}:
+            messages.error(request, 'Неизвестное действие.')
+            return redirect('uzmat:verify_moderation_detail', request_id=v_request.id)
+
+        if not comment:
+            messages.error(request, 'Заполните сообщение пользователю.')
+            return redirect('uzmat:verify_moderation_detail', request_id=v_request.id)
+
+        now = timezone.now()
+        with transaction.atomic():
+            if action == 'approve':
+                v_request.status = 'approved'
+                target_user.verification_status = 'approved'
+                target_user.is_verified = True
+                # Делаем галочку на 6 месяцев
+                target_user.verified_until = now + timezone.timedelta(days=180)
+            else:
+                v_request.status = 'rejected'
+                target_user.verification_status = 'rejected'
+                target_user.is_verified = False
+                target_user.verified_until = None
+
+            v_request.reviewer_comment = comment
+            v_request.reviewed_at = now
+            v_request.save(update_fields=['status', 'reviewer_comment', 'reviewed_at'])
+
+            target_user.save(update_fields=['verification_status', 'is_verified', 'verified_until'])
+
+            # Сообщение пользователю в чат "Техподдержка (имя админа)"
+            support_thread = (ChatThread.objects
+                              .filter(thread_type='support', advertisement__isnull=True, buyer=target_user, seller=request.user)
+                              .order_by('id')
+                              .first())
+            if not support_thread:
+                support_thread = ChatThread.objects.create(
+                    thread_type='support',
+                    advertisement=None,
+                    buyer=target_user,
+                    seller=request.user,
+                    last_message_at=now,
+                )
+
+            msg = ChatMessage(thread=support_thread, sender=request.user)
+            msg.set_text(comment)
+            msg.save()
+
+            support_thread.last_message_at = msg.created_at
+            support_thread.save(update_fields=['last_message_at'])
+
+        if action == 'approve':
+            messages.success(request, 'Профиль успешно верифицирован.')
+        else:
+            messages.success(request, 'Заявка отклонена.')
+
+        return redirect('uzmat:verify_moderation_list')
+
+    return render(request, 'uzmat/verify_moderation_detail.html', {
+        'user': request.user,
+        'v_request': v_request,
+        'target_user': target_user,
+    })
+
+
+@staff_member_required(login_url='/auth/')
+def admin_send_notification(request):
+    """Админская отправка уведомлений пользователям (всем или одному) через чат техподдержки."""
+    me = request.user
+
+    if request.method == 'POST':
+        target = (request.POST.get('target') or '').strip()  # all | user
+        user_id = (request.POST.get('user_id') or '').strip()
+        text = (request.POST.get('text') or '').strip()
+
+        if not text:
+            messages.error(request, 'Введите текст уведомления.')
+            return redirect('uzmat:admin_send_notification')
+
+        now = timezone.now()
+
+        def send_to_user(u: User):
+            if not u or not getattr(u, 'is_active', True):
+                return
+            if getattr(u, 'is_staff', False):
+                return
+            thread, _ = ChatThread.objects.get_or_create(
+                thread_type='support',
+                advertisement=None,
+                buyer=u,
+                seller=me,
+                defaults={'last_message_at': now},
+            )
+            msg = ChatMessage(thread=thread, sender=me)
+            msg.set_text(text)
+            msg.save()
+            thread.last_message_at = msg.created_at
+            thread.save(update_fields=['last_message_at'])
+
+        try:
+            if target == 'all':
+                users = User.objects.filter(is_active=True, is_staff=False).only('id')[:50000]
+                sent = 0
+                with transaction.atomic():
+                    for u in users.iterator():
+                        send_to_user(u)
+                        sent += 1
+                messages.success(request, f'Уведомление отправлено: {sent} пользователям.')
+            else:
+                try:
+                    uid = int(user_id)
+                except (ValueError, TypeError):
+                    uid = None
+                if not uid:
+                    messages.error(request, 'Выберите пользователя.')
+                    return redirect('uzmat:admin_send_notification')
+
+                u = get_object_or_404(User, id=uid, is_active=True)
+                with transaction.atomic():
+                    send_to_user(u)
+                messages.success(request, 'Уведомление отправлено пользователю.')
+        except Exception:
+            messages.error(request, 'Не удалось отправить уведомление. Проверьте логи сервера.')
+
+        return redirect('uzmat:admin_send_notification')
+
+    users = User.objects.filter(is_active=True, is_staff=False).order_by('id')[:2000]
+    return render(request, 'uzmat/admin_send_notification.html', {
+        'user': me,
+        'users': users,
+    })
+
+
+@login_required
+def toggle_favorite(request, ad_id):
+    """Добавить/удалить объявление из избранного"""
+    if request.method == 'POST':
+        try:
+            ad = get_object_or_404(Advertisement, pk=ad_id, is_active=True)
+            favorite, created = Favorite.objects.get_or_create(user=request.user, advertisement=ad)
+            
+            if not created:
+                favorite.delete()
+                return JsonResponse({'status': 'removed', 'is_favorited': False})
+            else:
+                return JsonResponse({'status': 'added', 'is_favorited': True})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+    
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+
+def privacy_policy(request):
+    """Страница политики конфиденциальности"""
+    context = {
+        'user': request.user,
+    }
+    return render(request, 'uzmat/privacy_policy.html', context)
+
+
+def terms_of_use(request):
+    """Страница условий использования"""
+    context = {
+        'user': request.user,
+    }
+    return render(request, 'uzmat/terms_of_use.html', context)
+
+
+def sitemap(request):
+    """Страница карты сайта"""
+    context = {
+        'user': request.user,
+    }
+    return render(request, 'uzmat/sitemap.html', context)
+
+
+def logistics(request):
+    """Страница ремонта - показывает все объявления типа 'service'"""
+    # Получаем объявления типа 'service' с применением фильтров
+    ads = get_filtered_ads(request, ad_type_filter='service')
+    
+    # Сохраняем общее количество до пагинации
+    total_count = ads.count()
+    
+    # Пагинация
+    paginator = Paginator(ads, 12)
+    page_number = request.GET.get('page', 1)
+    try:
+        page_obj = paginator.get_page(page_number)
+    except:
+        page_obj = paginator.get_page(1)
+    
+    # Получаем уникальные города для фильтра
+    country = request.GET.get('country')
+    if country and country != 'all' and country.strip():
+        cities = Advertisement.objects.filter(
+            is_active=True, 
+            country=country.strip(),
+            ad_type='service'
+        ).values_list('city', flat=True).distinct().order_by('city')
+    else:
+        cities = Advertisement.objects.filter(
+            is_active=True,
+            ad_type='service'
+        ).values_list('city', flat=True).distinct().order_by('city')
+    
+    context = {
+        'active_tab': 'services',
+        'user': request.user,
+        'ads': page_obj,
+        'page_obj': page_obj,
+        'cities': cities,
+        'total_count': total_count,
+    }
+    return render(request, 'uzmat/logistics.html', context)
+
+
+@login_required
+def add_cargo(request):
+    """Страница добавления груза"""
+    context = {
+        'user': request.user,
+    }
+    return render(request, 'uzmat/add_cargo.html', context)

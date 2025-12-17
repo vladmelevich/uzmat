@@ -1,0 +1,259 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Добро пожаловать — Uzmat</title>
+  <link rel="icon" type="image/svg+xml" href="{% static 'uzmat/logo-uzmat.svg' %}">
+  {% include 'uzmat/theme-init.html' %}
+  <link rel="stylesheet" href="{% static 'uzmat/styles.css' %}">
+  <script defer src="{% static 'uzmat/app.js' %}"></script>
+  <style>
+    .onboarding-container {
+      min-height: 80vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+    }
+    
+    @media (max-width: 768px) {
+      .onboarding-container {
+        padding-bottom: 39px !important;
+        min-height: auto !important;
+      }
+      .onboarding-login {
+        margin-bottom: 60px;
+      }
+    }
+    
+    .onboarding-card {
+      width: 100%;
+      max-width: 600px;
+      padding: 48px;
+      text-align: center;
+    }
+    
+    .onboarding-logo {
+      margin: 0 auto 24px;
+      width: 64px;
+      height: 64px;
+    }
+    
+    .onboarding-title {
+      font-size: 32px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      background: linear-gradient(135deg, var(--uz-primary), var(--uz-primary-hover));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .onboarding-subtitle {
+      font-size: 16px;
+      color: var(--uz-text-dim);
+      margin-bottom: 48px;
+      line-height: 1.6;
+    }
+    
+    .onboarding-options {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 32px;
+    }
+    
+    @media (max-width: 640px) {
+      .onboarding-options {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    .onboarding-option {
+      background: var(--uz-bg-card);
+      border: 2px solid var(--uz-border);
+      border-radius: var(--uz-radius-lg);
+      padding: 32px 24px;
+      cursor: pointer;
+      transition: all 0.3s var(--uz-ease);
+      text-decoration: none;
+      color: inherit;
+      display: block;
+    }
+    
+    .onboarding-option:hover {
+      border-color: var(--uz-primary);
+      transform: translateY(-4px);
+      box-shadow: var(--uz-shadow-hover);
+    }
+    
+    .onboarding-option-icon {
+      width: 56px;
+      height: 56px;
+      margin: 0 auto 16px;
+      background: var(--uz-primary-alpha);
+      border-radius: var(--uz-radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--uz-primary);
+    }
+    
+    .onboarding-option-icon svg {
+      width: 28px;
+      height: 28px;
+    }
+    
+    .onboarding-option-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    
+    .onboarding-option-description {
+      font-size: 14px;
+      color: var(--uz-text-dim);
+      line-height: 1.5;
+    }
+    
+    .onboarding-login {
+      margin-top: 32px;
+      padding-top: 32px;
+      border-top: 1px solid var(--uz-border);
+    }
+    
+    .onboarding-login-text {
+      font-size: 14px;
+      color: var(--uz-text-dim);
+      margin-bottom: 16px;
+    }
+  </style>
+</head>
+
+<body class="uz-body">
+
+  <!-- Floating Header -->
+  <header class="uz-header">
+    <div class="uz-header-inner">
+      <a href="{% url 'uzmat:index' %}" class="uz-logo">
+        <img src="{% static 'uzmat/logo-uzmat.svg' %}" alt="Uzmat" class="uz-logo-mark">
+        <span>Uzmat</span>
+      </a>
+
+      <nav class="uz-nav uz-hidden-mobile">
+        <a href="{% url 'uzmat:index' %}" class="uz-nav-item">Объявления</a>
+        <a href="{% url 'uzmat:parts_repair' %}" class="uz-nav-item">Запчасти</a>
+        <a href="#" class="uz-nav-item">Ремонт</a>
+      </nav>
+
+      <div class="uz-flex">
+        <button class="uz-btn uz-btn-ghost uz-hidden-mobile" data-theme-toggle>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="uz-container onboarding-container">
+    <div class="uz-card onboarding-card">
+      <img src="{% static 'uzmat/logo-uzmat.svg' %}" alt="Uzmat" class="onboarding-logo">
+      <h1 class="onboarding-title">Добро пожаловать в Uzmat</h1>
+      <p class="onboarding-subtitle">Выберите тип регистрации, который вам подходит</p>
+
+      <div class="onboarding-options">
+        <a href="{% url 'uzmat:register_individual' %}" class="onboarding-option">
+          <div class="onboarding-option-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+          </div>
+          <div class="onboarding-option-title">Личное использование</div>
+          <div class="onboarding-option-description">Для физических лиц. Быстрая регистрация с минимальными данными</div>
+        </a>
+
+        <a href="{% url 'uzmat:register_company' %}" class="onboarding-option">
+          <div class="onboarding-option-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+          </div>
+          <div class="onboarding-option-title">Для компании</div>
+          <div class="onboarding-option-description">Для юридических лиц и организаций. Расширенные возможности</div>
+        </a>
+      </div>
+
+      <div class="onboarding-login">
+        <p class="onboarding-login-text">Уже есть аккаунт?</p>
+        <a href="{% url 'uzmat:auth' %}" class="uz-btn uz-btn-outline" style="width: 100%;">Войти</a>
+      </div>
+    </div>
+  </main>
+
+  <!-- Mobile Navigation -->
+  <nav class="uz-bottom-nav uz-show-mobile">
+    <a href="{% url 'uzmat:index' %}" class="uz-bottom-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+      </svg>
+      <span>Главная</span>
+    </a>
+    <a href="{% url 'uzmat:chats' %}" class="uz-bottom-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+      </svg>
+      <span>Чаты</span>
+    </a>
+    <a href="{% url 'uzmat:create_ad' %}" class="uz-bottom-item" style="color: var(--uz-primary);">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="16"></line>
+        <line x1="8" y1="12" x2="16" y2="12"></line>
+      </svg>
+      <span>Создать</span>
+    </a>
+    <a href="{% url 'uzmat:profile' %}" class="uz-bottom-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+        <circle cx="12" cy="7" r="4"></circle>
+      </svg>
+      <span>Профиль</span>
+    </a>
+    <a href="{% url 'uzmat:settings' %}" class="uz-bottom-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"></circle>
+        <path
+          d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+        </path>
+      </svg>
+      <span>Меню</span>
+    </a>
+  </nav>
+
+</body>
+
+</html>
+

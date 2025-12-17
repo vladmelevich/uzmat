@@ -1,0 +1,262 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Уведомления — админ</title>
+  <link rel="icon" type="image/svg+xml" href="{% static 'uzmat/logo-uzmat.svg' %}">
+  {% include 'uzmat/theme-init.html' %}
+  <link rel="stylesheet" href="{% static 'uzmat/styles.css' %}">
+  <script defer src="{% static 'uzmat/app.js' %}"></script>
+  {% include 'uzmat/toast-container.html' %}
+  <style>
+    .an-grid {display:grid; grid-template-columns: 1fr 1fr; gap: 14px;}
+    @media (max-width: 920px) {.an-grid {grid-template-columns: 1fr;}}
+    .an-help {color: var(--uz-text-dim); font-size: 13px; line-height: 1.55;}
+    .an-radio {display:flex; gap: 10px; flex-wrap: wrap;}
+    .an-radio label {display:flex; align-items:center; gap: 8px; padding: 8px 12px; border-radius: 999px; border:1px solid var(--uz-border); background: var(--uz-bg-card); cursor:pointer;}
+    .an-radio input {accent-color: var(--uz-primary);}
+    .an-user-picker {position: relative;}
+    .an-user-dropdown {position: absolute; top: calc(100% + 6px); left: 0; right: 0; max-height: 320px; overflow: auto; background: var(--uz-bg-card); border: 1px solid var(--uz-border); border-radius: 12px; box-shadow: var(--uz-shadow-popover); padding: 6px; display: none; z-index: 9999;}
+    .an-user-picker.open .an-user-dropdown {display: block;}
+    .an-user-item {display:flex; align-items:center; gap: 10px; padding: 8px 10px; border-radius: 10px; cursor: pointer; border: 1px solid transparent;}
+    .an-user-item:hover {background: var(--uz-bg-hover); border-color: var(--uz-border);}
+    .an-user-item-avatar {width: 28px; height: 28px; border-radius: 50%; overflow:hidden; background: var(--uz-bg-hover); border: 1px solid var(--uz-border); display:flex; align-items:center; justify-content:center; flex-shrink: 0; color: var(--uz-primary); font-weight: 800; font-size: 12px;}
+    .an-user-item-avatar img {width: 100%; height: 100%; object-fit: cover; display:block;}
+    .an-user-item-meta {min-width: 0; flex: 1;}
+    .an-user-item-name {font-weight: 700; font-size: 13px; color: var(--uz-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+    .an-user-item-sub {font-size: 12px; color: var(--uz-text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px;}
+    .an-user-disabled {opacity: .55; pointer-events: none;}
+  </style>
+</head>
+<body class="uz-body">
+
+  <header class="uz-header">
+    <div class="uz-header-inner">
+      <a href="{% url 'uzmat:index' %}" class="uz-logo">
+        <img src="{% static 'uzmat/logo-uzmat.svg' %}" alt="Uzmat" class="uz-logo-mark">
+        <span>Uzmat</span>
+      </a>
+
+      {% include 'uzmat/nav.html' %}
+
+      <div class="uz-flex">
+        {% include 'uzmat/country-selector.html' %}
+        {% include 'uzmat/create-ad-button.html' %}
+        <button class="uz-btn uz-btn-ghost uz-hidden-mobile" data-theme-toggle>Тема</button>
+        {% include 'uzmat/user-avatar.html' %}
+      </div>
+    </div>
+  </header>
+
+  <main class="uz-container" style="max-width: 980px;">
+    <section class="uz-animate-in" style="margin-top: 18px;">
+      <div class="uz-card">
+        <div class="uz-flex" style="justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap;">
+          <div>
+            <h1 style="font-size: 22px; font-weight: 800; margin-bottom: 6px;">Отправить уведомление</h1>
+            <div class="an-help">Уведомление придёт пользователю как сообщение в чат <b style="color: var(--uz-text); font-weight: 700;">«Тех.поддержка»</b> на странице <b style="color: var(--uz-text); font-weight: 700;">/chats/</b>.</div>
+          </div>
+          <div class="uz-flex" style="gap: 10px; flex-wrap: wrap;">
+            <a href="{% url 'uzmat:verify_moderation_list' %}" class="uz-btn uz-btn-ghost">Модерация</a>
+            <a href="{% url 'uzmat:profile' %}" class="uz-btn uz-btn-ghost">В профиль</a>
+          </div>
+        </div>
+
+        <form method="post" style="margin-top: 14px;">
+          {% csrf_token %}
+
+          <div class="an-grid">
+            <div>
+              <div style="font-size: 12px; color: var(--uz-text-dim); font-weight: 700; margin-bottom: 8px;">Кому отправить</div>
+              <div class="an-radio">
+                <label>
+                  <input type="radio" name="target" value="user" checked>
+                  Одному пользователю
+                </label>
+                <label>
+                  <input type="radio" name="target" value="all">
+                  Всем пользователям
+                </label>
+              </div>
+
+              <div style="margin-top: 12px;">
+                <label style="font-size: 12px; color: var(--uz-text-dim); font-weight: 700;">Пользователь (если “одному”)</label>
+                <div class="uz-flex" style="gap: 12px; align-items: center; margin-top: 6px;">
+                  <div id="an-user-avatar" style="width: 36px; height: 36px; border-radius: 50%; background: var(--uz-bg-hover); border: 1px solid var(--uz-border); display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink: 0; color: var(--uz-primary); font-weight: 800;">
+                    <span id="an-user-avatar-fallback">—</span>
+                  </div>
+                  <div style="flex: 1; min-width: 0;">
+                    <input type="hidden" name="user_id" id="an-user-id" value="">
+                    <div class="an-user-picker" id="an-user-picker">
+                      <input class="uz-input" id="an-user-query" type="text" autocomplete="off" placeholder="Начните вводить имя или email…" />
+                      <div class="an-user-dropdown" id="an-user-dropdown">
+                        {% for u in users %}
+                          <div class="an-user-item" role="option"
+                               data-id="{{ u.id }}"
+                               data-name="{{ u.first_name|default:u.username|escape }}"
+                               data-email="{{ u.email|default:''|escape }}"
+                               data-avatar="{% if u.avatar %}{{ u.avatar.url }}{% endif %}">
+                            <div class="an-user-item-avatar">
+                              {% if u.avatar %}
+                                <img src="{{ u.avatar.url }}" alt="">
+                              {% else %}
+                                {{ u.first_name|default:u.username|first|upper }}
+                              {% endif %}
+                            </div>
+                            <div class="an-user-item-meta">
+                              <div class="an-user-item-name">{{ u.first_name|default:u.username }}</div>
+                              <div class="an-user-item-sub">{% if u.email %}{{ u.email }}{% else %}ID: {{ u.id }}{% endif %}</div>
+                            </div>
+                          </div>
+                        {% endfor %}
+                      </div>
+                    </div>
+                    <div class="an-help" id="an-user-label" style="margin-top: 6px;">—</div>
+                  </div>
+                </div>
+                <div class="an-help" style="margin-top: 8px;">Если пользователей больше, можно временно ограничиться первыми 2000 (так сделано для скорости). Если нужно — добавим поиск.</div>
+              </div>
+            </div>
+
+            <div>
+              <label style="font-size: 12px; color: var(--uz-text-dim); font-weight: 700;">Текст уведомления</label>
+              <textarea class="uz-input" name="text" rows="6" required placeholder="Напишите сообщение пользователю…" style="resize: vertical; margin-top: 6px;"></textarea>
+              <div class="an-help" style="margin-top: 8px;">Отправитель — текущий админ. У пользователя это будет выглядеть как чат с техподдержкой.</div>
+            </div>
+          </div>
+
+          <div class="uz-flex" style="justify-content: flex-end; margin-top: 14px;">
+            <button class="uz-btn uz-btn-primary" type="submit">Отправить уведомление</button>
+          </div>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    (function() {
+      const idInput = document.getElementById('an-user-id');
+      const picker = document.getElementById('an-user-picker');
+      const query = document.getElementById('an-user-query');
+      const dropdown = document.getElementById('an-user-dropdown');
+      const items = dropdown ? Array.from(dropdown.querySelectorAll('.an-user-item')) : [];
+      const avatarBox = document.getElementById('an-user-avatar');
+      const fallback = document.getElementById('an-user-avatar-fallback');
+      const label = document.getElementById('an-user-label');
+      const targetRadios = Array.from(document.querySelectorAll('input[name="target"]'));
+
+      function setAvatar(url, name) {
+        // очистка
+        const existing = avatarBox ? avatarBox.querySelector('img') : null;
+        if (existing) existing.remove();
+        if (fallback) fallback.style.display = 'none';
+
+        const nm = (name || '').trim();
+        if (label) label.textContent = nm || '—';
+
+        if (url) {
+          const img = document.createElement('img');
+          img.src = url;
+          img.alt = nm || 'avatar';
+          img.style.width = '100%';
+          img.style.height = '100%';
+          img.style.objectFit = 'cover';
+          avatarBox.appendChild(img);
+          return;
+        }
+
+        // fallback: первая буква имени
+        const letter = nm ? nm[0].toUpperCase() : '—';
+        if (fallback) {
+          fallback.textContent = letter;
+          fallback.style.display = 'inline';
+        }
+      }
+
+      function setSelected(id, name, avatarUrl, email) {
+        if (idInput) idInput.value = id || '';
+        const nm = (name || '').trim();
+        const em = (email || '').trim();
+        if (query) query.value = nm ? (em ? `${nm} · ${em}` : nm) : '';
+        setAvatar(avatarUrl || '', nm);
+        if (picker) picker.classList.remove('open');
+      }
+
+      function normalize(s) {
+        return (s || '').toString().toLowerCase().trim();
+      }
+
+      function filterList() {
+        const q = normalize(query ? query.value : '');
+        items.forEach((el) => {
+          const name = normalize(el.getAttribute('data-name'));
+          const email = normalize(el.getAttribute('data-email'));
+          const ok = !q || name.includes(q) || email.includes(q);
+          el.style.display = ok ? 'flex' : 'none';
+        });
+      }
+
+      function openList() {
+        if (!picker || !dropdown) return;
+        picker.classList.add('open');
+        filterList();
+      }
+
+      function closeList() {
+        if (!picker) return;
+        picker.classList.remove('open');
+      }
+
+      function setEnabled(enabled) {
+        if (picker) picker.classList.toggle('an-user-disabled', !enabled);
+        if (query) query.disabled = !enabled;
+        if (!enabled) {
+          if (idInput) idInput.value = '';
+          if (query) query.value = '';
+          setAvatar('', '');
+          closeList();
+        }
+      }
+
+      function syncTarget() {
+        const val = (targetRadios.find(r => r.checked)?.value) || 'user';
+        setEnabled(val !== 'all');
+      }
+
+      if (query && picker) {
+        query.addEventListener('focus', openList);
+        query.addEventListener('click', openList);
+        query.addEventListener('input', () => {
+          openList();
+          filterList();
+        });
+      }
+
+      if (items.length) {
+        items.forEach((el) => {
+          el.addEventListener('click', () => {
+            setSelected(
+              el.getAttribute('data-id') || '',
+              el.getAttribute('data-name') || '',
+              el.getAttribute('data-avatar') || '',
+              el.getAttribute('data-email') || ''
+            );
+          });
+        });
+      }
+
+      document.addEventListener('click', (e) => {
+        if (!picker) return;
+        if (!picker.contains(e.target)) closeList();
+      });
+
+      targetRadios.forEach((r) => r.addEventListener('change', syncTarget));
+      syncTarget();
+    })();
+  </script>
+</body>
+</html>
+
+

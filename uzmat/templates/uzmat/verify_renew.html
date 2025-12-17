@@ -1,0 +1,47 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Продление галочки — Uzmat</title>
+  <link rel="icon" type="image/svg+xml" href="{% static 'uzmat/logo-uzmat.svg' %}">
+  {% include 'uzmat/theme-init.html' %}
+  <link rel="stylesheet" href="{% static 'uzmat/styles.css' %}">
+  <script defer src="{% static 'uzmat/app.js' %}"></script>
+  {% include 'uzmat/toast-container.html' %}
+</head>
+<body class="uz-body">
+  <header class="uz-header">
+    <div class="uz-header-inner">
+      <a href="{% url 'uzmat:index' %}" class="uz-logo">
+        <img src="{% static 'uzmat/logo-uzmat.svg' %}" alt="Uzmat" class="uz-logo-mark">
+        <span>Uzmat</span>
+      </a>
+      {% include 'uzmat/nav.html' %}
+      <div class="uz-flex">
+        {% include 'uzmat/country-selector.html' %}
+        {% include 'uzmat/create-ad-button.html' %}
+        <button class="uz-btn uz-btn-ghost uz-hidden-mobile" data-theme-toggle>Тема</button>
+        {% include 'uzmat/user-avatar.html' %}
+      </div>
+    </div>
+  </header>
+
+  <main class="uz-container" style="max-width: 760px;">
+    <section class="uz-animate-in" style="margin-top: 18px;">
+      <div class="uz-card">
+        <h1 style="font-size: 22px; font-weight: 800; margin-bottom: 8px;">Продление галочки</h1>
+        <div style="color: var(--uz-text-dim); font-size: 13px;">
+          Страница в разработке. Скажи, что должно быть на ней — я добавлю оплату/тарифы/подтверждение.
+        </div>
+        <div style="margin-top: 14px;">
+          <a class="uz-btn uz-btn-outline" href="{% url 'uzmat:chats' %}">← Назад в чаты</a>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
+
+

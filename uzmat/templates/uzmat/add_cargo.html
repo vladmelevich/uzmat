@@ -1,0 +1,138 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Разместить груз — Uzmat</title>
+  <link rel="icon" type="image/svg+xml" href="{% static 'uzmat/logo-uzmat.svg' %}">
+  {% include 'uzmat/theme-init.html' %}
+  <link rel="stylesheet" href="{% static 'uzmat/styles.css' %}">
+  <script defer src="{% static 'uzmat/app.js' %}"></script>
+</head>
+
+<body class="uz-body">
+
+  <!-- Floating Header -->
+  <header class="uz-header">
+    <div class="uz-header-inner">
+      <a href="{% url 'uzmat:index' %}" class="uz-logo">
+        <img src="{% static 'uzmat/logo-uzmat.svg' %}" alt="Uzmat" class="uz-logo-mark">
+        <span>Uzmat</span>
+      </a>
+
+      {% include 'uzmat/nav.html' %}
+
+      <div class="uz-flex">
+        {% include 'uzmat/country-selector.html' %}
+        {% include 'uzmat/create-ad-button.html' %}
+        <button class="uz-btn uz-btn-ghost uz-hidden-mobile" data-theme-toggle>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+        </button>
+        {% include 'uzmat/user-avatar.html' %}
+      </div>
+    </div>
+  </header>
+
+  <main class="uz-container">
+
+    <!-- Breadcrumbs -->
+    <nav class="uz-breadcrumbs">
+      <a href="{% url 'uzmat:index' %}">Главная</a>
+      <span>/</span>
+      <a href="{% url 'uzmat:logistics' %}">Ремонт</a>
+      <span>/</span>
+      <span>Разместить груз</span>
+    </nav>
+
+    <div class="uz-form-container" style="max-width: 800px; margin: 0 auto;">
+      <h1 style="font-size: 32px; font-weight: 700; margin-bottom: 32px;">Разместить груз</h1>
+
+      <form method="post" class="uz-form" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        <div class="uz-form-group">
+          <label class="uz-form-label">Откуда *</label>
+          <input type="text" name="from_location" class="uz-form-input" required placeholder="Город отправления">
+        </div>
+
+        <div class="uz-form-group">
+          <label class="uz-form-label">Куда *</label>
+          <input type="text" name="to_location" class="uz-form-input" required placeholder="Город назначения">
+        </div>
+
+        <div class="uz-form-group">
+          <label class="uz-form-label">Тип груза *</label>
+          <select name="cargo_type" class="uz-form-input" required>
+            <option value="">Выберите тип груза</option>
+            <option value="general">Генеральный</option>
+            <option value="bulk">Насыпной</option>
+            <option value="liquid">Жидкий</option>
+            <option value="dangerous">Опасный</option>
+            <option value="perishable">Скоропортящийся</option>
+          </select>
+        </div>
+
+        <div class="uz-form-group">
+          <label class="uz-form-label">Вес (тонны)</label>
+          <input type="number" name="weight" class="uz-form-input" step="0.1" placeholder="Вес груза">
+        </div>
+
+        <div class="uz-form-group">
+          <label class="uz-form-label">Объем (м³)</label>
+          <input type="number" name="volume" class="uz-form-input" step="0.1" placeholder="Объем груза">
+        </div>
+
+        <div class="uz-form-group">
+          <label class="uz-form-label">Описание груза *</label>
+          <textarea name="description" class="uz-form-input" rows="4" required placeholder="Подробное описание груза"></textarea>
+        </div>
+
+        <div class="uz-form-group">
+          <label class="uz-form-label">Дата отправления</label>
+          <input type="date" name="departure_date" class="uz-form-input">
+        </div>
+
+        <div class="uz-form-group">
+          <label class="uz-form-label">Бюджет</label>
+          <input type="number" name="budget" class="uz-form-input" placeholder="Предполагаемая стоимость">
+        </div>
+
+        <div class="uz-form-group">
+          <label class="uz-form-label">Контакты *</label>
+          <input type="text" name="contact_phone" class="uz-form-input" required placeholder="Телефон для связи" value="{{ user.phone|default:'' }}">
+        </div>
+
+        <div class="uz-form-actions">
+          <button type="submit" class="uz-btn uz-btn-primary">Разместить груз</button>
+          <a href="{% url 'uzmat:logistics' %}" class="uz-btn uz-btn-ghost">Отмена</a>
+        </div>
+      </form>
+    </div>
+
+  </main>
+
+  {% include 'uzmat/footer.html' %}
+
+</body>
+</html>
+
+
+
+
+
+
+
+

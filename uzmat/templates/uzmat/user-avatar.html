@@ -1,0 +1,44 @@
+{% load static %}
+{% if user.is_authenticated %}
+  {% if user.is_staff %}
+  <a href="{% url 'uzmat:verify_moderation_list' %}" class="uz-btn uz-btn-outline uz-hidden-mobile" style="font-size: 13px; padding: 8px 12px;" title="Верифицировать пользователей">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"></path>
+      <path d="m9 12 2 2 4-4"></path>
+    </svg>
+    Верифицировать
+  </a>
+  {% else %}
+    {% if user.is_verified_active %}
+      <span class="uz-hidden-mobile" title="Проверенный профиль" style="display:inline-flex; align-items:center; gap:8px; padding: 8px 12px; border-radius: 999px; border:1px solid var(--uz-border); background: var(--uz-bg-card); font-size: 13px; font-weight: 700;">
+        {% include 'uzmat/verified-check.html' with u=user %}
+        Галочка
+      </span>
+    {% else %}
+      <a href="{% url 'uzmat:verify_info' %}" class="uz-btn uz-btn-outline uz-hidden-mobile" style="font-size: 13px; padding: 8px 12px;" title="Оформить галочку профиля">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        Оформить галочку
+      </a>
+    {% endif %}
+  {% endif %}
+<a href="{% url 'uzmat:profile' %}" class="uz-header-user-avatar" title="Профиль">
+  <div class="uz-header-avatar-circle">
+    {% if user.avatar %}
+      <img src="{{ user.avatar.url }}" alt="{{ user.first_name|default:user.username }}" class="uz-header-avatar-image">
+    {% else %}
+      {% if user.first_name %}
+        {{ user.first_name|first|upper }}
+      {% elif user.username %}
+        {{ user.username|first|upper }}
+      {% else %}
+        U
+      {% endif %}
+    {% endif %}
+  </div>
+</a>
+{% else %}
+<a href="{% url 'uzmat:onboarding' %}" class="uz-btn uz-btn-primary">Войти</a>
+{% endif %}
+

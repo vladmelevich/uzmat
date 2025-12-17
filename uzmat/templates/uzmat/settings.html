@@ -1,0 +1,267 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Настройки — Uzmat</title>
+  <link rel="icon" type="image/svg+xml" href="{% static 'uzmat/logo-uzmat.svg' %}">
+  {% include 'uzmat/theme-init.html' %}
+  <link rel="stylesheet" href="{% static 'uzmat/styles.css' %}">
+  <script src="{% static 'uzmat/i18n.js' %}"></script>
+  <script defer src="{% static 'uzmat/app.js' %}"></script>
+</head>
+
+<body class="uz-body">
+
+  <!-- Floating Header -->
+  <header class="uz-header">
+    <div class="uz-header-inner">
+      <a href="{% url 'uzmat:index' %}" class="uz-logo">
+        <img src="{% static 'uzmat/logo-uzmat.svg' %}" alt="Uzmat" class="uz-logo-mark">
+        <span>Uzmat</span>
+      </a>
+
+      {% include 'uzmat/nav.html' %}
+
+      <div class="uz-flex">
+        {% include 'uzmat/country-selector.html' %}
+        {% include 'uzmat/create-ad-button.html' %}
+        <button class="uz-btn uz-btn-ghost uz-hidden-mobile" data-theme-toggle>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+        </button>
+        {% include 'uzmat/user-avatar.html' %}
+      </div>
+    </div>
+  </header>
+
+  <main class="uz-container" style="max-width: 600px;">
+
+    <h1 style="font-size: 24px; font-weight: 700; margin-bottom: 24px;">Настройки</h1>
+
+    <div class="uz-flex-col" style="gap: 16px;">
+
+      <!-- Country and Currency -->
+      <div class="uz-card">
+        <div class="uz-flex" style="justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <div>
+            <div style="font-weight: 600; margin-bottom: 4px;">Страна и язык</div>
+            <div style="font-size: 13px; color: var(--uz-text-dim);">Выберите страну и язык для отображения</div>
+          </div>
+        </div>
+
+        <div class="uz-grid" style="grid-template-columns: repeat(2, 1fr); gap: 8px;">
+          <button class="uz-btn uz-btn-outline uz-settings-country-btn" data-country="kz" data-currency="₸ KZT" data-lang="kk" style="justify-content: flex-start; font-weight: 500;">
+            <img src="{% static 'uzmat/kazah.svg' %}" alt="KZ" class="uz-settings-flag" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';">
+            <span style="display:none; margin-right: 8px;">🇰🇿</span>
+            <span>
+              <div style="font-weight: 600;">Казахстан</div>
+              <div style="font-size: 12px; color: var(--uz-text-dim);">₸ KZT</div>
+            </span>
+          </button>
+          <button class="uz-btn uz-btn-ghost uz-settings-country-btn" data-country="uz" data-currency="сум UZS" data-lang="uz" style="justify-content: flex-start; font-weight: 500;">
+            <img src="{% static 'uzmat/uzbek.svg' %}" alt="UZ" class="uz-settings-flag" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';">
+            <span style="display:none; margin-right: 8px;">🇺🇿</span>
+            <span>
+              <div style="font-weight: 600;">Узбекистан</div>
+              <div style="font-size: 12px; color: var(--uz-text-dim);">сум UZS</div>
+            </span>
+          </button>
+          <button class="uz-btn uz-btn-ghost uz-settings-country-btn" data-country="ru" data-currency="₽ RUB" data-lang="ru" style="justify-content: flex-start; font-weight: 500;">
+            <img src="{% static 'uzmat/russia.svg' %}" alt="RU" class="uz-settings-flag" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';">
+            <span style="display:none; margin-right: 8px;">🇷🇺</span>
+            <span>
+              <div style="font-weight: 600;">Россия</div>
+              <div style="font-size: 12px; color: var(--uz-text-dim);">₽ RUB</div>
+            </span>
+          </button>
+          <button class="uz-btn uz-btn-ghost uz-settings-country-btn" data-country="by" data-currency="Br BYN" data-lang="be" style="justify-content: flex-start; font-weight: 500;">
+            <img src="{% static 'uzmat/bel.svg' %}" alt="BY" class="uz-settings-flag" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';">
+            <span style="display:none; margin-right: 8px;">🇧🇾</span>
+            <span>
+              <div style="font-weight: 600;">Беларусь</div>
+              <div style="font-size: 12px; color: var(--uz-text-dim);">Br BYN</div>
+            </span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Appearance -->
+      <div class="uz-card">
+        <div class="uz-flex" style="justify-content: space-between; align-items: center;">
+          <div>
+            <div style="font-weight: 600; margin-bottom: 4px;">Тема оформления</div>
+            <div style="font-size: 13px; color: var(--uz-text-dim);">Светлая или темная тема</div>
+          </div>
+          <button class="uz-btn uz-btn-outline" data-theme-toggle>Переключить</button>
+        </div>
+      </div>
+
+      <!-- Profile Verification -->
+      <div class="uz-card uz-show-mobile">
+        <div class="uz-flex" style="justify-content: space-between; align-items: center;">
+          <div>
+            <div style="font-weight: 600; margin-bottom: 4px;">Галочка профиля</div>
+            <div style="font-size: 13px; color: var(--uz-text-dim);">Оформить верификацию профиля</div>
+          </div>
+          {% if user.is_verified_active %}
+            <span title="Проверенный профиль" style="display:inline-flex; align-items:center; gap:8px; padding: 8px 12px; border-radius: 999px; border:1px solid var(--uz-border); background: var(--uz-bg-card); font-size: 13px; font-weight: 700;">
+              {% include 'uzmat/verified-check.html' with u=user %}
+              Галочка
+            </span>
+          {% else %}
+            <a href="{% url 'uzmat:verify_info' %}" class="uz-btn uz-btn-primary" style="font-size: 13px; padding: 8px 16px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              Оформить
+            </a>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Account -->
+      <div class="uz-card">
+        <div class="uz-flex" style="justify-content: space-between; align-items: center;">
+          <div>
+            <div style="font-weight: 600; margin-bottom: 4px;">Аккаунт</div>
+            <div style="font-size: 13px; color: var(--uz-text-dim);">Управление сессией</div>
+          </div>
+          <form method="post" action="{% url 'uzmat:logout' %}">
+            {% csrf_token %}
+            <button class="uz-btn uz-btn-outline"
+              style="color: var(--uz-danger); border-color: rgba(239, 68, 68, 0.2);">Выйти</button>
+          </form>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  {% include 'uzmat/footer.html' %}
+
+  <!-- Mobile Navigation -->
+  <nav class="uz-bottom-nav uz-show-mobile">
+    <a href="{% url 'uzmat:index' %}" class="uz-bottom-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+      </svg>
+      <span>Главная</span>
+    </a>
+    <a href="{% url 'uzmat:chats' %}" class="uz-bottom-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+      </svg>
+      <span>Чаты</span>
+    </a>
+    <a href="{% url 'uzmat:create_ad' %}" class="uz-bottom-item" style="color: var(--uz-primary);">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="16"></line>
+        <line x1="8" y1="12" x2="16" y2="12"></line>
+      </svg>
+      <span>Создать</span>
+    </a>
+    <a href="{% url 'uzmat:onboarding' %}" class="uz-bottom-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+        <circle cx="12" cy="7" r="4"></circle>
+      </svg>
+      <span>Профиль</span>
+    </a>
+    <a href="{% url 'uzmat:settings' %}" class="uz-bottom-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"></circle>
+        <path
+          d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+        </path>
+      </svg>
+      <span>Меню</span>
+    </a>
+  </nav>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Обработчики для кнопок выбора страны/языка
+      const countryButtons = document.querySelectorAll('.uz-settings-country-btn');
+      
+      countryButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          
+          const lang = this.getAttribute('data-lang');
+          const country = this.getAttribute('data-country');
+          
+          if (lang && window.i18n) {
+            // Мгновенное обновление активного состояния кнопок (без задержек)
+            countryButtons.forEach(btn => {
+              btn.classList.remove('uz-btn-outline');
+              btn.classList.add('uz-btn-ghost');
+            });
+            this.classList.remove('uz-btn-ghost');
+            this.classList.add('uz-btn-outline');
+            
+            // Сохраняем выбранную страну
+            localStorage.setItem('selected_country', country);
+            
+            // Устанавливаем язык МГНОВЕННО (синхронно)
+            window.i18n.setLanguage(lang);
+            
+            // Показываем уведомление асинхронно, чтобы не блокировать перевод
+            setTimeout(() => {
+              if (window.showToast) {
+                const langNames = {
+                  'ru': 'Русский',
+                  'uz': 'O\'zbek',
+                  'kk': 'Қазақ',
+                  'be': 'Беларуская'
+                };
+                window.showToast(`Язык изменен на ${langNames[lang] || lang}`, 'success');
+              }
+            }, 50);
+          }
+        });
+      });
+      
+      // Восстанавливаем выбранную страну при загрузке
+      const savedCountry = localStorage.getItem('selected_country');
+      if (savedCountry) {
+        const savedButton = document.querySelector(`.uz-settings-country-btn[data-country="${savedCountry}"]`);
+        if (savedButton) {
+          savedButton.classList.remove('uz-btn-ghost');
+          savedButton.classList.add('uz-btn-outline');
+          // Убираем outline с других кнопок
+          countryButtons.forEach(btn => {
+            if (btn !== savedButton) {
+              btn.classList.remove('uz-btn-outline');
+              btn.classList.add('uz-btn-ghost');
+            }
+          });
+        }
+      }
+    });
+  </script>
+
+</body>
+
+</html>

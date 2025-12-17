@@ -1,0 +1,204 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Регистрация компании — Uzmat</title>
+  <link rel="icon" type="image/svg+xml" href="{% static 'uzmat/logo-uzmat.svg' %}">
+  {% include 'uzmat/theme-init.html' %}
+  <link rel="stylesheet" href="{% static 'uzmat/styles.css' %}">
+  <script defer src="{% static 'uzmat/app.js' %}"></script>
+  {% include 'uzmat/toast-container.html' %}
+  <style>
+    @media (max-width: 768px) {
+      .register-company-main {
+        padding-bottom: 50px !important;
+        min-height: auto !important;
+      }
+      .register-company-form-footer {
+        margin-bottom: 60px !important;
+      }
+    }
+  </style>
+</head>
+
+<body class="uz-body">
+
+  <!-- Floating Header -->
+  <header class="uz-header">
+    <div class="uz-header-inner">
+      <a href="{% url 'uzmat:index' %}" class="uz-logo">
+        <img src="{% static 'uzmat/logo-uzmat.svg' %}" alt="Uzmat" class="uz-logo-mark">
+        <span>Uzmat</span>
+      </a>
+
+      <nav class="uz-nav uz-hidden-mobile">
+        <a href="{% url 'uzmat:index' %}" class="uz-nav-item">Объявления</a>
+        <a href="{% url 'uzmat:parts_repair' %}" class="uz-nav-item">Запчасти</a>
+        <a href="#" class="uz-nav-item">Ремонт</a>
+      </nav>
+
+      <div class="uz-flex">
+        <button class="uz-btn uz-btn-ghost uz-hidden-mobile" data-theme-toggle>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="uz-container register-company-main" style="min-height: 80vh; display: flex; align-items: center; justify-content: center; padding: 40px 20px;">
+    <div class="uz-card" style="width: 100%; max-width: 600px; padding: 40px;">
+      <div style="text-align: center; margin-bottom: 32px;">
+        <a href="{% url 'uzmat:onboarding' %}" style="display: inline-flex; align-items: center; gap: 8px; color: var(--uz-text-dim); font-size: 14px; margin-bottom: 24px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="19" y1="12" x2="5" y2="12"></line>
+            <polyline points="12 19 5 12 12 5"></polyline>
+          </svg>
+          Назад
+        </a>
+        <img src="{% static 'uzmat/logo-uzmat.svg' %}" alt="Uzmat" class="uz-logo-mark" style="margin: 0 auto 16px; width: 48px; height: 48px;">
+        <h1 style="font-size: 24px; font-weight: 700; margin-bottom: 8px;">Регистрация компании</h1>
+        <p style="color: var(--uz-text-dim);">Заполните данные о вашей компании</p>
+      </div>
+
+      {% if messages %}
+        <div style="margin-bottom: 24px;">
+          {% for message in messages %}
+            <div class="uz-alert" style="padding: 12px 16px; border-radius: var(--uz-radius-md); margin-bottom: 8px; 
+              {% if message.tags == 'error' %}background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: var(--uz-danger);
+              {% elif message.tags == 'success' %}background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); color: var(--uz-success);
+              {% else %}background: var(--uz-bg-hover); border: 1px solid var(--uz-border);{% endif %}">
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <form action="{% url 'uzmat:register_company' %}" method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="register_company">
+
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; margin-bottom: 8px; font-size: 14px; font-weight: 500;">Название компании *</label>
+          <input type="text" name="company_name" class="uz-input" placeholder="ООО «Пример»" required>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; margin-bottom: 8px; font-size: 14px; font-weight: 500;">ИНН *</label>
+          <input type="text" name="company_inn" class="uz-input" placeholder="1234567890" required>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; margin-bottom: 8px; font-size: 14px; font-weight: 500;">Директор *</label>
+          <input type="text" name="company_director" class="uz-input" placeholder="Иванов Иван Иванович" required>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; margin-bottom: 8px; font-size: 14px; font-weight: 500;">Телефон компании *</label>
+          <input type="tel" name="company_phone" class="uz-input" placeholder="+998 90 123 45 67" required>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; margin-bottom: 8px; font-size: 14px; font-weight: 500;">Email компании *</label>
+          <input type="email" name="company_email" class="uz-input" placeholder="info@company.com" required>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; margin-bottom: 8px; font-size: 14px; font-weight: 500;">Адрес компании</label>
+          <textarea name="company_address" class="uz-input" rows="3" placeholder="Город, улица, дом"></textarea>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; margin-bottom: 8px; font-size: 14px; font-weight: 500;">Юридический адрес</label>
+          <textarea name="company_legal_address" class="uz-input" rows="3" placeholder="Юридический адрес компании"></textarea>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; margin-bottom: 8px; font-size: 14px; font-weight: 500;">Сайт компании</label>
+          <input type="url" name="company_website" class="uz-input" placeholder="https://company.com">
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; margin-bottom: 8px; font-size: 14px; font-weight: 500;">Email для входа *</label>
+          <input type="email" name="email" class="uz-input" placeholder="your@email.com" required>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; margin-bottom: 8px; font-size: 14px; font-weight: 500;">Пароль *</label>
+          <input type="password" name="password" class="uz-input" placeholder="••••••••" required>
+        </div>
+
+        <button type="submit" class="uz-btn uz-btn-primary" style="width: 100%; margin-top: 8px;">Зарегистрировать компанию</button>
+
+        <div class="register-company-form-footer" style="text-align: center; margin-top: 24px;">
+          <p style="font-size: 13px; color: var(--uz-text-dim);">
+            Уже есть аккаунт? <a href="{% url 'uzmat:auth' %}" style="color: var(--uz-primary);">Войти</a>
+          </p>
+        </div>
+      </form>
+    </div>
+  </main>
+
+  <!-- Mobile Navigation -->
+  <nav class="uz-bottom-nav uz-show-mobile">
+    <a href="{% url 'uzmat:index' %}" class="uz-bottom-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+      </svg>
+      <span>Главная</span>
+    </a>
+    <a href="{% url 'uzmat:chats' %}" class="uz-bottom-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+      </svg>
+      <span>Чаты</span>
+    </a>
+    <a href="{% url 'uzmat:create_ad' %}" class="uz-bottom-item" style="color: var(--uz-primary);">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="16"></line>
+        <line x1="8" y1="12" x2="16" y2="12"></line>
+      </svg>
+      <span>Создать</span>
+    </a>
+    <a href="{% url 'uzmat:profile' %}" class="uz-bottom-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+        <circle cx="12" cy="7" r="4"></circle>
+      </svg>
+      <span>Профиль</span>
+    </a>
+    <a href="{% url 'uzmat:settings' %}" class="uz-bottom-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"></circle>
+        <path
+          d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+        </path>
+      </svg>
+      <span>Меню</span>
+    </a>
+  </nav>
+
+</body>
+
+</html>
+

@@ -1,0 +1,70 @@
+{% load static %}
+<!-- Footer -->
+<footer class="uz-footer">
+  <div class="uz-footer-inner">
+    <div class="uz-footer-brand">
+      <a href="{% url 'uzmat:index' %}" class="uz-footer-logo">
+        <img src="{% static 'uzmat/logo-uzmat.svg' %}" alt="Uzmat" class="uz-logo-mark">
+        <span>Uzmat</span>
+      </a>
+      <p class="uz-footer-description">
+        Единая платформа для поиска надежных подрядчиков и управления парком техники в Центральной Азии.
+      </p>
+      <div class="uz-footer-social">
+        <a href="#" aria-label="Telegram">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21.5 2L2 12.5l7 1L21.5 2z"></path>
+            <path d="M9 13.5l5 5 7-10-7 10-5-5z"></path>
+          </svg>
+        </a>
+        <a href="#" aria-label="WhatsApp">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 21l1.65-3.8a9 9 0 1 1 3.4 2.9L3 21"></path>
+            <path d="M9 10a.5.5 0 0 0 1 0V9a.5.5 0 0 0-1 0v1a5 5 0 0 0 5 5h1a.5.5 0 0 0 0-1h-1a.5.5 0 0 0 0 1"></path>
+          </svg>
+        </a>
+        <a href="#" aria-label="Instagram">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+            <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+            <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+          </svg>
+        </a>
+      </div>
+    </div>
+    <div class="uz-footer-column">
+      <h3 class="uz-footer-title">Платформа</h3>
+      <nav class="uz-footer-links">
+        <a href="{% url 'uzmat:index' %}" class="uz-footer-link">Объявления</a>
+        <a href="{% url 'uzmat:parts_repair' %}" class="uz-footer-link">Запчасти</a>
+        <a href="{% url 'uzmat:logistics' %}" class="uz-footer-link">Ремонт</a>
+        <a href="{% url 'uzmat:chats' %}" class="uz-footer-link">Чаты</a>
+      </nav>
+    </div>
+    <div class="uz-footer-column">
+      <h3 class="uz-footer-title">О компании</h3>
+      <nav class="uz-footer-links">
+        <a href="#" class="uz-footer-link">О нас</a>
+        <a href="#" class="uz-footer-link">Партнерам</a>
+        <a href="#" class="uz-footer-link">Вакансии</a>
+      </nav>
+    </div>
+    <div class="uz-footer-column">
+      <h3 class="uz-footer-title">Поддержка</h3>
+      <nav class="uz-footer-links">
+        <a href="{% url 'uzmat:help' %}" class="uz-footer-link">Помощь</a>
+        <a href="{% url 'uzmat:rules' %}" class="uz-footer-link">Правила</a>
+        <a href="{% url 'uzmat:settings' %}" class="uz-footer-link">Настройки</a>
+        <a href="{% url 'uzmat:safety' %}" class="uz-footer-link">Безопасность</a>
+      </nav>
+    </div>
+  </div>
+  <div class="uz-footer-bottom">
+    <p class="uz-footer-copyright">© 2024 Uzmat. Все права защищены.</p>
+    <nav class="uz-footer-legal">
+      <a href="{% url 'uzmat:privacy_policy' %}">Политика конфиденциальности</a>
+      <a href="{% url 'uzmat:terms_of_use' %}">Условия использования</a>
+      <a href="{% url 'uzmat:sitemap' %}">Карта сайта</a>
+    </nav>
+  </div>
+</footer>

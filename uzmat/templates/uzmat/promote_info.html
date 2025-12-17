@@ -1,0 +1,119 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Продвижение объявления</title>
+  <link rel="stylesheet" href="{% static 'uzmat/styles.css' %}">
+  <style>
+    .promo-hero {background: linear-gradient(135deg, #1e3a8a, #2563eb, #60a5fa); color: white; padding: 48px 32px; border-radius: 16px; box-shadow: 0 25px 70px rgba(37, 99, 235, 0.3);}
+    .promo-grid {display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; margin-top: 28px;}
+    .promo-card {background: white; border-radius: 14px; padding: 22px; box-shadow: 0 12px 40px rgba(0,0,0,0.08); border: 1px solid #e5e7eb; display: flex; flex-direction: column; gap: 12px;}
+    .promo-badge {display: inline-flex; align-items: center; gap: 8px; border-radius: 999px; padding: 8px 14px; font-weight: 700; font-size: 12px;}
+    .badge-gold {background: #fef3c7; color: #b45309;}
+    .badge-premium {background: #e0f2fe; color: #0369a1;}
+    .badge-vip {background: #ede9fe; color: #6d28d9;}
+    .promo-cta {margin-top: auto;}
+    .promo-list {color: #4b5563; line-height: 1.6; font-size: 14px; padding-left: 18px;}
+    .promo-list li {margin-bottom: 6px;}
+    .back-link {color: white; opacity: 0.9; text-decoration: underline;}
+    @media (max-width: 1120px) {
+      body {padding: 24px; max-width: 100%;}
+    }
+    @media (max-width: 960px) {
+      body {padding: 20px; max-width: 100%;}
+      .promo-hero {padding: 36px 24px; border-radius: 14px;}
+      .promo-hero h1 {font-size: 24px; line-height: 1.3;}
+      .promo-grid {gap: 16px;}
+      .promo-card {padding: 20px;}
+      .promo-hero > div {flex-direction: column; align-items: flex-start; gap: 12px;}
+    }
+    @media (max-width: 640px) {
+      body {padding: 16px; max-width: 100%;}
+      .promo-hero {padding: 24px 18px; border-radius: 12px;}
+      .promo-hero h1 {font-size: 20px; line-height: 1.35;}
+      .promo-hero p {font-size: 14px;}
+      .promo-grid {grid-template-columns: 1fr; gap: 16px;}
+      .promo-card {padding: 18px; box-shadow: 0 10px 30px rgba(0,0,0,0.06);}
+      .promo-badge {font-size: 11px; padding: 7px 12px;}
+      .promo-list {font-size: 13px;}
+      .promo-card h3 {font-size: 17px;}
+      .promo-card p {font-size: 14px;}
+      .promo-cta button {width: 100%; padding: 12px 14px; font-size: 14px;}
+      .promo-grid form {width: 100%;}
+    }
+  </style>
+</head>
+<body style="background: #f8fafc; font-family: 'Inter', system-ui, -apple-system, sans-serif; padding: 32px; max-width: 1100px; margin: 0 auto;">
+  <div class="promo-hero">
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+      <div>
+        <div style="opacity: 0.85; font-size: 14px; text-transform: uppercase; letter-spacing: 0.08em;">Продвижение объявлений</div>
+        <h1 style="margin: 8px 0 10px; font-size: 28px; font-weight: 800;">Выберите тариф и поднимите объявление в «Горячие предложения»</h1>
+        <p style="max-width: 680px; opacity: 0.9; font-size: 15px;">Продвижение даёт мгновенный приоритет в выдаче, больше просмотров и звонков. Выберите срок, подходящий именно вам, и активируйте в один клик.</p>
+      </div>
+      <div style="text-align: right;">
+        <a href="{% url 'uzmat:profile' %}" class="back-link">← Вернуться в профиль</a>
+        <div style="margin-top: 8px; background: rgba(255,255,255,0.12); padding: 10px 14px; border-radius: 10px; font-size: 14px;">Объявление: <strong>{{ ad.title }}</strong></div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top: 28px;">
+    <h2 style="font-size: 20px; font-weight: 700; color: #0f172a; margin-bottom: 8px;">Тарифы продвижения</h2>
+    <p style="color: #475569; margin-bottom: 18px;">Подписка мгновенно активирует вывод в блок «Горячие предложения» на выбранный срок. Отображение начинается сразу после оформления.</p>
+
+    <div class="promo-grid">
+      <div class="promo-card">
+        <div class="promo-badge badge-gold">GOLD • 3 дня</div>
+        <h3 style="font-size: 18px; font-weight: 800; color: #92400e;">Ускоренный старт</h3>
+        <p style="color: #6b7280;">Идеально, чтобы быстро собрать первые звонки и тестировать спрос.</p>
+        <ul class="promo-list">
+          <li>Мгновенный вывод в «Горячие предложения»</li>
+          <li>Повышенный приоритет в списке региона</li>
+          <li>Буст просмотров в первые 72 часа</li>
+        </ul>
+        <form method="post" action="{% url 'uzmat:promote_ad' slug=ad.slug %}" class="promo-cta">
+          {% csrf_token %}
+          <input type="hidden" name="plan" value="gold">
+          <button type="submit" class="uz-btn uz-btn-primary" style="width: 100%; background: linear-gradient(90deg, #f59e0b, #fbbf24); color: #78350f; font-weight: 800; border: none;">Оформить GOLD на 3 дня</button>
+        </form>
+      </div>
+
+      <div class="promo-card" style="border: 1px solid #bfdbfe; box-shadow: 0 16px 50px rgba(37,99,235,0.15);">
+        <div class="promo-badge badge-premium">PREMIUM • 14 дней</div>
+        <h3 style="font-size: 18px; font-weight: 800; color: #1d4ed8;">Баланс охвата и цены</h3>
+        <p style="color: #6b7280;">Оптимально для стабильного потока лидов без переплат.</p>
+        <ul class="promo-list">
+          <li>Приоритетный показ 24/7 на 2 недели</li>
+          <li>Удержание в верхних позициях дольше</li>
+          <li>Отлично подходит для аренды и услуг</li>
+        </ul>
+        <form method="post" action="{% url 'uzmat:promote_ad' slug=ad.slug %}" class="promo-cta">
+          {% csrf_token %}
+          <input type="hidden" name="plan" value="premium">
+          <button type="submit" class="uz-btn uz-btn-primary" style="width: 100%; background: linear-gradient(90deg, #1d4ed8, #60a5fa); color: white; font-weight: 800; border: none;">Оформить PREMIUM на 14 дней</button>
+        </form>
+      </div>
+
+      <div class="promo-card" style="border: 1px solid #ddd6fe; box-shadow: 0 16px 50px rgba(109,40,217,0.12);">
+        <div class="promo-badge badge-vip">VIP • 30 дней</div>
+        <h3 style="font-size: 18px; font-weight: 800; color: #6d28d9;">Максимум охвата</h3>
+        <p style="color: #6b7280;">Длинный срок для стабильных продаж без ежедневного контроля.</p>
+        <ul class="promo-list">
+          <li>Фиксация в «Горячих» на месяц</li>
+          <li>Максимально высокий приоритет показа</li>
+          <li>Лучший вариант для дорогой техники</li>
+        </ul>
+        <form method="post" action="{% url 'uzmat:promote_ad' slug=ad.slug %}" class="promo-cta">
+          {% csrf_token %}
+          <input type="hidden" name="plan" value="vip">
+          <button type="submit" class="uz-btn uz-btn-primary" style="width: 100%; background: linear-gradient(90deg, #7c3aed, #a855f7); color: white; font-weight: 800; border: none;">Оформить VIP на 30 дней</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+

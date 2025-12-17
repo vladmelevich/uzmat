@@ -1,0 +1,213 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Верификация — Uzmat</title>
+  <link rel="icon" type="image/svg+xml" href="{% static 'uzmat/logo-uzmat.svg' %}">
+  {% include 'uzmat/theme-init.html' %}
+  <link rel="stylesheet" href="{% static 'uzmat/styles.css' %}">
+  <script defer src="{% static 'uzmat/app.js' %}"></script>
+  {% include 'uzmat/toast-container.html' %}
+  <style>
+    .ver-hero {
+      background:
+        radial-gradient(circle at 20% 20%, rgba(37, 99, 235, 0.22), transparent 40%),
+        radial-gradient(circle at 80% 0%, rgba(14, 165, 233, 0.18), transparent 35%),
+        linear-gradient(135deg, rgba(15, 23, 42, 0.92), rgba(2, 6, 23, 0.92));
+      border: 1px solid var(--uz-border);
+      border-radius: var(--uz-radius-lg);
+      box-shadow: var(--uz-shadow-card);
+      padding: 22px;
+      overflow: hidden;
+    }
+    [data-theme="light"] .ver-hero {
+      background:
+        radial-gradient(circle at 20% 20%, rgba(37, 99, 235, 0.12), transparent 45%),
+        radial-gradient(circle at 80% 0%, rgba(14, 165, 233, 0.10), transparent 40%),
+        linear-gradient(135deg, rgba(248, 250, 252, 0.95), rgba(255, 255, 255, 0.95));
+    }
+    .ver-hero-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+    .ver-hero-kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--uz-text-dim);
+    }
+    .ver-hero-title {
+      font-size: 26px;
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+      margin: 10px 0 10px;
+      color: var(--uz-text);
+    }
+    .ver-hero-subtitle {
+      color: var(--uz-text-dim);
+      font-size: 14px;
+      max-width: 640px;
+    }
+    .ver-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+    @media (max-width: 720px) {
+      .ver-grid { grid-template-columns: 1fr; }
+      .ver-hero-title { font-size: 24px; }
+    }
+    .ver-tile {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--uz-border);
+      border-radius: var(--uz-radius-md);
+      padding: 14px;
+    }
+    [data-theme="light"] .ver-tile {
+      background: rgba(2, 6, 23, 0.02);
+    }
+    .ver-tile-title {
+      font-weight: 700;
+      margin-bottom: 6px;
+      font-size: 14px;
+      color: var(--uz-text);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .ver-tile-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: var(--uz-primary);
+      box-shadow: var(--uz-primary-glow);
+      flex-shrink: 0;
+    }
+    .ver-tile-desc {
+      font-size: 13px;
+      color: var(--uz-text-dim);
+      line-height: 1.5;
+    }
+    .ver-cta {
+      margin-top: 16px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .ver-note {
+      color: var(--uz-text-muted);
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body class="uz-body">
+
+  <header class="uz-header">
+    <div class="uz-header-inner">
+      <a href="{% url 'uzmat:index' %}" class="uz-logo">
+        <img src="{% static 'uzmat/logo-uzmat.svg' %}" alt="Uzmat" class="uz-logo-mark">
+        <span>Uzmat</span>
+      </a>
+
+      {% include 'uzmat/nav.html' %}
+
+      <div class="uz-flex">
+        {% include 'uzmat/country-selector.html' %}
+        {% include 'uzmat/create-ad-button.html' %}
+        <button class="uz-btn uz-btn-ghost uz-hidden-mobile" data-theme-toggle>Тема</button>
+        {% include 'uzmat/user-avatar.html' %}
+      </div>
+    </div>
+  </header>
+
+  <main class="uz-container" style="max-width: 760px;">
+    <div style="margin-top: 18px; display:flex; justify-content: space-between; align-items:center; gap: 12px; flex-wrap: wrap;">
+      <a href="{% url 'uzmat:profile' %}" class="uz-btn uz-btn-ghost" style="padding: 8px 12px;">← В профиль</a>
+
+      {% if user.verification_status and user.verification_status != 'none' %}
+        <span class="uz-badge"
+              style="
+                {% if user.verification_status == 'pending' %}background: rgba(245, 158, 11, 0.15); color: var(--uz-warning);
+                {% elif user.verification_status == 'approved' %}background: rgba(16, 185, 129, 0.15); color: var(--uz-success);
+                {% elif user.verification_status == 'rejected' %}background: rgba(239, 68, 68, 0.15); color: var(--uz-danger);
+                {% endif %}
+              ">
+          Статус:
+          {% if user.verification_status == 'pending' %}в обработке{% elif user.verification_status == 'approved' %}одобрено{% elif user.verification_status == 'rejected' %}отклонено{% endif %}
+        </span>
+      {% endif %}
+    </div>
+
+    <section class="uz-animate-in" style="margin-top: 18px;">
+      <div class="ver-hero">
+        <div class="ver-hero-top">
+          <div>
+            <div class="ver-hero-kicker">
+              <span class="ver-tile-dot" aria-hidden="true"></span>
+              галочка доверия
+            </div>
+            <h1 class="ver-hero-title">Сделайте профиль «проверенным» — и получайте больше обращений</h1>
+            <div class="ver-hero-subtitle">
+              Проверенный профиль выглядит надёжнее: люди охотнее пишут, меньше сомневаются и чаще выбирают именно ваши объявления.
+            </div>
+          </div>
+          <div>
+            {% if user.verification_status and user.verification_status != 'none' %}
+              <span class="uz-badge uz-badge-primary">Текущий статус: {{ user.get_verification_status_display }}</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="ver-grid">
+          <div class="ver-tile">
+            <div class="ver-tile-title"><span class="ver-tile-dot" aria-hidden="true"></span>Больше заявок и звонков</div>
+            <div class="ver-tile-desc">Когда профиль подтверждён, доверие выше — клиенты быстрее решаются написать и позвонить.</div>
+          </div>
+          <div class="ver-tile">
+            <div class="ver-tile-title"><span class="ver-tile-dot" aria-hidden="true"></span>Приоритет показов</div>
+            <div class="ver-tile-desc">Ваши объявления получают дополнительный приоритет в ленте и чаще попадаются на глаза.</div>
+          </div>
+          <div class="ver-tile">
+            <div class="ver-tile-title"><span class="ver-tile-dot" aria-hidden="true"></span>Меньше вопросов — быстрее сделки</div>
+            <div class="ver-tile-desc">Сомнений меньше — диалоги короче, решения принимаются быстрее при аренде и покупке.</div>
+          </div>
+          <div class="ver-tile">
+            <div class="ver-tile-title"><span class="ver-tile-dot" aria-hidden="true"></span>Один раз — на все объявления</div>
+            <div class="ver-tile-desc">Статус привязан к профилю и помогает всем вашим объявлениям одновременно.</div>
+          </div>
+        </div>
+
+        <div class="ver-cta">
+          {% if user.verification_status == 'pending' %}
+            <button class="uz-btn uz-btn-outline" disabled style="opacity: .6; cursor: not-allowed;">Заявка уже в обработке</button>
+          {% else %}
+            <form method="post" action="{% url 'uzmat:verify_info' %}" style="display:inline;">
+              {% csrf_token %}
+              {% if user.account_type == 'company' %}
+                <input type="hidden" name="verification_type" value="company">
+              {% else %}
+                <input type="hidden" name="verification_type" value="individual">
+              {% endif %}
+              <button type="submit" class="uz-btn uz-btn-primary" style="font-weight: 700;">Оформить верификацию</button>
+            </form>
+          {% endif %}
+          <div class="ver-note">Займёт пару минут: выберите тип и отправьте заявку.</div>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,118 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Заявка #{{ v_request.id }} — модерация</title>
+  <link rel="icon" type="image/svg+xml" href="{% static 'uzmat/logo-uzmat.svg' %}">
+  {% include 'uzmat/theme-init.html' %}
+  <link rel="stylesheet" href="{% static 'uzmat/styles.css' %}">
+  <script defer src="{% static 'uzmat/app.js' %}"></script>
+  {% include 'uzmat/toast-container.html' %}
+  <style>
+    .vd-kv {display:grid; grid-template-columns: 140px 1fr; gap: 8px 12px; font-size: 13px; color: var(--uz-text-dim);}
+    .vd-kv b {color: var(--uz-text); font-weight: 700;}
+    .vd-actions {display:flex; gap: 10px; flex-wrap: wrap;}
+    .vd-actions .uz-btn {font-weight: 700;}
+    .vd-danger {color: var(--uz-danger);}
+  </style>
+</head>
+<body class="uz-body">
+
+  <header class="uz-header">
+    <div class="uz-header-inner">
+      <a href="{% url 'uzmat:index' %}" class="uz-logo">
+        <img src="{% static 'uzmat/logo-uzmat.svg' %}" alt="Uzmat" class="uz-logo-mark">
+        <span>Uzmat</span>
+      </a>
+
+      {% include 'uzmat/nav.html' %}
+
+      <div class="uz-flex">
+        {% include 'uzmat/country-selector.html' %}
+        {% include 'uzmat/create-ad-button.html' %}
+        <button class="uz-btn uz-btn-ghost uz-hidden-mobile" data-theme-toggle>Тема</button>
+        {% include 'uzmat/user-avatar.html' %}
+      </div>
+    </div>
+  </header>
+
+  <main class="uz-container" style="max-width: 1080px;">
+    <div style="margin-top: 18px;">
+      <a href="{% url 'uzmat:verify_moderation_list' %}" class="uz-btn uz-btn-ghost" style="padding: 8px 12px;">← К списку заявок</a>
+    </div>
+
+    <section class="uz-animate-in" style="margin-top: 14px;">
+      <div class="uz-card">
+        <div class="uz-flex" style="justify-content: space-between; align-items:flex-start; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <div class="uz-badge uz-badge-primary">Заявка #{{ v_request.id }}</div>
+            <h1 style="font-size: 22px; font-weight: 800; margin-top: 10px;">{{ v_request.get_verification_type_display }}</h1>
+            <div style="color: var(--uz-text-dim); font-size: 13px; margin-top: 6px;">
+              Создано: {{ v_request.created_at|date:"d.m.Y H:i" }} · Статус: {{ v_request.get_status_display }}
+              {% if v_request.reviewed_at %} · Решение: {{ v_request.reviewed_at|date:"d.m.Y H:i" }}{% endif %}
+            </div>
+          </div>
+          <div class="vd-actions">
+            {% if v_request.status == 'pending' %}
+            <span class="uz-badge">Нужно сообщение модератора</span>
+            {% else %}
+            <span class="uz-badge">Решение уже принято</span>
+            {% endif %}
+          </div>
+        </div>
+
+        {% if v_request.status == 'pending' %}
+        <div style="margin-top: 12px;">
+          <form method="post">
+            {% csrf_token %}
+            <div class="uz-flex-col" style="gap: 8px;">
+              <label style="font-size: 12px; color: var(--uz-text-dim); font-weight: 600;">Сообщение пользователю (обязательно)</label>
+              <textarea class="uz-input" name="comment" rows="3" required placeholder="Напишите сообщение пользователю" style="resize: vertical;"></textarea>
+              <div style="display:flex; gap: 10px; flex-wrap: wrap;">
+                <button class="uz-btn uz-btn-primary" name="action" value="approve" type="submit">Верифицировать</button>
+                <button class="uz-btn uz-btn-outline vd-danger" style="border-color: rgba(239,68,68,0.35);" name="action" value="reject" type="submit">Отклонить</button>
+              </div>
+            </div>
+          </form>
+        </div>
+        {% else %}
+        {% if v_request.reviewer_comment %}
+        <div style="margin-top: 12px; color: var(--uz-text-dim); font-size: 13px;">
+          Комментарий модератора: <b>{{ v_request.reviewer_comment }}</b>
+        </div>
+        {% endif %}
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="uz-animate-in" style="margin-top: 14px; animation-delay: .05s;">
+      <div class="uz-card" style="padding: 16px;">
+        <div style="font-weight: 800; font-size: 16px; margin-bottom: 10px;">Данные профиля</div>
+        <div class="vd-kv">
+          <div>Имя</div><div><b>{{ target_user.first_name|default:"—" }}</b></div>
+          <div>Email</div><div><b>{{ target_user.email|default:"—" }}</b></div>
+          <div>Телефон</div><div><b>{{ target_user.phone|default:"—" }}</b></div>
+          <div>Город</div><div><b>{{ target_user.city|default:"—" }}</b></div>
+          <div>Тип аккаунта</div><div><b>{{ target_user.get_account_type_display|default:"—" }}</b></div>
+        </div>
+
+        {% if target_user.account_type == 'company' %}
+          <div style="margin-top: 12px; font-weight: 800; font-size: 14px;">Компания</div>
+          <div class="vd-kv" style="margin-top: 10px;">
+            <div>Название</div><div><b>{{ target_user.company_name|default:"—" }}</b></div>
+            <div>ИНН</div><div><b>{{ target_user.company_inn|default:"—" }}</b></div>
+            <div>Директор</div><div><b>{{ target_user.company_director|default:"—" }}</b></div>
+            <div>Телефон</div><div><b>{{ target_user.company_phone|default:"—" }}</b></div>
+            <div>Email</div><div><b>{{ target_user.company_email|default:"—" }}</b></div>
+          </div>
+        {% endif %}
+      </div>
+    </section>
+  </main>
+</body>
+</html>
+
+
+

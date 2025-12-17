@@ -1,0 +1,1007 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% if edit_mode %}Редактировать объявление{% else %}Создать объявление{% endif %} — Uzmat</title>
+  <link rel="icon" type="image/svg+xml" href="{% static 'uzmat/logo-uzmat.svg' %}">
+  {% include 'uzmat/theme-init.html' %}
+  <link rel="stylesheet" href="{% static 'uzmat/styles.css' %}">
+  <script defer src="{% static 'uzmat/app.js' %}"></script>
+  {% include 'uzmat/toast-container.html' %}
+  <script>
+    // Переключение формы в зависимости от типа объявления
+    document.addEventListener('DOMContentLoaded', function() {
+      const adTypeSelect = document.getElementById('ad_type');
+      if (!adTypeSelect) return;
+      
+      const equipmentFields = document.getElementById('equipment-fields');
+      const serviceFields = document.getElementById('service-fields');
+      const partsFields = document.getElementById('parts-fields');
+      const priceTypeGroup = document.getElementById('price-type-group');
+      const operatorGroup = document.getElementById('operator-group');
+      const minOrderGroup = document.getElementById('min-order-group');
+      const characteristicsGroup = document.getElementById('characteristics-group');
+
+      if (!equipmentFields || !serviceFields || !partsFields || !priceTypeGroup || !operatorGroup || !minOrderGroup || !characteristicsGroup) {
+        console.warn('Не все элементы формы найдены');
+        return;
+      }
+
+      function updateFormFields() {
+        const selectedType = adTypeSelect.value;
+        
+        // Скрываем все группы полей
+        if (equipmentFields) equipmentFields.style.display = 'none';
+        if (serviceFields) serviceFields.style.display = 'none';
+        if (partsFields) partsFields.style.display = 'none';
+        if (characteristicsGroup) characteristicsGroup.style.display = 'none';
+        if (operatorGroup) operatorGroup.style.display = 'none';
+        if (minOrderGroup) minOrderGroup.style.display = 'none';
+        if (priceTypeGroup) priceTypeGroup.style.display = 'none';
+
+        // Убираем required со всех полей
+        const allFields = document.querySelectorAll('.ad-type-fields input, .ad-type-fields textarea');
+        allFields.forEach(field => field.removeAttribute('required'));
+
+        if (selectedType === 'rent' || selectedType === 'sale') {
+          // Показываем поля для техники
+          if (equipmentFields) equipmentFields.style.display = 'block';
+          if (characteristicsGroup) characteristicsGroup.style.display = 'block';
+          
+          // Добавляем required обратно
+          if (equipmentFields) {
+            equipmentFields.querySelectorAll('input[required], textarea[required]').forEach(field => {
+              field.setAttribute('required', 'required');
+            });
+          }
+
+          // Для аренды показываем оператора и минимальный заказ
+          if (selectedType === 'rent') {
+            if (operatorGroup) operatorGroup.style.display = 'block';
+            if (minOrderGroup) minOrderGroup.style.display = 'block';
+          }
+
+          // Тип цены для аренды и продажи
+          if (priceTypeGroup) {
+            if (selectedType === 'rent') {
+              priceTypeGroup.style.display = 'block';
+            } else if (selectedType === 'sale') {
+              priceTypeGroup.style.display = 'none';
+            }
+          }
+        } else if (selectedType === 'service') {
+          // Показываем поля для услуг
+          if (serviceFields) serviceFields.style.display = 'block';
+          if (serviceFields) {
+            serviceFields.querySelectorAll('input[required], textarea[required]').forEach(field => {
+              field.setAttribute('required', 'required');
+            });
+          }
+          if (priceTypeGroup) priceTypeGroup.style.display = 'none';
+        } else if (selectedType === 'parts') {
+          // Показываем поля для запчастей
+          if (partsFields) partsFields.style.display = 'block';
+          if (partsFields) {
+            partsFields.querySelectorAll('input[required], textarea[required]').forEach(field => {
+              field.setAttribute('required', 'required');
+            });
+          }
+          if (priceTypeGroup) priceTypeGroup.style.display = 'block';
+        }
+      }
+
+      // Инициализация при загрузке
+      updateFormFields();
+
+      // Обработчик изменения типа объявления
+      adTypeSelect.addEventListener('change', updateFormFields);
+    });
+
+    // Селекторы страны и города в форме создания объявления
+    document.addEventListener('DOMContentLoaded', function() {
+      const countrySelector = document.getElementById('country_selector');
+      if (!countrySelector) return;
+      
+      const countrySelect = document.getElementById('country_select');
+      const countryToggle = countrySelector.querySelector('[data-filter-country-toggle]');
+      const countryDropdown = countrySelector.querySelector('[data-filter-country-dropdown]');
+      const countryDisplay = countrySelector.querySelector('[data-filter-country-display]');
+      if (!countryDropdown) return;
+      const countryOptions = countryDropdown.querySelectorAll('[data-filter-value]');
+      
+      const citySelector = document.getElementById('city_selector');
+      if (!citySelector) return;
+      
+      const cityInput = document.getElementById('city_input');
+      const cityToggle = citySelector.querySelector('[data-filter-city-toggle]');
+      const cityDropdown = citySelector.querySelector('[data-filter-city-dropdown]');
+      if (!cityDropdown) return;
+      
+      const citySearchInput = citySelector.querySelector('[data-filter-city-search]');
+      const cityList = citySelector.querySelector('[data-filter-city-list]');
+      const cityDisplay = citySelector.querySelector('[data-filter-city-display]');
+      if (!cityList || !cityDisplay) return;
+
+      // Список городов по странам
+      const citiesByCountry = {
+        kz: [
+          "Алматы", "Астана", "Шымкент", "Караганда", "Актобе", "Тараз", "Павлодар",
+          "Усть-Каменогорск", "Семей", "Костанай", "Кызылорда", "Уральск", "Петропавловск",
+          "Атырау", "Туркестан", "Кокшетау", "Темиртау", "Экибастуз", "Рудный", "Жанаозен"
+        ],
+        uz: [
+          "Ташкент", "Самарканд", "Наманган", "Андижан", "Нукус", "Бухара", "Карши",
+          "Фергана", "Коканд", "Маргилан", "Джизак", "Гулистан", "Термез", "Ургенч",
+          "Навои", "Ангрен", "Чирчик", "Бекабад", "Денау", "Шахрисабз"
+        ],
+        ru: [
+          "Москва", "Санкт-Петербург", "Новосибирск", "Екатеринбург", "Казань", "Нижний Новгород",
+          "Челябинск", "Самара", "Омск", "Ростов-на-Дону", "Уфа", "Красноярск", "Воронеж",
+          "Пермь", "Волгоград", "Краснодар", "Саратов", "Тюмень", "Тольятти", "Ижевск"
+        ],
+        by: [
+          "Минск", "Гомель", "Могилёв", "Витебск", "Гродно", "Брест", "Бобруйск",
+          "Барановичи", "Борисов", "Пинск", "Орша", "Мозырь", "Солигорск", "Новополоцк",
+          "Лида", "Молодечно", "Полоцк", "Жлобин", "Светлогорск", "Речица"
+        ]
+      };
+
+      const countryNames = {
+        kz: 'Казахстан',
+        uz: 'Узбекистан',
+        ru: 'Россия',
+        by: 'Беларусь'
+      };
+
+      let selectedCountry = '';
+      
+      // Сохраняем выбранные значения в глобальной переменной для доступа из других функций
+      window.selectedCountryValue = '';
+      window.selectedCityValue = '';
+      
+      // Инициализация значений при редактировании (после определения всех переменных)
+      {% if edit_mode and ad.country %}
+      const editCountry = '{{ ad.country }}';
+      const editCity = '{{ ad.city }}';
+      
+      if (editCountry && countrySelect) {
+        countrySelect.value = editCountry;
+        selectedCountry = editCountry;
+        window.selectedCountryValue = editCountry;
+        if (countryDisplay) {
+          countryDisplay.textContent = countryNames[editCountry] || 'Выберите страну';
+        }
+        // Активируем выбранную опцию
+        countryOptions.forEach(opt => {
+          if (opt.getAttribute('data-filter-value') === editCountry) {
+            opt.classList.add('active');
+          }
+        });
+        // Загружаем города для выбранной страны
+        renderCities(editCountry);
+      }
+      
+      if (editCity && cityInput) {
+        cityInput.value = editCity;
+        window.selectedCityValue = editCity;
+        if (cityDisplay) {
+          cityDisplay.textContent = editCity;
+        }
+      }
+      {% endif %}
+
+      // Отобразить города
+      function renderCities(country) {
+        const cities = citiesByCountry[country] || [];
+        cityList.innerHTML = "";
+        
+        cities.forEach((city) => {
+          const item = document.createElement('button');
+          item.type = 'button';
+          item.className = 'uz-filter-option';
+          item.textContent = city;
+          item.addEventListener('click', (e) => {
+            e.stopPropagation();
+            cityDisplay.textContent = city;
+            // Убеждаемся, что значение установлено в скрытое поле
+            if (cityInput) {
+              cityInput.value = city;
+              cityInput.setAttribute('value', city);
+              window.selectedCityValue = city;
+              // Также устанавливаем атрибут name для гарантии
+              cityInput.name = 'city';
+            }
+            citySelector.removeAttribute('data-open');
+            
+            // Отладочная информация (можно убрать в продакшене)
+            console.log('Город выбран:', city, 'Значение в поле:', cityInput ? cityInput.value : 'поле не найдено');
+          });
+          cityList.appendChild(item);
+        });
+      }
+
+      // Фильтрация городов
+      function filterCities(query) {
+        const items = cityList.querySelectorAll('.uz-filter-option');
+        const lowerQuery = query.toLowerCase().trim();
+        
+        items.forEach((item) => {
+          const cityName = item.textContent.toLowerCase();
+          if (cityName.includes(lowerQuery)) {
+            item.classList.remove('is-hidden');
+          } else {
+            item.classList.add('is-hidden');
+          }
+        });
+      }
+
+      // Открытие/закрытие селектора страны
+      if (countryToggle) {
+        countryToggle.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const isOpen = countrySelector.hasAttribute('data-open');
+          
+          // Закрываем другие селекторы на этой странице
+          const pageSelectors = document.querySelectorAll('#country_selector[data-filter-country], #city_selector[data-filter-city]');
+          pageSelectors.forEach(s => {
+            s.removeAttribute('data-open');
+          });
+          
+          if (!isOpen) {
+            countrySelector.setAttribute('data-open', '');
+          }
+        });
+      }
+
+      // Выбор страны
+      if (countryOptions.length > 0) {
+        countryOptions.forEach(option => {
+          option.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const value = option.getAttribute('data-filter-value');
+            
+            selectedCountry = value;
+            window.selectedCountryValue = value;
+            // Убеждаемся, что значение установлено в скрытое поле
+            if (countrySelect) {
+              countrySelect.value = value;
+              countrySelect.setAttribute('value', value);
+              // Также устанавливаем атрибут name для гарантии
+              countrySelect.name = 'country';
+            }
+            if (countryDisplay) countryDisplay.textContent = countryNames[value] || 'Выберите страну';
+            
+            // Обновляем список городов
+            if (cityList && cityDisplay) {
+              renderCities(value);
+              cityDisplay.textContent = 'Выберите город';
+              if (cityInput) {
+                cityInput.value = '';
+                cityInput.removeAttribute('value');
+              }
+            }
+            
+            countryOptions.forEach(opt => opt.classList.remove('active'));
+            option.classList.add('active');
+            countrySelector.removeAttribute('data-open');
+            
+            // Отладочная информация (можно убрать в продакшене)
+            console.log('Страна выбрана:', value, 'Значение в поле:', countrySelect ? countrySelect.value : 'поле не найдено');
+          });
+        });
+      }
+
+      // Открытие/закрытие селектора города
+      if (cityToggle) {
+        cityToggle.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const isOpen = citySelector.hasAttribute('data-open');
+          
+          // Закрываем другие селекторы на этой странице
+          const pageSelectors = document.querySelectorAll('#country_selector[data-filter-country], #city_selector[data-filter-city]');
+          pageSelectors.forEach(s => {
+            s.removeAttribute('data-open');
+          });
+          
+          if (!isOpen) {
+            if (selectedCountry) {
+              renderCities(selectedCountry);
+              citySelector.setAttribute('data-open', '');
+              if (citySearchInput) {
+                citySearchInput.value = '';
+                setTimeout(() => citySearchInput.focus(), 100);
+              }
+            } else {
+              alert('Сначала выберите страну');
+            }
+          }
+        });
+      }
+
+      // Поиск городов
+      if (citySearchInput) {
+        citySearchInput.addEventListener('input', (e) => {
+          filterCities(e.target.value);
+        });
+      }
+
+      // Закрытие при клике вне
+      document.addEventListener('click', (e) => {
+        const pageCountrySelector = document.getElementById('country_selector');
+        const pageCitySelector = document.getElementById('city_selector');
+        
+        if (pageCountrySelector && pageCitySelector) {
+          if (!e.target.closest('#country_selector') && !e.target.closest('#city_selector')) {
+            pageCountrySelector.removeAttribute('data-open');
+            pageCitySelector.removeAttribute('data-open');
+          }
+        }
+      });
+    });
+
+    // Валидация формы перед отправкой
+    document.addEventListener('DOMContentLoaded', function() {
+      const form = document.querySelector('.uz-form');
+      if (!form) return;
+
+      form.addEventListener('submit', function(e) {
+        // Проверяем наличие файла перед отправкой
+        const photoInput = document.getElementById('photo-upload');
+        if (photoInput) {
+          console.log('✓ Input найден, файлов:', photoInput.files ? photoInput.files.length : 0);
+          if (photoInput.files && photoInput.files.length > 0) {
+            console.log('✓ Файл готов к отправке:', photoInput.files[0].name, 'размер:', photoInput.files[0].size, 'тип:', photoInput.files[0].type);
+            // Убеждаемся, что input находится внутри формы
+            if (!form.contains(photoInput)) {
+              console.error('⚠️ Input файла не находится внутри формы!');
+              form.appendChild(photoInput);
+            }
+          } else {
+            console.log('⚠️ Файл не выбран - объявление будет создано без фотографии');
+          }
+        } else {
+          console.error('⚠️ Input файла не найден!');
+        }
+        
+        const countrySelect = document.getElementById('country_select');
+        const cityInput = document.getElementById('city_input');
+        const adTypeSelect = document.getElementById('ad_type');
+        
+        // Получаем значения из отображаемых элементов, если скрытые поля пустые
+        const countryDisplay = document.querySelector('[data-filter-country-display]');
+        const cityDisplay = document.querySelector('[data-filter-city-display]');
+        
+        // Пытаемся восстановить значения из глобальных переменных или из DOM
+        if (countrySelect && (!countrySelect.value || countrySelect.value.trim() === '')) {
+          // Сначала пробуем из глобальной переменной
+          if (window.selectedCountryValue) {
+            countrySelect.value = window.selectedCountryValue;
+            countrySelect.setAttribute('value', window.selectedCountryValue);
+            console.log('Восстановлено значение страны из глобальной переменной:', window.selectedCountryValue);
+          } else {
+            // Ищем активную опцию страны
+            const activeCountryOption = document.querySelector('#country_selector [data-filter-value].active');
+            if (activeCountryOption) {
+              const countryValue = activeCountryOption.getAttribute('data-filter-value');
+              countrySelect.value = countryValue;
+              countrySelect.setAttribute('value', countryValue);
+              window.selectedCountryValue = countryValue;
+              console.log('Восстановлено значение страны из активной опции:', countryValue);
+            }
+          }
+        }
+        
+        if (cityInput && (!cityInput.value || cityInput.value.trim() === '')) {
+          // Сначала пробуем из глобальной переменной
+          if (window.selectedCityValue) {
+            cityInput.value = window.selectedCityValue;
+            cityInput.setAttribute('value', window.selectedCityValue);
+            console.log('Восстановлено значение города из глобальной переменной:', window.selectedCityValue);
+          } else if (cityDisplay && cityDisplay.textContent && cityDisplay.textContent !== 'Выберите город') {
+            // Пытаемся получить значение из отображаемого текста
+            const cityValue = cityDisplay.textContent.trim();
+            cityInput.value = cityValue;
+            cityInput.setAttribute('value', cityValue);
+            window.selectedCityValue = cityValue;
+            console.log('Восстановлено значение города из отображаемого текста:', cityValue);
+          }
+        }
+        
+        let errors = [];
+        let hasErrors = false;
+
+        // Проверка типа объявления
+        if (!adTypeSelect || !adTypeSelect.value) {
+          errors.push('Выберите тип объявления');
+          hasErrors = true;
+        }
+
+        // Проверка страны - проверяем и значение, и что поле существует
+        if (!countrySelect) {
+          errors.push('Поле выбора страны не найдено');
+          hasErrors = true;
+        } else if (!countrySelect.value || countrySelect.value.trim() === '') {
+          errors.push('Выберите страну');
+          hasErrors = true;
+        }
+
+        // Проверка города - проверяем и значение, и что поле существует
+        if (!cityInput) {
+          errors.push('Поле выбора города не найдено');
+          hasErrors = true;
+        } else if (!cityInput.value || cityInput.value.trim() === '') {
+          errors.push('Выберите город');
+          hasErrors = true;
+        }
+
+        // Проверка обязательных полей в зависимости от типа
+        const adType = adTypeSelect ? adTypeSelect.value : '';
+        if (adType === 'rent' || adType === 'sale') {
+          const equipmentType = form.querySelector('[name="equipment_type"]');
+          const brand = form.querySelector('[name="brand"]');
+          const title = form.querySelector('[name="title"]');
+          const description = form.querySelector('[name="description"]');
+          
+          if (equipmentType && !equipmentType.value.trim()) {
+            errors.push('Укажите тип техники');
+            hasErrors = true;
+          }
+          if (brand && !brand.value.trim()) {
+            errors.push('Укажите марку');
+            hasErrors = true;
+          }
+          if (title && !title.value.trim()) {
+            errors.push('Укажите заголовок объявления');
+            hasErrors = true;
+          }
+          if (description && !description.value.trim()) {
+            errors.push('Укажите описание');
+            hasErrors = true;
+          }
+        } else if (adType === 'service') {
+          const serviceName = form.querySelector('[name="service_name"]');
+          const serviceDescription = form.querySelector('[name="service_description"]');
+          
+          if (serviceName && !serviceName.value.trim()) {
+            errors.push('Укажите название услуги');
+            hasErrors = true;
+          }
+          if (serviceDescription && !serviceDescription.value.trim()) {
+            errors.push('Укажите описание услуги');
+            hasErrors = true;
+          }
+        } else if (adType === 'parts') {
+          const partName = form.querySelector('[name="part_name"]');
+          const partEquipmentType = form.querySelector('[name="part_equipment_type"]');
+          const partBrand = form.querySelector('[name="part_brand"]');
+          const partTitle = form.querySelector('[name="part_title"]');
+          const partDescription = form.querySelector('[name="part_description"]');
+          
+          if (partName && !partName.value.trim()) {
+            errors.push('Укажите название запчасти');
+            hasErrors = true;
+          }
+          if (partEquipmentType && !partEquipmentType.value.trim()) {
+            errors.push('Укажите тип техники для запчасти');
+            hasErrors = true;
+          }
+          if (partBrand && !partBrand.value.trim()) {
+            errors.push('Укажите марку для запчасти');
+            hasErrors = true;
+          }
+          if (partTitle && !partTitle.value.trim()) {
+            errors.push('Укажите заголовок объявления');
+            hasErrors = true;
+          }
+          if (partDescription && !partDescription.value.trim()) {
+            errors.push('Укажите описание');
+            hasErrors = true;
+          }
+        }
+
+        // Проверка цены
+        const price = form.querySelector('[name="price"]');
+        if (price && !price.value.trim()) {
+          errors.push('Укажите цену');
+          hasErrors = true;
+        }
+
+        // Проверка телефона
+        const phone = form.querySelector('[name="phone"]');
+        if (phone && !phone.value.trim()) {
+          errors.push('Укажите телефон');
+          hasErrors = true;
+        }
+        
+        // Проверяем наличие файла перед отправкой
+        const photoUpload = document.getElementById('photo-upload');
+        if (photoUpload && photoUpload.files && photoUpload.files.length > 0) {
+          console.log('Файл выбран для загрузки:', photoUpload.files[0].name, 'размер:', photoUpload.files[0].size);
+        } else {
+          console.log('⚠️ Файл не выбран для загрузки');
+        }
+        
+        // Отладочная информация перед отправкой
+        console.log('Перед отправкой формы:');
+        console.log('Страна:', countrySelect ? countrySelect.value : 'не найдено');
+        console.log('Город:', cityInput ? cityInput.value : 'не найдено');
+        console.log('Тип объявления:', adType);
+        
+        // Проверяем FormData перед отправкой
+        const formData = new FormData(form);
+        console.log('FormData keys:', Array.from(formData.keys()));
+        if (photoUpload && photoUpload.files && photoUpload.files.length > 0) {
+          console.log('✓ Файл в FormData:', formData.has('photo'), 'имя:', photoUpload.files[0].name);
+        } else {
+          console.log('⚠️ Файл НЕ в FormData - input пустой');
+        }
+
+        // ФИНАЛЬНАЯ ПРОВЕРКА ФАЙЛА ПЕРЕД ОТПРАВКОЙ
+        const finalPhotoCheck = document.getElementById('photo-upload');
+        if (finalPhotoCheck) {
+          if (finalPhotoCheck.files && finalPhotoCheck.files.length > 0) {
+            console.log('✅ ФИНАЛЬНАЯ ПРОВЕРКА: Файл выбран и готов к отправке:', finalPhotoCheck.files[0].name);
+            // Убеждаемся, что файл действительно в форме
+            const finalFormData = new FormData(form);
+            console.log('✅ ФИНАЛЬНАЯ ПРОВЕРКА: FormData содержит photo:', finalFormData.has('photo'));
+            if (!finalFormData.has('photo')) {
+              console.error('❌ КРИТИЧЕСКАЯ ОШИБКА: Файл выбран, но НЕ в FormData!');
+              // Пытаемся принудительно добавить файл
+              finalFormData.append('photo', finalPhotoCheck.files[0]);
+              console.log('Попытка принудительно добавить файл в FormData');
+            }
+          } else {
+            console.log('⚠️ ФИНАЛЬНАЯ ПРОВЕРКА: Файл НЕ выбран');
+          }
+        }
+        
+        // Показываем ошибки
+        if (hasErrors && errors.length > 0) {
+          e.preventDefault();
+          // Показываем первую ошибку (без toast)
+          alert(errors[0] || ('Исправьте следующие ошибки:\n' + errors.join('\n')));
+          // Подсвечиваем проблемные поля
+          if (!countrySelect || !countrySelect.value) {
+            const countrySelector = document.getElementById('country_selector');
+            if (countrySelector) {
+              countrySelector.style.border = '2px solid var(--uz-danger)';
+              setTimeout(() => {
+                countrySelector.style.border = '';
+              }, 3000);
+            }
+          }
+          if (!cityInput || !cityInput.value) {
+            const citySelector = document.getElementById('city_selector');
+            if (citySelector) {
+              citySelector.style.border = '2px solid var(--uz-danger)';
+              setTimeout(() => {
+                citySelector.style.border = '';
+              }, 3000);
+            }
+          }
+        }
+      });
+    });
+  </script>
+</head>
+
+<body class="uz-body">
+
+  <!-- Floating Header -->
+  <header class="uz-header">
+    <div class="uz-header-inner">
+      <a href="{% url 'uzmat:index' %}" class="uz-logo">
+        <img src="{% static 'uzmat/logo-uzmat.svg' %}" alt="Uzmat" class="uz-logo-mark">
+        <span>Uzmat</span>
+      </a>
+
+      {% include 'uzmat/nav.html' %}
+
+      <div class="uz-flex">
+        {% include 'uzmat/country-selector.html' %}
+        {% include 'uzmat/create-ad-button.html' %}
+        <button class="uz-btn uz-btn-ghost uz-hidden-mobile" data-theme-toggle>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+        </button>
+        {% include 'uzmat/user-avatar.html' %}
+      </div>
+    </div>
+  </header>
+
+  <main class="uz-container">
+
+    <!-- Breadcrumbs -->
+    <nav class="uz-breadcrumbs">
+      <a href="{% url 'uzmat:index' %}">Главная</a>
+      <span>/</span>
+      <span>{% if edit_mode %}Редактировать объявление{% else %}Создать объявление{% endif %}</span>
+    </nav>
+
+    <div style="max-width: 800px; margin: 0 auto;">
+      <h1 style="font-size: 32px; font-weight: 700; margin-bottom: 8px;">{% if edit_mode %}Редактировать объявление{% else %}Создать объявление{% endif %}</h1>
+      <p style="font-size: 16px; color: var(--uz-text-dim); margin-bottom: 32px;">
+        {% if edit_mode %}Измените данные вашего объявления{% else %}Разместите объявление о вашей спецтехнике, запчастях или услугах{% endif %}
+      </p>
+
+      {% if messages %}
+        <div style="margin-bottom: 24px;">
+          {% for message in messages %}
+            <div class="uz-alert" style="padding: 12px 16px; border-radius: var(--uz-radius-md); margin-bottom: 8px; 
+              {% if message.tags == 'error' %}background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: var(--uz-danger);
+              {% elif message.tags == 'success' %}background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); color: var(--uz-success);
+              {% else %}background: var(--uz-bg-hover); border: 1px solid var(--uz-border);{% endif %}">
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <form class="uz-form" method="post" action="{% if edit_mode %}{% url 'uzmat:edit_ad' slug=ad.slug %}{% else %}{% url 'uzmat:create_ad' %}{% endif %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        <!-- Основная информация -->
+        <div class="uz-card" style="margin-bottom: 24px;">
+          <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 24px;">Основная информация</h2>
+          
+          <div class="uz-form-group">
+            <label class="uz-form-label">Тип объявления *</label>
+            <select class="uz-input" name="ad_type" id="ad_type" required>
+              <option value="">Выберите тип</option>
+              <option value="rent" {% if edit_mode and ad.ad_type == 'rent' %}selected{% endif %}>Аренда</option>
+              <option value="sale" {% if edit_mode and ad.ad_type == 'sale' %}selected{% endif %}>Продажа</option>
+              <option value="service" {% if edit_mode and ad.ad_type == 'service' %}selected{% endif %}>Услуги</option>
+              <option value="parts" {% if edit_mode and ad.ad_type == 'parts' %}selected{% endif %}>Запчасти</option>
+            </select>
+          </div>
+
+          <!-- Поля для Аренды и Продажи -->
+          <div id="equipment-fields" class="ad-type-fields">
+            <div class="uz-form-group">
+              <label class="uz-form-label">Тип техники *</label>
+              <input type="text" class="uz-input" name="equipment_type" placeholder="Например: Экскаватор, Погрузчик" value="{% if edit_mode and ad.equipment_type %}{{ ad.equipment_type }}{% endif %}" required>
+            </div>
+
+            <div class="uz-form-group">
+              <label class="uz-form-label">Марка *</label>
+              <input type="text" class="uz-input" name="brand" placeholder="Например: Komatsu, Caterpillar" value="{% if edit_mode and ad.brand %}{{ ad.brand }}{% endif %}" required>
+            </div>
+
+            <div class="uz-form-group">
+              <label class="uz-form-label">Модель</label>
+              <input type="text" class="uz-input" name="model" placeholder="Например: PC210, D6R" value="{% if edit_mode and ad.model %}{{ ad.model }}{% endif %}">
+            </div>
+
+            <div class="uz-form-group">
+              <label class="uz-form-label">Год выпуска</label>
+              <input type="number" class="uz-input" name="year" placeholder="Например: 2022" min="1900" max="2025" value="{% if edit_mode and ad.year %}{{ ad.year }}{% endif %}">
+            </div>
+
+            <div class="uz-form-group">
+              <label class="uz-form-label">Заголовок объявления *</label>
+              <input type="text" class="uz-input" name="title" placeholder="Краткое описание" value="{% if edit_mode and ad.title %}{{ ad.title }}{% endif %}" required>
+            </div>
+
+            <div class="uz-form-group">
+              <label class="uz-form-label">Описание *</label>
+              <textarea class="uz-input" name="description" rows="6" placeholder="Подробное описание техники, условий аренды/продажи, дополнительная информация" required>{% if edit_mode and ad.description %}{{ ad.description }}{% endif %}</textarea>
+            </div>
+          </div>
+
+          <!-- Поля для Услуг -->
+          <div id="service-fields" class="ad-type-fields" style="display: none;">
+            <div class="uz-form-group">
+              <label class="uz-form-label">Название услуги *</label>
+              <input type="text" class="uz-input" name="service_name" placeholder="Например: Ремонт экскаваторов, Аренда с оператором" value="{% if edit_mode and ad.service_name %}{{ ad.service_name }}{% endif %}" required>
+            </div>
+
+            <div class="uz-form-group">
+              <label class="uz-form-label">Описание услуги *</label>
+              <textarea class="uz-input" name="service_description" rows="6" placeholder="Подробное описание предоставляемой услуги, условия выполнения, сроки" required>{% if edit_mode and ad.description %}{{ ad.description }}{% endif %}</textarea>
+            </div>
+          </div>
+
+          <!-- Поля для Запчастей -->
+          <div id="parts-fields" class="ad-type-fields" style="display: none;">
+            <div class="uz-form-group">
+              <label class="uz-form-label">Название запчасти *</label>
+              <input type="text" class="uz-input" name="part_name" placeholder="Например: Гидроцилиндр, Фильтр масляный" value="{% if edit_mode and ad.part_name %}{{ ad.part_name }}{% endif %}" required>
+            </div>
+
+            <div class="uz-form-group">
+              <label class="uz-form-label">Для какого типа техники *</label>
+              <input type="text" class="uz-input" name="part_equipment_type" placeholder="Например: Экскаватор, Погрузчик" value="{% if edit_mode and ad.part_equipment_type %}{{ ad.part_equipment_type }}{% endif %}" required>
+            </div>
+
+            <div class="uz-form-group">
+              <label class="uz-form-label">Марка *</label>
+              <input type="text" class="uz-input" name="part_brand" placeholder="Например: Komatsu, Caterpillar" value="{% if edit_mode and ad.part_brand %}{{ ad.part_brand }}{% endif %}" required>
+            </div>
+
+            <div class="uz-form-group">
+              <label class="uz-form-label">Модель</label>
+              <input type="text" class="uz-input" name="part_model" placeholder="Например: PC210, D6R" value="{% if edit_mode and ad.part_model %}{{ ad.part_model }}{% endif %}">
+            </div>
+
+            <div class="uz-form-group">
+              <label class="uz-form-label">Заголовок объявления *</label>
+              <input type="text" class="uz-input" name="part_title" placeholder="Краткое описание запчасти" value="{% if edit_mode and ad.title %}{{ ad.title }}{% endif %}" required>
+            </div>
+
+            <div class="uz-form-group">
+              <label class="uz-form-label">Описание *</label>
+              <textarea class="uz-input" name="part_description" rows="6" placeholder="Подробное описание запчасти, состояние, совместимость, дополнительная информация" required>{% if edit_mode and ad.description %}{{ ad.description }}{% endif %}</textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Местоположение и контакты -->
+        <div class="uz-card" style="margin-bottom: 24px;">
+          <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 24px;">Местоположение и контакты</h2>
+          
+          <div class="uz-form-group">
+            <label class="uz-form-label">Страна *</label>
+            <div class="uz-filter-selector" id="country_selector" data-filter-country>
+              <button type="button" class="uz-filter-button" data-filter-country-toggle>
+                <span data-filter-country-display>Выберите страну</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </button>
+              <div class="uz-filter-dropdown" data-filter-country-dropdown>
+                <button type="button" class="uz-filter-option" data-filter-value="kz">
+                  <span style="font-size: 18px; margin-right: 8px;">🇰🇿</span>
+                  <span>Казахстан</span>
+                </button>
+                <button type="button" class="uz-filter-option" data-filter-value="uz">
+                  <span style="font-size: 18px; margin-right: 8px;">🇺🇿</span>
+                  <span>Узбекистан</span>
+                </button>
+                <button type="button" class="uz-filter-option" data-filter-value="ru">
+                  <span style="font-size: 18px; margin-right: 8px;">🇷🇺</span>
+                  <span>Россия</span>
+                </button>
+                <button type="button" class="uz-filter-option" data-filter-value="by">
+                  <span style="font-size: 18px; margin-right: 8px;">🇧🇾</span>
+                  <span>Беларусь</span>
+                </button>
+              </div>
+              <input type="hidden" name="country" id="country_select" required>
+            </div>
+          </div>
+
+          <div class="uz-form-group">
+            <label class="uz-form-label">Город *</label>
+            <div class="uz-filter-selector" id="city_selector" data-filter-city>
+              <button type="button" class="uz-filter-button" data-filter-city-toggle>
+                <span data-filter-city-display>Выберите город</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </button>
+              <div class="uz-filter-dropdown" data-filter-city-dropdown>
+                <input type="text" class="uz-filter-search" placeholder="Поиск города..." data-filter-city-search>
+                <div class="uz-filter-options-list" data-filter-city-list></div>
+              </div>
+              <input type="hidden" name="city" id="city_input" required>
+            </div>
+          </div>
+
+          <div class="uz-form-group">
+            <label class="uz-form-label">Телефон *</label>
+            <input type="tel" class="uz-input" name="phone" placeholder="+7 (XXX) XXX-XX-XX" value="{% if edit_mode and ad.phone %}{{ ad.phone }}{% elif user.phone %}{{ user.phone }}{% endif %}" required>
+          </div>
+        </div>
+
+        <!-- Цена и условия -->
+        <div class="uz-card" style="margin-bottom: 24px;">
+          <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 24px;">Цена и условия</h2>
+          
+          <div class="uz-form-group">
+            <label class="uz-form-label">Цена *</label>
+            <div class="uz-flex" style="gap: 12px;">
+              <input type="number" class="uz-input" name="price" placeholder="Сумма" value="{% if edit_mode and ad.price %}{{ ad.price|floatformat:0 }}{% endif %}" step="0.01" required style="flex: 1;">
+              <select class="uz-input" name="currency" required style="width: 150px;">
+                <option value="kzt" {% if edit_mode and ad.currency == 'kzt' %}selected{% endif %}>₸ KZT</option>
+                <option value="uzs" {% if edit_mode and ad.currency == 'uzs' %}selected{% endif %}>сум UZS</option>
+                <option value="rub" {% if edit_mode and ad.currency == 'rub' %}selected{% endif %}>₽ RUB</option>
+                <option value="byn" {% if edit_mode and ad.currency == 'byn' %}selected{% endif %}>Br BYN</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Тип цены (только для Аренды, Продажи и Запчастей) -->
+          <div class="uz-form-group" id="price-type-group" style="display: none;">
+            <label class="uz-form-label">Тип цены</label>
+            <select class="uz-input" name="price_type" id="price_type">
+              <option value="per-hour" {% if edit_mode and ad.price_type == 'per-hour' %}selected{% endif %}>За час</option>
+              <option value="per-day" {% if edit_mode and ad.price_type == 'per-day' %}selected{% endif %}>За день</option>
+              <option value="per-month" {% if edit_mode and ad.price_type == 'per-month' %}selected{% endif %}>За месяц</option>
+              <option value="fixed" {% if edit_mode and ad.price_type == 'fixed' %}selected{% endif %}>Договорная</option>
+            </select>
+          </div>
+
+          <!-- Оператор и минимальный заказ (только для Аренды) -->
+          <div class="uz-form-group" id="operator-group" style="display: none;">
+            <label class="uz-form-label">
+              <input type="checkbox" name="with_operator" id="with_operator" {% if edit_mode and ad.with_operator %}checked{% endif %} style="margin-right: 8px;">
+              С оператором / экипажем
+            </label>
+          </div>
+
+          <div class="uz-form-group" id="min-order-group" style="display: none;">
+            <label class="uz-form-label">Минимальный заказ</label>
+            <input type="text" class="uz-input" name="min_order" id="min_order" placeholder="Например: 4 часа, 1 день" value="{% if edit_mode and ad.min_order %}{{ ad.min_order }}{% endif %}">
+          </div>
+        </div>
+
+        <!-- Фотография -->
+        <div class="uz-card" style="margin-bottom: 24px;">
+          <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 24px;">Фотография объявления</h2>
+          
+          {% if edit_mode %}
+          <!-- Текущие изображения -->
+          {% if ad.image or ad.images.exists %}
+          <div style="margin-bottom: 24px;">
+            <div style="font-size: 13px; color: var(--uz-text-dim); margin-bottom: 12px; font-weight: 500;">Текущие изображения</div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px;">
+              {% if ad.image %}
+              <div style="position: relative; border-radius: var(--uz-radius-md); overflow: hidden; border: 1px solid var(--uz-border);">
+                <img src="{{ ad.image.url }}" alt="Основное изображение" style="width: 100%; height: 150px; object-fit: cover; display: block;">
+                <div style="position: absolute; top: 4px; left: 4px; background: rgba(0, 0, 0, 0.7); color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600;">Основное</div>
+              </div>
+              {% endif %}
+              {% for img in ad.images.all %}
+              <div style="position: relative; border-radius: var(--uz-radius-md); overflow: hidden; border: 1px solid var(--uz-border);">
+                <img src="{{ img.image.url }}" alt="Изображение {{ forloop.counter }}" style="width: 100%; height: 150px; object-fit: cover; display: block;">
+                {% if img.is_main %}
+                <div style="position: absolute; top: 4px; left: 4px; background: rgba(16, 185, 129, 0.9); color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600;">Главное</div>
+                {% endif %}
+              </div>
+              {% endfor %}
+            </div>
+            <div style="margin-top: 12px; font-size: 12px; color: var(--uz-text-dim);">
+              Загрузите новое изображение, чтобы добавить к существующим
+            </div>
+          </div>
+          {% endif %}
+          {% endif %}
+          
+          <div class="uz-form-group">
+            <label class="uz-form-label">{% if edit_mode %}Добавить новое фото{% else %}Загрузить фото{% endif %}</label>
+            <div class="uz-upload-area">
+              <input type="file" id="photo-upload" name="photos" accept="image/*" multiple style="position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0;">
+              <label for="photo-upload" class="uz-upload-button">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 8px;">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="17 8 12 3 7 8"></polyline>
+                  <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+                <span>Нажмите или перетащите файл</span>
+                <span style="font-size: 13px; color: var(--uz-text-muted); margin-top: 4px;">{% if edit_mode %}Новое изображение будет добавлено к существующим{% else %}Максимум 10 фотографий{% endif %}</span>
+              </label>
+            </div>
+            <div id="photo-preview" class="uz-photo-preview"></div>
+          </div>
+        </div>
+
+        <!-- Характеристики (только для Аренды и Продажи) -->
+        <div class="uz-card" id="characteristics-group" style="margin-bottom: 32px;">
+          <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 24px;">Дополнительные характеристики</h2>
+          
+          <div class="uz-grid" style="grid-template-columns: repeat(2, 1fr); gap: 16px;">
+            <div class="uz-form-group">
+              <label class="uz-form-label">Мощность (л.с.)</label>
+              <input type="number" class="uz-input" name="power" placeholder="Например: 150" value="{% if edit_mode and ad.power %}{{ ad.power }}{% endif %}">
+            </div>
+
+            <div class="uz-form-group">
+              <label class="uz-form-label">Вес (т)</label>
+              <input type="number" class="uz-input" name="weight" placeholder="Например: 20" {% if edit_mode and ad.weight %}value="{{ ad.weight|stringformat:"g" }}"{% endif %} step="0.01">
+            </div>
+
+            <div class="uz-form-group">
+              <label class="uz-form-label">Состояние</label>
+              <select class="uz-input" name="condition">
+                <option value="">Выберите</option>
+                <option value="new" {% if edit_mode and ad.condition == 'new' %}selected{% endif %}>Новое</option>
+                <option value="excellent" {% if edit_mode and ad.condition == 'excellent' %}selected{% endif %}>Отличное</option>
+                <option value="good" {% if edit_mode and ad.condition == 'good' %}selected{% endif %}>Хорошее</option>
+                <option value="satisfactory" {% if edit_mode and ad.condition == 'satisfactory' %}selected{% endif %}>Удовлетворительное</option>
+              </select>
+            </div>
+
+            <div class="uz-form-group">
+              <label class="uz-form-label">Часы работы</label>
+              <input type="number" class="uz-input" name="hours" placeholder="Например: 5000" value="{% if edit_mode and ad.hours %}{{ ad.hours }}{% endif %}">
+            </div>
+          </div>
+        </div>
+
+        <!-- Кнопки действий -->
+        <div class="uz-flex" style="gap: 12px; justify-content: flex-end;">
+          <a href="{% url 'uzmat:index' %}" class="uz-btn uz-btn-outline">Отмена</a>
+          <button type="submit" class="uz-btn uz-btn-primary">
+            {% if edit_mode %}Сохранить изменения{% else %}Опубликовать объявление{% endif %}
+          </button>
+        </div>
+      </form>
+    </div>
+
+  </main>
+
+  {% include 'uzmat/footer.html' %}
+
+  <!-- Mobile Navigation -->
+  <nav class="uz-bottom-nav uz-show-mobile">
+    <a href="{% url 'uzmat:index' %}" class="uz-bottom-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+      </svg>
+      <span>Главная</span>
+    </a>
+    <a href="{% url 'uzmat:chats' %}" class="uz-bottom-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+      </svg>
+      <span>Чаты</span>
+    </a>
+    <a href="{% url 'uzmat:create_ad' %}" class="uz-bottom-item" style="color: var(--uz-primary);">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="16"></line>
+        <line x1="8" y1="12" x2="16" y2="12"></line>
+      </svg>
+      <span>Создать</span>
+    </a>
+    {% if user.is_authenticated %}
+    <a href="{% url 'uzmat:profile' %}" class="uz-bottom-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+        <circle cx="12" cy="7" r="4"></circle>
+      </svg>
+      <span>Профиль</span>
+    </a>
+    {% else %}
+    <a href="{% url 'uzmat:onboarding' %}" class="uz-bottom-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+        <circle cx="12" cy="7" r="4"></circle>
+      </svg>
+      <span>Профиль</span>
+    </a>
+    {% endif %}
+    <a href="{% url 'uzmat:settings' %}" class="uz-bottom-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"></circle>
+        <path
+          d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+        </path>
+      </svg>
+      <span>Меню</span>
+    </a>
+  </nav>
+
+</body>
+
+</html>
+

@@ -1,0 +1,581 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Запчасти — Uzmat</title>
+  <link rel="icon" type="image/svg+xml" href="{% static 'uzmat/logo-uzmat.svg' %}">
+  {% include 'uzmat/theme-init.html' %}
+  <link rel="stylesheet" href="{% static 'uzmat/styles.css' %}">
+  <script defer src="{% static 'uzmat/app.js' %}"></script>
+</head>
+
+<body class="uz-body">
+
+  <!-- Floating Header -->
+  <header class="uz-header">
+    <div class="uz-header-inner">
+      <a href="{% url 'uzmat:index' %}" class="uz-logo">
+        <img src="{% static 'uzmat/logo-uzmat.svg' %}" alt="Uzmat" class="uz-logo-mark">
+        <span>Uzmat</span>
+      </a>
+
+      {% include 'uzmat/nav.html' %}
+
+      <div class="uz-flex">
+        {% include 'uzmat/country-selector.html' %}
+        {% include 'uzmat/create-ad-button.html' %}
+        <button class="uz-btn uz-btn-ghost uz-hidden-mobile" data-theme-toggle>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+        </button>
+        {% include 'uzmat/user-avatar.html' %}
+      </div>
+    </div>
+  </header>
+
+  <main class="uz-container">
+
+    <!-- Hero Section -->
+    <section class="uz-hero uz-animate-in">
+      <h1 class="uz-hero-title">
+        Запчасти<br>
+        для вашего парка
+      </h1>
+      <p class="uz-hero-subtitle">
+        Оригинальные компоненты и запчасти для спецтехники по всему Казахстану.
+      </p>
+
+      <div class="uz-search-container">
+        <input type="text" class="uz-search-input" id="parts-search-input" placeholder="Поиск по названию">
+        <svg class="uz-search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+      </div>
+
+      <!-- Быстрые кнопки поиска -->
+      <div class="uz-search-quick-buttons">
+        <span class="uz-search-quick-label">Популярные запросы:</span>
+        <div class="uz-search-quick-list">
+          <button type="button" class="uz-search-quick-btn" data-search-query="Фильтр">Фильтр</button>
+          <button type="button" class="uz-search-quick-btn" data-search-query="Масло">Масло</button>
+          <button type="button" class="uz-search-quick-btn" data-search-query="Гидроцилиндр">Гидроцилиндр</button>
+          <button type="button" class="uz-search-quick-btn" data-search-query="Тормозные колодки">Тормозные колодки</button>
+          <button type="button" class="uz-search-quick-btn" data-search-query="Ремень">Ремень</button>
+          <button type="button" class="uz-search-quick-btn" data-search-query="Шланг">Шланг</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Categories Grid -->
+    <section class="uz-animate-in" style="animation-delay: 0.1s;">
+      <div class="uz-flex" style="justify-content: space-between; margin-bottom: 24px; padding: 0 20px;">
+        <div>
+          <h2 style="font-size: 20px; font-weight: 600;">Популярные категории</h2>
+          <p style="font-size: 14px; color: var(--uz-text-dim); margin-top: 4px;">Найдено: <strong>{{ total_count }}</strong> объявлений</p>
+        </div>
+        <a href="{% url 'uzmat:catalog' %}" class="uz-btn uz-btn-ghost" style="font-size: 13px;">Смотреть все &rarr;</a>
+      </div>
+
+      <!-- Filters -->
+      <form method="get" action="{% url 'uzmat:parts_repair' %}" id="filters-form">
+        <input type="hidden" name="search" id="parts-search-hidden" value="{{ request.GET.search|default:'' }}">
+        <div class="uz-filters-container">
+          <div class="uz-filters-grid">
+            <!-- Country Filter -->
+            <div class="uz-filter-item">
+              <label class="uz-filter-label">Страна</label>
+              <div class="uz-filter-selector" data-filter-country>
+                <button type="button" class="uz-filter-button" data-filter-country-toggle>
+                  <span data-filter-country-display>{% if request.GET.country %}{% if request.GET.country == 'kz' %}🇰🇿 Казахстан{% elif request.GET.country == 'uz' %}🇺🇿 Узбекистан{% elif request.GET.country == 'ru' %}🇷🇺 Россия{% elif request.GET.country == 'by' %}🇧🇾 Беларусь{% else %}Все страны{% endif %}{% else %}Все страны{% endif %}</span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                </button>
+                <div class="uz-filter-dropdown" data-filter-country-dropdown>
+                  <button type="button" class="uz-filter-option {% if not request.GET.country or request.GET.country == 'all' %}active{% endif %}" data-filter-value="all" data-filter-name="country">Все страны</button>
+                  <button type="button" class="uz-filter-option {% if request.GET.country == 'kz' %}active{% endif %}" data-filter-value="kz" data-filter-name="country">
+                    <span style="font-size: 18px; margin-right: 8px;">🇰🇿</span>
+                    <span>Казахстан</span>
+                  </button>
+                  <button type="button" class="uz-filter-option {% if request.GET.country == 'uz' %}active{% endif %}" data-filter-value="uz" data-filter-name="country">
+                    <span style="font-size: 18px; margin-right: 8px;">🇺🇿</span>
+                    <span>Узбекистан</span>
+                  </button>
+                  <button type="button" class="uz-filter-option {% if request.GET.country == 'ru' %}active{% endif %}" data-filter-value="ru" data-filter-name="country">
+                    <span style="font-size: 18px; margin-right: 8px;">🇷🇺</span>
+                    <span>Россия</span>
+                  </button>
+                  <button type="button" class="uz-filter-option {% if request.GET.country == 'by' %}active{% endif %}" data-filter-value="by" data-filter-name="country">
+                    <span style="font-size: 18px; margin-right: 8px;">🇧🇾</span>
+                    <span>Беларусь</span>
+                  </button>
+                </div>
+                <input type="hidden" name="country" value="{{ request.GET.country|default:'' }}">
+              </div>
+            </div>
+
+            <!-- City Filter -->
+            <div class="uz-filter-item">
+              <label class="uz-filter-label">Город</label>
+              <div class="uz-filter-selector" data-filter-city>
+                <button type="button" class="uz-filter-button" data-filter-city-toggle>
+                  <span data-filter-city-display>{% if request.GET.city and request.GET.city != 'all' %}{{ request.GET.city }}{% else %}Все города{% endif %}</span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                </button>
+                <div class="uz-filter-dropdown" data-filter-city-dropdown>
+                  <input type="text" class="uz-filter-search" placeholder="Поиск города..." data-filter-city-search>
+                  <div class="uz-filter-options-list" data-filter-city-list>
+                    <button type="button" class="uz-filter-option {% if not request.GET.city or request.GET.city == 'all' %}active{% endif %}" data-filter-value="all" data-filter-name="city">Все города</button>
+                  </div>
+                </div>
+                <input type="hidden" name="city" value="{{ request.GET.city|default:'' }}">
+              </div>
+            </div>
+
+            <!-- Type Filter -->
+            <div class="uz-filter-item">
+              <label class="uz-filter-label">Тип</label>
+              <input type="text" class="uz-filter-input" name="equipment_type" placeholder="Например: Экскаватор" value="{{ request.GET.equipment_type }}">
+            </div>
+
+            <!-- Brand Filter -->
+            <div class="uz-filter-item">
+              <label class="uz-filter-label">Марка</label>
+              <input type="text" class="uz-filter-input" name="brand" placeholder="Например: Komatsu" value="{{ request.GET.brand }}">
+            </div>
+
+            <!-- Price Filter -->
+            <div class="uz-filter-item">
+              <div class="uz-filter-label-row">
+                <label class="uz-filter-label">Цена</label>
+                <button type="button" class="uz-filter-help" data-price-help-toggle aria-label="Подсказка по цене">!</button>
+                <div class="uz-filter-tooltip" data-price-help-tooltip hidden>Чтобы фильтровать по цене, сначала выберите страну.</div>
+              </div>
+              <div class="uz-filter-price-range">
+                <input type="number" class="uz-filter-input uz-filter-price-input" name="price_from" placeholder="От" value="{{ request.GET.price_from }}"{% if not request.GET.country %} disabled{% endif %}>
+                <span>-</span>
+                <input type="number" class="uz-filter-input uz-filter-price-input" name="price_to" placeholder="До" value="{{ request.GET.price_to }}"{% if not request.GET.country %} disabled{% endif %}>
+              </div>
+            </div>
+          </div>
+        </div>
+      </form>
+
+      <div class="uz-bento-grid">
+        {% for ad in ads %}
+        <article class="uz-ad-card">
+          <a href="{% url 'uzmat:ad_detail' slug=ad.slug %}" class="uz-ad-card-link">
+            <div class="uz-ad-image">
+              {% if ad.images.exists %}
+                <img src="{{ ad.images.first.image.url }}" alt="{{ ad.title }}" style="width: 100%; height: 100%; object-fit: cover; object-position: center;">
+              {% elif ad.image %}
+                <img src="{{ ad.image.url }}" alt="{{ ad.title }}" style="width: 100%; height: 100%; object-fit: cover; object-position: center;">
+              {% else %}
+                <svg class="uz-ad-image-icon" viewBox="0 0 775 775" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M254.297 74.0126C253.919 74.1409 253.569 74.338 253.263 74.5938C222.4 96.1604 197.202 124.862 179.813 158.258C162.424 191.653 153.357 228.755 153.385 266.406C153.376 307.694 164.285 348.25 185.008 383.961C205.73 419.672 235.528 449.268 271.379 469.747C289.785 480.306 303.089 500.586 301.766 524.062V524.126L291.529 719.749C291.195 726.164 288.327 732.183 283.555 736.483C278.782 740.782 272.498 743.01 266.083 742.676C259.669 742.342 253.649 739.474 249.35 734.702C245.05 729.93 242.822 723.645 243.156 717.23L253.393 521.478V521.349C253.586 518.443 251.875 514.406 247.322 511.791C204.063 487.073 168.109 451.357 143.106 408.262C118.102 365.168 104.938 316.229 104.948 266.406C104.916 220.968 115.856 176.194 136.837 135.89C157.819 95.5858 188.221 60.9434 225.46 34.9074C233.442 29.1874 242.93 25.9416 252.743 25.5741C262.556 25.2067 272.26 27.7337 280.647 32.8407C296.276 42.2699 306.771 59.8043 306.771 79.9866V232.209C306.77 233.589 307.123 234.945 307.796 236.149C308.469 237.353 309.439 238.365 310.613 239.088L383.27 283.812C385.853 285.426 389.147 285.426 391.73 283.812L464.386 239.088C465.561 238.365 466.531 237.353 467.204 236.149C467.876 234.945 468.229 233.589 468.229 232.209V80.0188C468.229 59.8043 478.724 42.2699 494.385 32.8407C502.769 27.7406 512.467 25.2174 522.273 25.5848C532.079 25.9522 541.561 29.1942 549.539 34.9074C586.783 60.9465 617.188 95.5941 638.17 135.904C659.151 176.214 670.089 220.995 670.052 266.439C670.053 316.259 656.881 365.194 631.872 408.282C606.863 451.37 570.906 487.08 527.646 511.791C523.125 514.406 521.413 518.443 521.575 521.349V521.478L531.844 717.23C532.009 720.407 531.547 723.584 530.485 726.582C529.422 729.58 527.779 732.339 525.65 734.702C523.521 737.064 520.948 738.985 518.076 740.353C515.205 741.721 512.093 742.511 508.917 742.676C505.74 742.842 502.563 742.38 499.565 741.317C496.567 740.254 493.808 738.612 491.445 736.483C489.082 734.354 487.162 731.78 485.794 728.909C484.425 726.038 483.636 722.925 483.471 719.749L473.234 524.126V524.062C471.91 500.586 485.182 480.306 503.588 469.747C539.446 449.272 569.25 419.678 589.978 383.967C610.706 348.256 621.621 307.697 621.615 266.406C621.642 228.755 612.576 191.653 595.187 158.258C577.797 124.862 552.6 96.1604 521.736 74.5938C521.431 74.338 521.08 74.1409 520.703 74.0126L520.38 73.9803C520.283 73.9803 519.928 73.9803 519.379 74.3032C518.217 75.0136 516.667 76.8543 516.667 80.0188V232.177C516.667 251.811 506.495 270.023 489.768 280.292L417.111 325.016C408.206 330.494 397.956 333.395 387.5 333.395C377.044 333.395 366.794 330.494 357.888 325.016L285.232 280.324C277.018 275.271 270.234 268.199 265.526 259.783C260.818 251.367 258.342 241.886 258.333 232.242V79.9866C258.333 76.822 256.783 74.9814 255.621 74.3032C255.309 74.1304 254.971 74.0104 254.62 73.948L254.297 74.0126Z" fill="currentColor"/>
+                </svg>
+              {% endif %}
+            </div>
+            <div class="uz-ad-content">
+              <div class="uz-ad-content-header">
+                <div class="uz-ad-price">{{ ad.get_price_display }}</div>
+                {% if user.is_authenticated %}
+                <button class="uz-ad-favorite" type="button" aria-label="Добавить в избранное" data-ad-id="{{ ad.id }}" onclick="toggleFavorite(event, {{ ad.id }})">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                  </svg>
+                </button>
+                {% endif %}
+              </div>
+              <div>
+                <h3 class="uz-ad-title">{{ ad.title }}</h3>
+                <p class="uz-ad-subtitle">{{ ad.get_ad_type_display }}</p>
+                <p class="uz-ad-description">{{ ad.description|truncatewords:12 }}</p>
+              </div>
+              <div class="uz-ad-meta">
+                <div class="uz-ad-meta-left">
+                  <span>{{ ad.city }}</span>
+                  <span>•</span>
+                  <span>{{ ad.created_at|date:"d M" }}</span>
+                </div>
+                <div class="uz-ad-meta-right">
+                  <span>{{ ad.views_count }} просмотров</span>
+                </div>
+              </div>
+            </div>
+          </a>
+        </article>
+        {% empty %}
+        <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: var(--uz-text-dim);">
+          <p>Объявления не найдены</p>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="uz-pagination" style="margin-top: 48px;">
+      {% if page_obj.has_previous %}
+      <a href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="uz-pagination-btn uz-pagination-btn--prev">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+        Назад
+      </a>
+      {% else %}
+      <button class="uz-pagination-btn uz-pagination-btn--prev" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+        Назад
+      </button>
+      {% endif %}
+      <div class="uz-pagination-pages">
+        {% for num in page_obj.paginator.page_range %}
+          {% if page_obj.number == num %}
+            <button class="uz-pagination-page active">{{ num }}</button>
+          {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+            <a href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="uz-pagination-page">{{ num }}</a>
+          {% endif %}
+        {% endfor %}
+      </div>
+      {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="uz-pagination-btn uz-pagination-btn--next">
+        Вперед
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
+      </a>
+      {% else %}
+      <button class="uz-pagination-btn uz-pagination-btn--next" disabled>
+        Вперед
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
+      </button>
+      {% endif %}
+    </div>
+    {% endif %}
+
+  </main>
+
+  {% include 'uzmat/footer.html' %}
+
+  <!-- Mobile Navigation -->
+  <nav class="uz-bottom-nav uz-show-mobile">
+    <a href="{% url 'uzmat:index' %}" class="uz-bottom-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+      </svg>
+      <span>Главная</span>
+    </a>
+    <a href="{% url 'uzmat:chats' %}" class="uz-bottom-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+      </svg>
+      <span>Чаты</span>
+    </a>
+    <a href="{% url 'uzmat:auth' %}" class="uz-bottom-item" style="color: var(--uz-primary);">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="16"></line>
+        <line x1="8" y1="12" x2="16" y2="12"></line>
+      </svg>
+      <span>Создать</span>
+    </a>
+    <a href="{% url 'uzmat:onboarding' %}" class="uz-bottom-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+        <circle cx="12" cy="7" r="4"></circle>
+      </svg>
+      <span>Профиль</span>
+    </a>
+    <a href="{% url 'uzmat:settings' %}" class="uz-bottom-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"></circle>
+        <path
+          d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+        </path>
+      </svg>
+      <span>Меню</span>
+    </a>
+  </nav>
+
+  <script>
+    function getCookie(name) {
+      let cookieValue = null;
+      if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+          const cookie = cookies[i].trim();
+          if (cookie.substring(0, name.length + 1) === (name + '=')) {
+            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+            break;
+          }
+        }
+      }
+      return cookieValue;
+    }
+    
+    // Функционал избранного
+    function toggleFavorite(event, adId) {
+      event.preventDefault();
+      event.stopPropagation();
+      
+      {% if not user.is_authenticated %}
+      window.location.href = "{% url 'uzmat:auth' %}";
+      return;
+      {% endif %}
+      
+      const button = event.currentTarget;
+      const url = "{% url 'uzmat:toggle_favorite' ad_id=0 %}".replace('0', adId);
+      const csrftoken = getCookie('csrftoken');
+      
+      fetch(url, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': csrftoken,
+          'Content-Type': 'application/json',
+        },
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        return response.json();
+      })
+      .then(data => {
+        if (data.is_favorited !== undefined) {
+          if (data.is_favorited) {
+            button.style.color = 'var(--uz-primary)';
+            if (button.querySelector('path')) {
+              button.querySelector('path').setAttribute('fill', 'currentColor');
+            }
+          } else {
+            button.style.color = '';
+            if (button.querySelector('path')) {
+              button.querySelector('path').removeAttribute('fill');
+            }
+          }
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+      });
+    }
+    
+    // Фильтры - открытие/закрытие дропдаунов и отправка формы при изменении
+    document.addEventListener('DOMContentLoaded', function() {
+      const filterForm = document.getElementById('filters-form');
+      if (!filterForm) return;
+      
+      // Открытие/закрытие дропдауна страны
+      const countryToggle = filterForm.querySelector('[data-filter-country-toggle]');
+      const countryDropdown = filterForm.querySelector('[data-filter-country-dropdown]');
+      const countrySelector = filterForm.querySelector('[data-filter-country]');
+      
+      if (countryToggle && countryDropdown && countrySelector) {
+        countryToggle.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          
+          // Закрываем другие дропдауны
+          const citySelector = filterForm.querySelector('[data-filter-city]');
+          if (citySelector) {
+            citySelector.removeAttribute('data-open');
+          }
+          
+          // Переключаем текущий дропдаун
+          if (countrySelector.hasAttribute('data-open')) {
+            countrySelector.removeAttribute('data-open');
+          } else {
+            countrySelector.setAttribute('data-open', '');
+          }
+        });
+      }
+      
+      // Открытие/закрытие дропдауна города
+      const cityToggle = filterForm.querySelector('[data-filter-city-toggle]');
+      const cityDropdown = filterForm.querySelector('[data-filter-city-dropdown]');
+      const citySelector = filterForm.querySelector('[data-filter-city]');
+      const citySearchInput = filterForm.querySelector('[data-filter-city-search]');
+      
+      if (cityToggle && cityDropdown && citySelector) {
+        cityToggle.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          
+          // Закрываем другие дропдауны
+          if (countrySelector) {
+            countrySelector.removeAttribute('data-open');
+          }
+          
+          // Переключаем текущий дропдаун
+          if (citySelector.hasAttribute('data-open')) {
+            citySelector.removeAttribute('data-open');
+          } else {
+            citySelector.setAttribute('data-open', '');
+            // Фокусируемся на поле поиска при открытии
+            if (citySearchInput) {
+              setTimeout(() => citySearchInput.focus(), 100);
+            }
+          }
+        });
+      }
+      
+      // Поиск в фильтре городов
+      if (citySearchInput && citySelector) {
+        citySearchInput.addEventListener('input', function(e) {
+          const query = e.target.value.toLowerCase().trim();
+          const cityOptions = citySelector.querySelectorAll('[data-filter-name="city"]');
+          
+          cityOptions.forEach(option => {
+            const cityName = option.textContent.toLowerCase();
+            if (cityName.includes(query)) {
+              option.style.display = '';
+            } else {
+              option.style.display = 'none';
+            }
+          });
+        });
+      }
+      
+      // Закрытие дропдаунов при клике вне их
+      document.addEventListener('click', function(e) {
+        if (!e.target.closest('[data-filter-country]') && !e.target.closest('[data-filter-city]')) {
+          if (countrySelector) countrySelector.removeAttribute('data-open');
+          if (citySelector) citySelector.removeAttribute('data-open');
+        }
+      });
+      
+      // Обработка выбора страны
+      filterForm.querySelectorAll('[data-filter-name="country"]').forEach(option => {
+        option.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          const value = this.getAttribute('data-filter-value');
+          const hiddenInput = filterForm.querySelector('input[name="country"]');
+          if (hiddenInput) {
+            hiddenInput.value = value === 'all' ? '' : value;
+            // Обновляем отображаемый текст
+            const display = countrySelector.querySelector('[data-filter-country-display]');
+            if (display) {
+              display.textContent = this.textContent.trim();
+            }
+            // Закрываем дропдаун
+            countrySelector.removeAttribute('data-open');
+            filterForm.submit();
+          }
+        });
+      });
+      
+      // Обработка выбора города
+      filterForm.querySelectorAll('[data-filter-name="city"]').forEach(option => {
+        option.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          const value = this.getAttribute('data-filter-value');
+          const hiddenInput = filterForm.querySelector('input[name="city"]');
+          if (hiddenInput) {
+            hiddenInput.value = value === 'all' ? '' : value;
+            // Обновляем отображаемый текст
+            const display = citySelector.querySelector('[data-filter-city-display]');
+            if (display) {
+              display.textContent = this.textContent.trim();
+            }
+            // Закрываем дропдаун
+            citySelector.removeAttribute('data-open');
+            filterForm.submit();
+          }
+        });
+      });
+      
+      // Обработка текстовых полей - отправка при потере фокуса
+      filterForm.querySelectorAll('input[name="equipment_type"], input[name="brand"], input[name="price_from"], input[name="price_to"]').forEach(input => {
+        input.addEventListener('change', function() {
+          filterForm.submit();
+        });
+      });
+    });
+
+    // Поиск в реальном времени для страницы запчастей
+    const partsSearchInput = document.getElementById('parts-search-input');
+    const partsSearchHidden = document.getElementById('parts-search-hidden');
+    const filterForm = document.getElementById('filters-form');
+    
+    if (partsSearchInput && filterForm && partsSearchHidden) {
+      let searchTimeout;
+      
+      partsSearchInput.addEventListener('input', function(e) {
+        const query = e.target.value.trim();
+        
+        // Убеждаемся, что значение обновлено в обоих полях
+        partsSearchInput.value = query;
+        partsSearchHidden.value = query;
+        
+        clearTimeout(searchTimeout);
+        // Поиск работает при вводе хотя бы одной буквы
+        searchTimeout = setTimeout(() => {
+          // Отправляем форму с параметром search (работает даже при пустом запросе для сброса)
+          filterForm.submit();
+        }, 300); // Задержка 300ms для оптимизации
+      });
+      
+      // Обработка клавиши Backspace и Delete для немедленной очистки
+      partsSearchInput.addEventListener('keydown', function(e) {
+        if ((e.key === 'Backspace' || e.key === 'Delete') && this.value.length === 1) {
+          clearTimeout(searchTimeout);
+          const emptyValue = '';
+          this.value = emptyValue;
+          partsSearchHidden.value = emptyValue;
+          searchTimeout = setTimeout(() => {
+            filterForm.submit();
+          }, 100);
+        }
+      });
+    }
+
+    // Быстрые кнопки поиска на странице запчастей
+    document.querySelectorAll('.uz-search-quick-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const query = this.getAttribute('data-search-query');
+        if (query && partsSearchInput) {
+          partsSearchInput.value = query;
+          if (partsSearchHidden) {
+            partsSearchHidden.value = query;
+          }
+          if (filterForm) {
+            filterForm.submit();
+          }
+        }
+      });
+    });
+  </script>
+
+</body>
+
+</html>

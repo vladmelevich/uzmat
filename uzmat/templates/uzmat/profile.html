@@ -1,0 +1,385 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Профиль — Uzmat</title>
+  <link rel="icon" type="image/svg+xml" href="{% static 'uzmat/logo-uzmat.svg' %}">
+  {% include 'uzmat/theme-init.html' %}
+  <link rel="stylesheet" href="{% static 'uzmat/styles.css' %}">
+  <script defer src="{% static 'uzmat/app.js' %}"></script>
+  {% include 'uzmat/toast-container.html' %}
+  <script>
+    // Предпросмотр аватара
+    document.addEventListener('DOMContentLoaded', function() {
+      const avatarInput = document.getElementById('profile-avatar-input');
+      const avatarDisplay = document.querySelector('[data-profile-avatar]');
+      
+      if (avatarInput && avatarDisplay) {
+        avatarInput.addEventListener('change', function(e) {
+          const file = e.target.files[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+              avatarDisplay.innerHTML = `<img src="${e.target.result}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover;">`;
+            };
+            reader.readAsDataURL(file);
+          }
+        });
+      }
+    });
+  </script>
+</head>
+<body class="uz-body">
+
+  <!-- Floating Header -->
+  <header class="uz-header">
+    <div class="uz-header-inner">
+      <a href="{% url 'uzmat:index' %}" class="uz-logo">
+        <img src="{% static 'uzmat/logo-uzmat.svg' %}" alt="Uzmat" class="uz-logo-mark">
+        <span>Uzmat</span>
+      </a>
+
+      {% include 'uzmat/nav.html' %}
+
+      <div class="uz-flex">
+        {% include 'uzmat/country-selector.html' %}
+        {% include 'uzmat/create-ad-button.html' %}
+        <button class="uz-btn uz-btn-ghost uz-hidden-mobile" data-theme-toggle>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+        </button>
+        {% include 'uzmat/user-avatar.html' %}
+      </div>
+    </div>
+  </header>
+
+  <main class="uz-container">
+    <!-- Profile Section -->
+    <section class="uz-animate-in">
+      <div class="uz-card">
+        <div style="margin-bottom: 24px;">
+          <h1 style="font-size: 24px; font-weight: 700; margin-bottom: 8px;">
+            {% if user.account_type == 'company' %}Профиль компании{% else %}Профиль владельца техники{% endif %}
+          </h1>
+          <span class="uz-badge" style="background: var(--uz-primary-alpha); color: var(--uz-primary);">
+            {% if user.account_type == 'company' %}Компания{% else %}Uzmat ID{% endif %} · премиальный аккаунт
+          </span>
+        </div>
+
+        <form method="post" action="{% url 'uzmat:profile' %}" enctype="multipart/form-data">
+          {% csrf_token %}
+          <div class="uz-flex uz-profile-form-layout" style="gap: 24px; margin-bottom: 24px; align-items: flex-start;">
+            <div class="uz-flex-col uz-profile-avatar-section" style="align-items: center; gap: 12px; flex-shrink: 0;">
+              <div style="width: 80px; height: 80px; border-radius: 50%; background: var(--uz-bg-hover); display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 700; color: var(--uz-primary); overflow: hidden;" data-profile-avatar>
+                {% if user.avatar %}
+                  <img src="{{ user.avatar.url }}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover;">
+                {% else %}
+                  {% if user.first_name %}{{ user.first_name|first|upper }}{% else %}U{% endif %}
+                {% endif %}
+              </div>
+              <label style="cursor: pointer; color: var(--uz-primary); font-size: 12px; text-align: center;">
+                <span>Добавить фото</span>
+                <input id="profile-avatar-input" name="avatar" type="file" accept="image/*" style="display: none;">
+              </label>
+            </div>
+
+            <div class="uz-profile-fields-section" style="flex: 1;">
+              {% if user.account_type == 'company' %}
+                <!-- Данные компании - компактная сетка -->
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px 16px;">
+                  <div style="grid-column: 1 / -1;">
+                    <label for="profile-company-name" style="display: block; font-size: 12px; font-weight: 500; margin-bottom: 4px; color: var(--uz-text-dim);">Название компании <span style="color: var(--uz-danger);">*</span></label>
+                    <input id="profile-company-name" name="company_name" type="text" class="uz-input" placeholder="Название компании" value="{% if user.company_name %}{{ user.company_name }}{% endif %}" required style="font-size: 14px; padding: 8px 12px;">
+                  </div>
+                  <div>
+                    <label for="profile-company-inn" style="display: block; font-size: 12px; font-weight: 500; margin-bottom: 4px; color: var(--uz-text-dim);">ИНН <span style="color: var(--uz-danger);">*</span></label>
+                    <input id="profile-company-inn" name="company_inn" type="text" class="uz-input" placeholder="ИНН" value="{% if user.company_inn %}{{ user.company_inn }}{% endif %}" required style="font-size: 14px; padding: 8px 12px;">
+                  </div>
+                  <div>
+                    <label for="profile-company-director" style="display: block; font-size: 12px; font-weight: 500; margin-bottom: 4px; color: var(--uz-text-dim);">Директор <span style="color: var(--uz-danger);">*</span></label>
+                    <input id="profile-company-director" name="company_director" type="text" class="uz-input" placeholder="ФИО директора" value="{% if user.company_director %}{{ user.company_director }}{% endif %}" required style="font-size: 14px; padding: 8px 12px;">
+                  </div>
+                  <div>
+                    <label for="profile-company-phone" style="display: block; font-size: 12px; font-weight: 500; margin-bottom: 4px; color: var(--uz-text-dim);">Телефон компании <span style="color: var(--uz-danger);">*</span></label>
+                    <input id="profile-company-phone" name="company_phone" type="tel" class="uz-input" placeholder="+7 777 000‑00‑00" value="{% if user.company_phone %}{{ user.company_phone }}{% endif %}" required style="font-size: 14px; padding: 8px 12px;">
+                  </div>
+                  <div>
+                    <label for="profile-company-email" style="display: block; font-size: 12px; font-weight: 500; margin-bottom: 4px; color: var(--uz-text-dim);">Email компании <span style="color: var(--uz-danger);">*</span></label>
+                    <input id="profile-company-email" name="company_email" type="email" class="uz-input" placeholder="company@example.com" value="{% if user.company_email %}{{ user.company_email }}{% endif %}" required style="font-size: 14px; padding: 8px 12px;">
+                  </div>
+                  <div>
+                    <label for="profile-company-website" style="display: block; font-size: 12px; font-weight: 500; margin-bottom: 4px; color: var(--uz-text-dim);">Сайт компании</label>
+                    <input id="profile-company-website" name="company_website" type="url" class="uz-input" placeholder="https://example.com" value="{% if user.company_website %}{{ user.company_website }}{% endif %}" style="font-size: 14px; padding: 8px 12px;">
+                  </div>
+                  <div>
+                    <label for="profile-city" style="display: block; font-size: 12px; font-weight: 500; margin-bottom: 4px; color: var(--uz-text-dim);">Город</label>
+                    <input id="profile-city" name="city" type="text" class="uz-input" placeholder="Город" value="{% if user.city %}{{ user.city }}{% endif %}" style="font-size: 14px; padding: 8px 12px;">
+                  </div>
+                  <div>
+                    <label for="profile-phone" style="display: block; font-size: 12px; font-weight: 500; margin-bottom: 4px; color: var(--uz-text-dim);">Личный телефон</label>
+                    <input id="profile-phone" name="phone" type="tel" class="uz-input" placeholder="+7 777 000‑00‑00" value="{% if user.phone %}{{ user.phone }}{% endif %}" style="font-size: 14px; padding: 8px 12px;">
+                  </div>
+                  <div>
+                    <label for="profile-company-address" style="display: block; font-size: 12px; font-weight: 500; margin-bottom: 4px; color: var(--uz-text-dim);">Адрес компании</label>
+                    <input id="profile-company-address" name="company_address" type="text" class="uz-input" placeholder="Адрес компании" value="{% if user.company_address %}{{ user.company_address }}{% endif %}" style="font-size: 14px; padding: 8px 12px;">
+                  </div>
+                  <div>
+                    <label for="profile-company-legal-address" style="display: block; font-size: 12px; font-weight: 500; margin-bottom: 4px; color: var(--uz-text-dim);">Юридический адрес</label>
+                    <input id="profile-company-legal-address" name="company_legal_address" type="text" class="uz-input" placeholder="Юридический адрес" value="{% if user.company_legal_address %}{{ user.company_legal_address }}{% endif %}" style="font-size: 14px; padding: 8px 12px;">
+                  </div>
+                </div>
+              {% else %}
+                <!-- Данные физического лица -->
+                <div class="uz-flex-col" style="gap: 12px;">
+                  <div>
+                    <label for="profile-name" style="display: block; font-size: 12px; font-weight: 500; margin-bottom: 4px; color: var(--uz-text-dim);">Имя <span style="color: var(--uz-danger);">*</span></label>
+                    <input id="profile-name" name="name" type="text" class="uz-input" placeholder="Ваше имя" value="{% if user.first_name %}{{ user.first_name }}{% endif %}" required style="font-size: 14px; padding: 8px 12px;">
+                  </div>
+                  <div>
+                    <label for="profile-city" style="display: block; font-size: 12px; font-weight: 500; margin-bottom: 4px; color: var(--uz-text-dim);">Город <span style="color: var(--uz-danger);">*</span></label>
+                    <input id="profile-city" name="city" type="text" class="uz-input" placeholder="Например: Усть‑Каменогорск" value="{% if user.city %}{{ user.city }}{% endif %}" required style="font-size: 14px; padding: 8px 12px;">
+                  </div>
+                  <div>
+                    <label for="profile-phone" style="display: block; font-size: 12px; font-weight: 500; margin-bottom: 4px; color: var(--uz-text-dim);">Телефон</label>
+                    <input id="profile-phone" name="phone" type="tel" class="uz-input" placeholder="+7 777 000‑00‑00" value="{% if user.phone %}{{ user.phone }}{% endif %}" style="font-size: 14px; padding: 8px 12px;">
+                  </div>
+                </div>
+              {% endif %}
+            </div>
+          </div>
+          
+          <style>
+            @media (max-width: 768px) {
+              .uz-profile-fields-section > div[style*="grid-template-columns"] {
+                grid-template-columns: 1fr !important;
+              }
+            }
+          </style>
+
+          <div class="uz-profile-submit-section" style="border-top: 1px solid var(--uz-border); padding-top: 20px; display: flex; justify-content: space-between; align-items: center;">
+            <button type="submit" class="uz-btn uz-btn-primary">Сохранить изменения</button>
+          </div>
+        </form>
+        
+        <!-- Форма выхода (отдельно от формы редактирования) -->
+        <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--uz-border);">
+          <form method="post" action="{% url 'uzmat:logout' %}" style="display: inline-block;">
+            {% csrf_token %}
+            <button type="submit" class="uz-btn uz-btn-outline" style="color: var(--uz-danger); border-color: rgba(239, 68, 68, 0.2);">Выйти из профиля</button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- My Ads Section -->
+    <section class="uz-animate-in uz-profile-ads-section" style="animation-delay: 0.1s; margin-top: 48px;">
+      <div class="uz-flex" style="justify-content: space-between; margin-bottom: 24px; padding: 0 20px;">
+        <h2 style="font-size: 20px; font-weight: 600;">Мои объявления <span style="color: var(--uz-text-dim); font-weight: 400;">({{ user_ads|length }})</span></h2>
+        {% if user.is_staff %}
+          <a href="{% url 'uzmat:admin_send_notification' %}" class="uz-btn uz-btn-outline" style="padding: 8px 12px;">Уведомления</a>
+        {% endif %}
+      </div>
+
+      {% if not now_dt %}{% now "UTC" as now_dt %}{% endif %}
+      <div class="uz-bento-grid">
+        {% for ad in user_ads %}
+        <article class="uz-ad-card" style="position: relative;">
+          <a href="{% url 'uzmat:ad_detail' slug=ad.slug %}" class="uz-ad-card-link">
+            <div class="uz-ad-image">
+              {% if ad.images.exists %}
+                <img src="{{ ad.images.first.image.url }}" alt="{{ ad.title }}" style="width: 100%; height: 100%; object-fit: cover; object-position: center;">
+              {% elif ad.image %}
+                <img src="{{ ad.image.url }}" alt="{{ ad.title }}" style="width: 100%; height: 100%; object-fit: cover; object-position: center;">
+              {% else %}
+                <svg class="uz-ad-image-icon" viewBox="0 0 775 775" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M209.896 678.125C290.15 678.125 355.208 613.066 355.208 532.812C355.208 452.559 290.15 387.5 209.896 387.5C129.642 387.5 64.5833 452.559 64.5833 532.812C64.5833 613.066 129.642 678.125 209.896 678.125Z" stroke="currentColor" stroke-width="48.4375" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M613.542 678.125C667.044 678.125 710.417 634.753 710.417 581.25C710.417 527.747 667.044 484.375 613.542 484.375C560.039 484.375 516.667 527.747 516.667 581.25C516.667 634.753 560.039 678.125 613.542 678.125Z" stroke="currentColor" stroke-width="48.4375" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M64.5833 339.059C101.195 311.596 144.839 295.068 190.459 291.392C236.079 287.716 281.807 297.042 322.344 318.288C362.881 339.535 396.568 371.834 419.501 411.441C442.434 451.048 453.675 496.343 451.922 542.077C451.179 561.581 450.824 571.366 455.571 576.306C460.318 581.247 469.133 581.247 486.732 581.247H516.667M419.792 290.622L520.089 309.416C595.652 323.624 633.466 330.696 655.779 357.595C678.125 384.494 678.125 423.147 678.125 500.518M645.833 387.497H613.542" stroke="currentColor" stroke-width="48.4375" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M419.792 403.646V309.58C419.792 296.943 417.973 284.565 414.334 272.445L371.354 96.875M129.167 290.625V96.875M96.875 96.875H419.792M581.25 306.771V258.333C581.25 241.205 588.054 224.778 600.166 212.666C612.278 200.554 628.705 193.75 645.833 193.75M226.042 290.625V96.875" stroke="currentColor" stroke-width="48.4375" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              {% endif %}
+              {% if not ad.is_active %}
+              <div style="position: absolute; top: 8px; left: 8px; background: rgba(239, 68, 68, 0.9); color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;">Неактивно</div>
+              {% endif %}
+              {% if ad.is_promoted %}
+              <div style="position: absolute; top: 8px; right: 8px; background: rgba(59, 130, 246, 0.95); color: white; padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 700;">
+                Горячее предложение{% if ad.promotion_plan %} • {{ ad.promotion_plan|upper }}{% endif %}
+              </div>
+              {% endif %}
+            </div>
+            <div class="uz-ad-content">
+              <div class="uz-ad-content-header">
+                <div class="uz-ad-price">{{ ad.get_price_display }}</div>
+              </div>
+              <div>
+                <h3 class="uz-ad-title">{{ ad.title }}</h3>
+                <p class="uz-ad-subtitle">{{ ad.get_ad_type_display }}</p>
+                {% if not ad.is_active %}
+                <div style="margin: 8px 0; padding: 6px 10px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 4px; display: inline-block;">
+                  <span style="color: rgb(239, 68, 68); font-size: 12px; font-weight: 600;">Неактивно</span>
+                </div>
+                {% endif %}
+                <p class="uz-ad-description">{{ ad.description|truncatewords:15 }}</p>
+              </div>
+              <div class="uz-ad-meta">
+                <div class="uz-ad-meta-left">
+                  <svg class="uz-ad-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                    <circle cx="12" cy="10" r="3"></circle>
+                  </svg>
+                  <span>{{ ad.city }}</span>
+                  <span>•</span>
+                  <span>{{ ad.created_at|date:"d M" }}</span>
+                </div>
+                <div class="uz-ad-meta-right">
+                  <svg class="uz-ad-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                  <span>{{ ad.views_count }}</span>
+                </div>
+              </div>
+            </div>
+          </a>
+          <!-- Кнопка продвижения объявления -->
+          <div class="uz-ad-actions" style="position: absolute; top: 8px; right: 8px; z-index: 10;">
+            {% if not ad.is_promoted or not ad.promotion_until or ad.promotion_until <= now_dt %}
+            <a href="{% url 'uzmat:promote_info' slug=ad.slug %}" class="uz-btn uz-btn-primary" style="padding: 8px 12px; font-size: 12px; min-width: 180px; border: none;">
+              Продвигать объявление
+            </a>
+            {% else %}
+            <div class="uz-btn uz-btn-primary" style="padding: 8px 12px; font-size: 12px; min-width: 180px; border: none; background: rgba(59,130,246,0.75); cursor: default; text-align:center;">
+              Уже в горячих
+            </div>
+            {% endif %}
+          </div>
+        </article>
+        {% empty %}
+        <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: var(--uz-text-dim);">
+          <p>У вас пока нет объявлений</p>
+          <a href="{% url 'uzmat:create_ad' %}" class="uz-btn uz-btn-primary" style="margin-top: 16px;">Создать объявление</a>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <!-- History Section -->
+    <section class="uz-animate-in uz-profile-history-section" style="animation-delay: 0.2s; margin-top: 48px;">
+      <div class="uz-card">
+        <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 20px;">История</h2>
+        <div class="uz-flex-col" style="gap: 12px;">
+          <div style="padding: 12px 0; border-bottom: 1px solid var(--uz-border);">
+            <div style="font-weight: 500; margin-bottom: 4px;">Фронтальные погрузчики, LiuGong 835H</div>
+            <div style="font-size: 13px; color: var(--uz-text-dim);">Аренда • г. Усть‑Каменогорск • 12 смен</div>
+          </div>
+          <div style="padding: 12px 0; border-bottom: 1px solid var(--uz-border);">
+            <div style="font-weight: 500; margin-bottom: 4px;">Экскаватор‑погрузчик Hidromek 102B</div>
+            <div style="font-size: 13px; color: var(--uz-text-dim);">Покупка • г. Актобе • январь 2025</div>
+          </div>
+          <div style="padding: 12px 0; border-bottom: 1px solid var(--uz-border);">
+            <div style="font-size: 14px; font-weight: 600; margin-bottom: 12px; color: var(--uz-text-dim);">История продаж</div>
+            <div style="font-size: 13px; color: var(--uz-text-muted);">Появится здесь, когда вы разместите первое объявление.</div>
+          </div>
+          <div style="padding: 12px 0;">
+            <div style="font-size: 14px; font-weight: 600; margin-bottom: 12px;">Избранное <span style="color: var(--uz-text-dim); font-weight: 400;">({{ favorites|length }})</span></div>
+            <div class="uz-flex-col" style="gap: 8px;" data-favorites-list>
+              {% for favorite in favorites %}
+              <div style="padding: 8px 0; border-bottom: 1px solid var(--uz-border);">
+                <a href="{% url 'uzmat:ad_detail' slug=favorite.advertisement.slug %}" style="font-weight: 500; margin-bottom: 4px; display: block;">{{ favorite.advertisement.title }}</a>
+                <div style="font-size: 13px; color: var(--uz-text-dim);">{{ favorite.advertisement.get_ad_type_display }} • {{ favorite.advertisement.city }}</div>
+              </div>
+              {% empty %}
+              <div style="font-size: 13px; color: var(--uz-text-muted);">Избранные объявления появятся здесь, когда вы добавите их на странице техники.</div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  {% include 'uzmat/footer.html' %}
+
+  <!-- Mobile Navigation -->
+  <nav class="uz-bottom-nav uz-show-mobile">
+    <a href="{% url 'uzmat:index' %}" class="uz-bottom-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+      </svg>
+      <span>Главная</span>
+    </a>
+    <a href="{% url 'uzmat:chats' %}" class="uz-bottom-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+      </svg>
+      <span>Чаты</span>
+    </a>
+    <a href="{% url 'uzmat:create_ad' %}" class="uz-bottom-item" style="color: var(--uz-primary);">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="16"></line>
+        <line x1="8" y1="12" x2="16" y2="12"></line>
+      </svg>
+      <span>Создать</span>
+    </a>
+    <a href="{% url 'uzmat:profile' %}" class="uz-bottom-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+        <circle cx="12" cy="7" r="4"></circle>
+      </svg>
+      <span>Профиль</span>
+    </a>
+    <a href="{% url 'uzmat:settings' %}" class="uz-bottom-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"></circle>
+        <path
+          d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+        </path>
+      </svg>
+      <span>Меню</span>
+    </a>
+  </nav>
+
+  <!-- Django Messages to Toast -->
+  {% if messages %}
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      {% for message in messages %}
+        {% if 'auth' in message.extra_tags %}
+          {% if message.tags == 'error' %}
+            window.showToast('{{ message|escapejs }}', 'error');
+          {% elif message.tags == 'success' %}
+            window.showToast('{{ message|escapejs }}', 'success');
+          {% elif message.tags == 'warning' %}
+            window.showToast('{{ message|escapejs }}', 'warning');
+          {% else %}
+            window.showToast('{{ message|escapejs }}', 'info');
+          {% endif %}
+        {% endif %}
+      {% endfor %}
+    });
+  </script>
+  {% endif %}
+
+</body>
+</html>
+
+

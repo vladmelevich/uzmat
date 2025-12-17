@@ -1,0 +1,357 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% if profile_user.account_type == 'company' %}{{ profile_user.company_name }}{% else %}{{ profile_user.first_name|default:profile_user.username }}{% endif %} — Uzmat</title>
+  <link rel="icon" type="image/svg+xml" href="{% static 'uzmat/logo-uzmat.svg' %}">
+  {% include 'uzmat/theme-init.html' %}
+  <link rel="stylesheet" href="{% static 'uzmat/styles.css' %}">
+  <script defer src="{% static 'uzmat/app.js' %}"></script>
+  {% include 'uzmat/toast-container.html' %}
+</head>
+<body class="uz-body">
+  {% include 'uzmat/toast-container.html' %}
+
+  <!-- Floating Header -->
+  <header class="uz-header">
+    <div class="uz-header-inner">
+      <a href="{% url 'uzmat:index' %}" class="uz-logo">
+        <img src="{% static 'uzmat/logo-uzmat.svg' %}" alt="Uzmat" class="uz-logo-mark">
+        <span>Uzmat</span>
+      </a>
+
+      {% include 'uzmat/nav.html' %}
+
+      <div class="uz-flex">
+        {% include 'uzmat/country-selector.html' %}
+        {% include 'uzmat/create-ad-button.html' %}
+        <button class="uz-btn uz-btn-ghost uz-hidden-mobile" data-theme-toggle>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+        </button>
+        {% include 'uzmat/user-avatar.html' %}
+      </div>
+    </div>
+  </header>
+
+  <main class="uz-container">
+    <!-- Breadcrumbs -->
+    <nav class="uz-breadcrumbs">
+      <a href="{% url 'uzmat:index' %}">Главная</a>
+      <span>/</span>
+      <span class="uz-breadcrumb-current">
+        {% if profile_user.account_type == 'company' %}
+          {{ profile_user.company_name }}
+        {% else %}
+          {{ profile_user.first_name|default:profile_user.username }}
+        {% endif %}
+      </span>
+    </nav>
+
+    <!-- Profile Header -->
+    <section class="uz-animate-in" style="margin-top: 32px;">
+      <div class="uz-card">
+        <div class="uz-flex" style="gap: 24px; align-items: flex-start; flex-wrap: wrap;">
+          <!-- Avatar -->
+          <div class="uz-flex-col" style="align-items: center; gap: 12px; flex-shrink: 0;">
+            <div style="width: 120px; height: 120px; border-radius: 50%; background: var(--uz-bg-hover); display: flex; align-items: center; justify-content: center; font-size: 48px; font-weight: 700; color: var(--uz-primary); overflow: hidden;">
+              {% if profile_user.avatar %}
+                <img src="{{ profile_user.avatar.url }}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover;">
+              {% else %}
+                {% if profile_user.account_type == 'company' %}
+                  {% if profile_user.company_name %}{{ profile_user.company_name|first|upper }}{% else %}C{% endif %}
+                {% else %}
+                  {% if profile_user.first_name %}{{ profile_user.first_name|first|upper }}{% else %}U{% endif %}
+                {% endif %}
+              {% endif %}
+            </div>
+            {% if profile_user.account_type == 'company' %}
+              <span class="uz-badge" style="background: var(--uz-primary-alpha); color: var(--uz-primary);">Компания</span>
+            {% else %}
+              <span class="uz-badge" style="background: var(--uz-primary-alpha); color: var(--uz-primary);">Пользователь</span>
+            {% endif %}
+          </div>
+
+          <!-- Profile Info -->
+          <div class="uz-flex-col" style="flex: 1; gap: 16px; min-width: 0;">
+            <div>
+              <h1 style="font-size: 32px; font-weight: 700; margin-bottom: 8px;">
+                {% if profile_user.account_type == 'company' %}
+                  {{ profile_user.company_name|default:profile_user.username }}{% include 'uzmat/verified-check.html' with u=profile_user %}
+                {% else %}
+                  {{ profile_user.first_name|default:profile_user.username }}{% include 'uzmat/verified-check.html' with u=profile_user %}
+                {% endif %}
+              </h1>
+              <div class="uz-flex" style="gap: 12px; flex-wrap: wrap; align-items: center;">
+                {% if profile_user.is_verified_active %}
+                  <span class="uz-badge" style="background: rgba(29, 155, 240, 0.12); color: #1D9BF0; border: 1px solid rgba(29, 155, 240, 0.35); font-weight: 700;">Проверенный</span>
+                {% endif %}
+                <span style="color: var(--uz-text-dim); font-size: 14px;">На Uzmat с {{ profile_user.created_at|date:"Y" }}</span>
+              </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="uz-flex" style="gap: 24px; flex-wrap: wrap;">
+              <div>
+                <div style="font-size: 24px; font-weight: 700; color: var(--uz-primary);">{{ ads_count }}</div>
+                <div style="font-size: 13px; color: var(--uz-text-dim);">Объявлений</div>
+              </div>
+              <div>
+                <div style="font-size: 24px; font-weight: 700; color: var(--uz-primary);">{{ total_views }}</div>
+                <div style="font-size: 13px; color: var(--uz-text-dim);">Просмотров</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Company Details (if company) -->
+    {% if profile_user.account_type == 'company' %}
+    <section class="uz-animate-in" style="margin-top: 32px; animation-delay: 0.1s;">
+      <div class="uz-card">
+        <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 20px;">Информация о компании</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+          {% if profile_user.company_inn %}
+          <div>
+            <div style="font-size: 12px; color: var(--uz-text-dim); margin-bottom: 4px;">ИНН</div>
+            <div style="font-weight: 500;">{{ profile_user.company_inn }}</div>
+          </div>
+          {% endif %}
+          {% if profile_user.company_director %}
+          <div>
+            <div style="font-size: 12px; color: var(--uz-text-dim); margin-bottom: 4px;">Директор</div>
+            <div style="font-weight: 500;">{{ profile_user.company_director }}</div>
+          </div>
+          {% endif %}
+          {% if profile_user.company_phone %}
+          <div>
+            <div style="font-size: 12px; color: var(--uz-text-dim); margin-bottom: 4px;">Телефон</div>
+            <div style="font-weight: 500;">{{ profile_user.company_phone }}</div>
+          </div>
+          {% endif %}
+          {% if profile_user.company_email %}
+          <div>
+            <div style="font-size: 12px; color: var(--uz-text-dim); margin-bottom: 4px;">Email</div>
+            <div style="font-weight: 500;">{{ profile_user.company_email }}</div>
+          </div>
+          {% endif %}
+          {% if profile_user.company_website %}
+          <div>
+            <div style="font-size: 12px; color: var(--uz-text-dim); margin-bottom: 4px;">Сайт</div>
+            <div style="font-weight: 500;">
+              <a href="{{ profile_user.company_website }}" target="_blank" rel="noopener noreferrer" style="color: var(--uz-primary); text-decoration: none;">{{ profile_user.company_website }}</a>
+            </div>
+          </div>
+          {% endif %}
+          {% if profile_user.city %}
+          <div>
+            <div style="font-size: 12px; color: var(--uz-text-dim); margin-bottom: 4px;">Город</div>
+            <div style="font-weight: 500;">{{ profile_user.city }}</div>
+          </div>
+          {% endif %}
+          {% if profile_user.company_address %}
+          <div>
+            <div style="font-size: 12px; color: var(--uz-text-dim); margin-bottom: 4px;">Адрес компании</div>
+            <div style="font-weight: 500;">{{ profile_user.company_address }}</div>
+          </div>
+          {% endif %}
+          {% if profile_user.company_legal_address %}
+          <div>
+            <div style="font-size: 12px; color: var(--uz-text-dim); margin-bottom: 4px;">Юридический адрес</div>
+            <div style="font-weight: 500;">{{ profile_user.company_legal_address }}</div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </section>
+    {% else %}
+    <!-- Individual User Details -->
+    <section class="uz-animate-in" style="margin-top: 32px; animation-delay: 0.1s;">
+      <div class="uz-card">
+        <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 20px;">Информация</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+          {% if profile_user.first_name %}
+          <div>
+            <div style="font-size: 12px; color: var(--uz-text-dim); margin-bottom: 4px;">Имя</div>
+            <div style="font-weight: 500;">{{ profile_user.first_name }}</div>
+          </div>
+          {% endif %}
+          {% if profile_user.city %}
+          <div>
+            <div style="font-size: 12px; color: var(--uz-text-dim); margin-bottom: 4px;">Город</div>
+            <div style="font-weight: 500;">{{ profile_user.city }}</div>
+          </div>
+          {% endif %}
+          {% if profile_user.phone %}
+          <div>
+            <div style="font-size: 12px; color: var(--uz-text-dim); margin-bottom: 4px;">Телефон</div>
+            <div style="font-weight: 500;">{{ profile_user.phone }}</div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </section>
+    {% endif %}
+
+    <!-- User Ads -->
+    <section class="uz-animate-in" style="margin-top: 32px; animation-delay: 0.2s;">
+      <div style="margin-bottom: 24px;">
+        <h2 style="font-size: 24px; font-weight: 600;">Объявления <span style="color: var(--uz-text-dim); font-weight: 400;">({{ ads_count }})</span></h2>
+      </div>
+
+      {% if user_ads %}
+      <div class="uz-bento-grid">
+        {% for ad in user_ads %}
+        <article class="uz-ad-card">
+          <a href="{% url 'uzmat:ad_detail' slug=ad.slug %}" class="uz-ad-card-link">
+            <div class="uz-ad-image">
+              {% if ad.images.exists %}
+                <img src="{{ ad.images.first.image.url }}" alt="{{ ad.title }}" style="width: 100%; height: 100%; object-fit: cover; object-position: center;">
+              {% elif ad.image %}
+                <img src="{{ ad.image.url }}" alt="{{ ad.title }}" style="width: 100%; height: 100%; object-fit: cover; object-position: center;">
+              {% else %}
+                <svg class="uz-ad-image-icon" viewBox="0 0 775 775" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M209.896 678.125C290.15 678.125 355.208 613.066 355.208 532.812C355.208 452.559 290.15 387.5 209.896 387.5C129.642 387.5 64.5833 452.559 64.5833 532.812C64.5833 613.066 129.642 678.125 209.896 678.125Z" stroke="currentColor" stroke-width="48.4375" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M613.542 678.125C667.044 678.125 710.417 634.753 710.417 581.25C710.417 527.747 667.044 484.375 613.542 484.375C560.039 484.375 516.667 527.747 516.667 581.25C516.667 634.753 560.039 678.125 613.542 678.125Z" stroke="currentColor" stroke-width="48.4375" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M64.5833 339.059C101.195 311.596 144.839 295.068 190.459 291.392C236.079 287.716 281.807 297.042 322.344 318.288C362.881 339.535 396.568 371.834 419.501 411.441C442.434 451.048 453.675 496.343 451.922 542.077C451.179 561.581 450.824 571.366 455.571 576.306C460.318 581.247 469.133 581.247 486.732 581.247H516.667M419.792 290.622L520.089 309.416C595.652 323.624 633.466 330.696 655.779 357.595C678.125 384.494 678.125 423.147 678.125 500.518M645.833 387.497H613.542" stroke="currentColor" stroke-width="48.4375" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M419.792 403.646V309.58C419.792 296.943 417.973 284.565 414.334 272.445L371.354 96.875M129.167 290.625V96.875M96.875 96.875H419.792M581.25 306.771V258.333C581.25 241.205 588.054 224.778 600.166 212.666C612.278 200.554 628.705 193.75 645.833 193.75M226.042 290.625V96.875" stroke="currentColor" stroke-width="48.4375" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              {% endif %}
+            </div>
+            <div class="uz-ad-content">
+              <div class="uz-ad-content-header">
+                <div class="uz-ad-price">{{ ad.get_price_display }}</div>
+              </div>
+              <div>
+                <h3 class="uz-ad-title">{{ ad.title }}</h3>
+                <p class="uz-ad-subtitle">{{ ad.get_ad_type_display }}</p>
+                <p class="uz-ad-description">{{ ad.description|truncatewords:15 }}</p>
+              </div>
+              <div class="uz-ad-meta">
+                <div class="uz-ad-meta-left">
+                  <svg class="uz-ad-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                    <circle cx="12" cy="10" r="3"></circle>
+                  </svg>
+                  <span>{{ ad.city }}</span>
+                  <span>•</span>
+                  <span>{{ ad.created_at|date:"d M" }}</span>
+                </div>
+                <div class="uz-ad-meta-right">
+                  <svg class="uz-ad-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                  <span>{{ ad.views_count }}</span>
+                </div>
+              </div>
+            </div>
+          </a>
+        </article>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="uz-card" style="text-align: center; padding: 60px 20px;">
+        <p style="color: var(--uz-text-dim); font-size: 16px;">У пользователя пока нет объявлений</p>
+      </div>
+      {% endif %}
+    </section>
+
+  </main>
+
+  {% include 'uzmat/footer.html' %}
+
+  <!-- Mobile Navigation -->
+  <nav class="uz-bottom-nav uz-show-mobile">
+    <a href="{% url 'uzmat:index' %}" class="uz-bottom-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+      </svg>
+      <span>Главная</span>
+    </a>
+    <a href="{% url 'uzmat:chats' %}" class="uz-bottom-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+      </svg>
+      <span>Чаты</span>
+    </a>
+    <a href="{% url 'uzmat:create_ad' %}" class="uz-bottom-item" style="color: var(--uz-primary);">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="16"></line>
+        <line x1="8" y1="12" x2="16" y2="12"></line>
+      </svg>
+      <span>Создать</span>
+    </a>
+    {% if user.is_authenticated %}
+    <a href="{% url 'uzmat:profile' %}" class="uz-bottom-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+        <circle cx="12" cy="7" r="4"></circle>
+      </svg>
+      <span>Профиль</span>
+    </a>
+    {% else %}
+    <a href="{% url 'uzmat:onboarding' %}" class="uz-bottom-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+        <circle cx="12" cy="7" r="4"></circle>
+      </svg>
+      <span>Профиль</span>
+    </a>
+    {% endif %}
+    <a href="{% url 'uzmat:settings' %}" class="uz-bottom-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"></circle>
+        <path
+          d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+        </path>
+      </svg>
+      <span>Меню</span>
+    </a>
+  </nav>
+
+  <!-- Django Messages to Toast -->
+  {% if messages %}
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      {% for message in messages %}
+        {% if 'auth' in message.extra_tags %}
+          {% if message.tags == 'error' %}
+            window.showToast('{{ message|escapejs }}', 'error');
+          {% elif message.tags == 'success' %}
+            window.showToast('{{ message|escapejs }}', 'success');
+          {% elif message.tags == 'warning' %}
+            window.showToast('{{ message|escapejs }}', 'warning');
+          {% else %}
+            window.showToast('{{ message|escapejs }}', 'info');
+          {% endif %}
+        {% endif %}
+      {% endfor %}
+    });
+  </script>
+  {% endif %}
+
+</body>
+</html>
+

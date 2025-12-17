@@ -1,0 +1,122 @@
+{% load static %}
+<!-- Выпадающий список стран -->
+<div class="uz-nav-country-selector" data-nav-country-selector>
+  <button type="button" class="uz-nav-country-btn" data-nav-country-toggle>
+    <span class="uz-nav-country-flag">
+      <img id="nav-country-flag" src="{% static 'uzmat/kazah.svg' %}" alt="KZ" class="uz-nav-country-flag-img" onerror="this.style.display='none'; if(this.nextElementSibling){this.nextElementSibling.style.display='block';}">
+      <span class="uz-nav-country-flag-fallback" style="display:none;">🇰🇿</span>
+    </span>
+    <span class="uz-nav-country-code">KZ</span>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="6 9 12 15 18 9"></polyline>
+    </svg>
+  </button>
+  <div class="uz-nav-country-dropdown" data-nav-country-dropdown>
+    <button type="button" class="uz-nav-country-option active" data-nav-country="kz" data-currency="₸ KZT" data-lang="ru" data-flag="{% static 'uzmat/kazah.svg' %}">
+      <span class="uz-nav-country-flag">
+        <img src="{% static 'uzmat/kazah.svg' %}" alt="KZ" class="uz-nav-country-flag-img" onerror="this.style.display='none'; if(this.nextElementSibling){this.nextElementSibling.style.display='block';}">
+        <span class="uz-nav-country-flag-fallback" style="display:none;">🇰🇿</span>
+      </span>
+      <div class="uz-nav-country-info">
+        <span class="uz-nav-country-name">Казахстан</span>
+        <span class="uz-nav-country-currency">₸ KZT</span>
+      </div>
+    </button>
+    <button type="button" class="uz-nav-country-option" data-nav-country="uz" data-currency="сум UZS" data-lang="uz" data-flag="{% static 'uzmat/uzbek.svg' %}">
+      <span class="uz-nav-country-flag">
+        <img src="{% static 'uzmat/uzbek.svg' %}" alt="UZ" class="uz-nav-country-flag-img" onerror="this.style.display='none'; if(this.nextElementSibling){this.nextElementSibling.style.display='block';}">
+        <span class="uz-nav-country-flag-fallback" style="display:none;">🇺🇿</span>
+      </span>
+      <div class="uz-nav-country-info">
+        <span class="uz-nav-country-name">Узбекистан</span>
+        <span class="uz-nav-country-currency">сум UZS</span>
+      </div>
+    </button>
+    <button type="button" class="uz-nav-country-option" data-nav-country="ru" data-currency="₽ RUB" data-lang="ru" data-flag="{% static 'uzmat/russia.svg' %}">
+      <span class="uz-nav-country-flag">
+        <img src="{% static 'uzmat/russia.svg' %}" alt="RU" class="uz-nav-country-flag-img" onerror="this.style.display='none'; if(this.nextElementSibling){this.nextElementSibling.style.display='block';}">
+        <span class="uz-nav-country-flag-fallback" style="display:none;">🇷🇺</span>
+      </span>
+      <div class="uz-nav-country-info">
+        <span class="uz-nav-country-name">Россия</span>
+        <span class="uz-nav-country-currency">₽ RUB</span>
+      </div>
+    </button>
+    <button type="button" class="uz-nav-country-option" data-nav-country="by" data-currency="Br BYN" data-lang="be" data-flag="{% static 'uzmat/bel.svg' %}">
+      <span class="uz-nav-country-flag">
+        <img src="{% static 'uzmat/bel.svg' %}" alt="BY" class="uz-nav-country-flag-img" onerror="this.style.display='none'; if(this.nextElementSibling){this.nextElementSibling.style.display='block';}">
+        <span class="uz-nav-country-flag-fallback" style="display:none;">🇧🇾</span>
+      </span>
+      <div class="uz-nav-country-info">
+        <span class="uz-nav-country-name">Беларусь</span>
+        <span class="uz-nav-country-currency">Br BYN</span>
+      </div>
+    </button>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const selector = document.querySelector('[data-nav-country-selector]');
+    if (!selector) return;
+
+    const toggleBtn = selector.querySelector('[data-nav-country-toggle]');
+    const dropdown = selector.querySelector('[data-nav-country-dropdown]');
+    const options = selector.querySelectorAll('.uz-nav-country-option');
+    const flagImg = selector.querySelector('#nav-country-flag');
+    const codeSpan = toggleBtn ? toggleBtn.querySelector('.uz-nav-country-code') : null;
+
+    function closeDropdown() {
+      selector.removeAttribute('data-open');
+    }
+
+    function openDropdown() {
+      selector.setAttribute('data-open', 'true');
+    }
+
+    if (toggleBtn) {
+      toggleBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        if (selector.hasAttribute('data-open')) {
+          closeDropdown();
+        } else {
+          openDropdown();
+        }
+      });
+    }
+
+    options.forEach(option => {
+      option.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Мгновенное обновление UI
+        options.forEach(o => o.classList.remove('active'));
+        option.classList.add('active');
+
+        const flagSrc = option.getAttribute('data-flag') || '';
+        const code = option.getAttribute('data-nav-country')?.toUpperCase() || '';
+        const lang = option.getAttribute('data-lang') || 'ru';
+        const country = option.getAttribute('data-nav-country') || '';
+
+        if (flagImg && flagSrc) flagImg.src = flagSrc;
+        if (codeSpan) codeSpan.textContent = code;
+
+        // Сохраняем выбранную страну
+        localStorage.setItem('selected_country', country);
+
+        // Переключаем язык МГНОВЕННО если доступен i18n
+        if (window.i18n && lang) {
+          window.i18n.setLanguage(lang);
+        }
+
+        closeDropdown();
+      });
+    });
+
+    document.addEventListener('click', closeDropdown);
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') closeDropdown();
+    });
+  });
+</script>

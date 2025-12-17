@@ -1,0 +1,258 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Вход и регистрация — Uzmat</title>
+  <link rel="icon" type="image/svg+xml" href="{% static 'uzmat/logo-uzmat.svg' %}">
+  {% include 'uzmat/theme-init.html' %}
+  <link rel="stylesheet" href="{% static 'uzmat/styles.css' %}">
+  <script defer src="{% static 'uzmat/app.js' %}"></script>
+  {% include 'uzmat/toast-container.html' %}
+  <style>
+    @media (max-width: 768px) {
+      .auth-main-container {
+        padding-bottom: 80px !important;
+        min-height: auto !important;
+      }
+      .auth-form-footer {
+        margin-bottom: 40px;
+      }
+    }
+  </style>
+</head>
+
+<body class="uz-body">
+
+  <!-- Floating Header -->
+  <header class="uz-header">
+    <div class="uz-header-inner">
+      <a href="{% url 'uzmat:index' %}" class="uz-logo">
+        <img src="{% static 'uzmat/logo-uzmat.svg' %}" alt="Uzmat" class="uz-logo-mark">
+        <span>Uzmat</span>
+      </a>
+
+      <nav class="uz-nav uz-hidden-mobile">
+        <a href="{% url 'uzmat:index' %}" class="uz-nav-item">Объявления</a>
+        <a href="{% url 'uzmat:parts_repair' %}" class="uz-nav-item">Запчасти</a>
+        <a href="#" class="uz-nav-item">Ремонт</a>
+      </nav>
+
+      <div class="uz-flex">
+        <button class="uz-btn uz-btn-ghost uz-hidden-mobile" data-theme-toggle>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="uz-container auth-main-container" style="min-height: 80vh; display: flex; align-items: center; justify-content: center;">
+
+    <div class="uz-card" style="width: 100%; max-width: 400px; padding: 40px;">
+      <div style="text-align: center; margin-bottom: 32px;">
+        <a href="{% url 'uzmat:onboarding' %}" style="display: inline-flex; align-items: center; gap: 8px; color: var(--uz-text-dim); font-size: 14px; margin-bottom: 16px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="19" y1="12" x2="5" y2="12"></line>
+            <polyline points="12 19 5 12 12 5"></polyline>
+          </svg>
+          Назад к выбору
+        </a>
+        <img src="{% static 'uzmat/logo-uzmat.svg' %}" alt="Uzmat" class="uz-logo-mark" style="margin: 0 auto 16px; width: 48px; height: 48px;">
+        <h1 style="font-size: 24px; font-weight: 700; margin-bottom: 8px;">Добро пожаловать</h1>
+        <p style="color: var(--uz-text-dim);">Войдите, чтобы управлять объявлениями</p>
+      </div>
+
+      <div class="uz-nav" style="margin-bottom: 24px; width: 100%; justify-content: center;">
+        <button type="button" class="uz-nav-item {% if not show_register %}active{% endif %}" style="flex: 1; text-align: center;" data-auth-tab="login">Вход</button>
+        <button type="button" class="uz-nav-item {% if show_register %}active{% endif %}" style="flex: 1; text-align: center;" data-auth-tab="register">Регистрация</button>
+      </div>
+
+      {% if messages %}
+        <div style="margin-bottom: 24px;">
+          {% for message in messages %}
+            <div class="uz-alert" style="padding: 12px 16px; border-radius: var(--uz-radius-md); margin-bottom: 8px; 
+              {% if message.tags == 'error' %}background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: var(--uz-danger);
+              {% elif message.tags == 'success' %}background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); color: var(--uz-success);
+              {% else %}background: var(--uz-bg-hover); border: 1px solid var(--uz-border);{% endif %}">
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <!-- Login Form -->
+      <form data-auth-panel="login" action="{% url 'uzmat:auth' %}" method="post" style="{% if show_register %}display: none;{% endif %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="login">
+
+        <div style="margin-bottom: 16px;">
+          <label style="display: block; margin-bottom: 8px; font-size: 14px; font-weight: 500;">Email</label>
+          <input type="email" name="email" class="uz-input" placeholder="name@company.com" required>
+        </div>
+
+        <div style="margin-bottom: 24px;">
+          <label style="display: block; margin-bottom: 8px; font-size: 14px; font-weight: 500;">Пароль</label>
+          <input type="password" name="password" class="uz-input" placeholder="••••••••" required>
+        </div>
+
+        <button type="submit" class="uz-btn uz-btn-primary" style="width: 100%;">Войти</button>
+
+        <div style="text-align: center; margin-top: 16px;">
+          <a href="#" style="font-size: 13px; color: var(--uz-text-dim);">Забыли пароль?</a>
+        </div>
+      </form>
+
+      <!-- Register Form -->
+      <form data-auth-panel="register" action="{% url 'uzmat:register_individual' %}" method="post" style="{% if not show_register %}display: none;{% endif %}">
+        {% csrf_token %}
+
+        <div style="margin-bottom: 16px;">
+          <label style="display: block; margin-bottom: 8px; font-size: 14px; font-weight: 500;">Имя</label>
+          <input type="text" name="name" class="uz-input" placeholder="Иван Иванов" required>
+        </div>
+
+        <div style="margin-bottom: 16px;">
+          <label style="display: block; margin-bottom: 8px; font-size: 14px; font-weight: 500;">Email</label>
+          <input type="email" name="email" class="uz-input" placeholder="name@example.com" required>
+        </div>
+
+        <div style="margin-bottom: 24px;">
+          <label style="display: block; margin-bottom: 8px; font-size: 14px; font-weight: 500;">Пароль</label>
+          <input type="password" name="password" class="uz-input" placeholder="••••••••" required>
+        </div>
+
+        <button type="submit" class="uz-btn uz-btn-primary" style="width: 100%;">Создать аккаунт</button>
+        
+        <div class="auth-form-footer" style="text-align: center; margin-top: 16px;">
+          <p style="font-size: 13px; color: var(--uz-text-dim);">
+            Регистрация для компании? <a href="{% url 'uzmat:register_company' %}" style="color: var(--uz-primary);">Зарегистрировать компанию</a>
+          </p>
+        </div>
+      </form>
+
+    </div>
+
+  </main>
+
+  <!-- Mobile Navigation -->
+  <nav class="uz-bottom-nav uz-show-mobile">
+    <a href="{% url 'uzmat:index' %}" class="uz-bottom-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+      </svg>
+      <span>Главная</span>
+    </a>
+    <a href="{% url 'uzmat:chats' %}" class="uz-bottom-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+      </svg>
+      <span>Чаты</span>
+    </a>
+    <a href="{% url 'uzmat:create_ad' %}" class="uz-bottom-item" style="color: var(--uz-primary);">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="16"></line>
+        <line x1="8" y1="12" x2="16" y2="12"></line>
+      </svg>
+      <span>Создать</span>
+    </a>
+    <a href="{% url 'uzmat:onboarding' %}" class="uz-bottom-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+        <circle cx="12" cy="7" r="4"></circle>
+      </svg>
+      <span>Профиль</span>
+    </a>
+    <a href="{% url 'uzmat:settings' %}" class="uz-bottom-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"></circle>
+        <path
+          d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+        </path>
+      </svg>
+      <span>Меню</span>
+    </a>
+  </nav>
+
+  <!-- Django Messages to Toast -->
+  {% if messages %}
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      {% for message in messages %}
+        {% if 'auth' in message.extra_tags %}
+          {% if message.tags == 'error' %}
+            window.showToast('{{ message|escapejs }}', 'error');
+          {% elif message.tags == 'success' %}
+            window.showToast('{{ message|escapejs }}', 'success');
+          {% elif message.tags == 'warning' %}
+            window.showToast('{{ message|escapejs }}', 'warning');
+          {% else %}
+            window.showToast('{{ message|escapejs }}', 'info');
+          {% endif %}
+        {% endif %}
+      {% endfor %}
+    });
+  </script>
+  {% endif %}
+
+  <!-- Переключение между Вход и Регистрация -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const loginTab = document.querySelector('[data-auth-tab="login"]');
+      const registerTab = document.querySelector('[data-auth-tab="register"]');
+      const loginForm = document.querySelector('[data-auth-panel="login"]');
+      const registerForm = document.querySelector('[data-auth-panel="register"]');
+
+      if (loginTab && registerTab && loginForm && registerForm) {
+        // Функция переключения на вкладку входа
+        function showLogin() {
+          loginTab.classList.add('active');
+          registerTab.classList.remove('active');
+          loginForm.style.display = 'block';
+          registerForm.style.display = 'none';
+        }
+
+        // Функция переключения на вкладку регистрации
+        function showRegister() {
+          registerTab.classList.add('active');
+          loginTab.classList.remove('active');
+          registerForm.style.display = 'block';
+          loginForm.style.display = 'none';
+        }
+
+        // Обработчики кликов
+        loginTab.addEventListener('click', function(e) {
+          e.preventDefault();
+          showLogin();
+        });
+
+        registerTab.addEventListener('click', function(e) {
+          e.preventDefault();
+          showRegister();
+        });
+      }
+    });
+  </script>
+
+</body>
+
+</html>

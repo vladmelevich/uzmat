@@ -1,0 +1,133 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Удаление объявления — Uzmat</title>
+  <link rel="icon" type="image/svg+xml" href="{% static 'uzmat/logo-uzmat.svg' %}">
+  {% include 'uzmat/theme-init.html' %}
+  <link rel="stylesheet" href="{% static 'uzmat/styles.css' %}">
+  <script defer src="{% static 'uzmat/app.js' %}"></script>
+  {% include 'uzmat/toast-container.html' %}
+</head>
+<body class="uz-body">
+  {% include 'uzmat/toast-container.html' %}
+
+  <!-- Floating Header -->
+  <header class="uz-header">
+    <div class="uz-header-inner">
+      <a href="{% url 'uzmat:index' %}" class="uz-logo">
+        <img src="{% static 'uzmat/logo-uzmat.svg' %}" alt="Uzmat" class="uz-logo-mark">
+        <span>Uzmat</span>
+      </a>
+
+      {% include 'uzmat/nav.html' %}
+
+      <div class="uz-flex">
+        {% include 'uzmat/country-selector.html' %}
+        {% include 'uzmat/create-ad-button.html' %}
+        <button class="uz-btn uz-btn-ghost uz-hidden-mobile" data-theme-toggle>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+        </button>
+        {% include 'uzmat/user-avatar.html' %}
+      </div>
+    </div>
+  </header>
+
+  <main class="uz-container">
+    <!-- Breadcrumbs -->
+    <nav class="uz-breadcrumbs">
+      <a href="{% url 'uzmat:index' %}">Главная</a>
+      <span>/</span>
+      <a href="{% url 'uzmat:profile' %}">Профиль</a>
+      <span>/</span>
+      <span class="uz-breadcrumb-current">Удаление объявления</span>
+    </nav>
+
+    <!-- Delete Confirmation -->
+    <section class="uz-animate-in" style="margin-top: 48px; max-width: 600px; margin-left: auto; margin-right: auto;">
+      <div class="uz-card">
+        <div style="text-align: center; margin-bottom: 32px;">
+          <div style="width: 80px; height: 80px; margin: 0 auto 20px; border-radius: 50%; background: rgba(239, 68, 68, 0.1); display: flex; align-items: center; justify-content: center;">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="rgb(239, 68, 68)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+          </div>
+          <h1 style="font-size: 28px; font-weight: 700; margin-bottom: 12px;">Удалить объявление?</h1>
+          <p style="color: var(--uz-text-dim); font-size: 16px; line-height: 1.6;">
+            Вы уверены, что хотите удалить это объявление? Это действие нельзя отменить.
+          </p>
+        </div>
+
+        <!-- Ad Preview -->
+        <div style="background: var(--uz-bg-hover); border-radius: var(--uz-radius-md); padding: 20px; margin-bottom: 32px;">
+          <div style="font-size: 12px; color: var(--uz-text-dim); margin-bottom: 8px;">Объявление</div>
+          <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">{{ ad.title }}</h3>
+          <div class="uz-flex" style="gap: 8px; flex-wrap: wrap; align-items: center;">
+            <span class="uz-badge">{{ ad.get_ad_type_display }}</span>
+            <span style="color: var(--uz-text-dim); font-size: 13px;">{{ ad.city }}</span>
+            <span style="color: var(--uz-text-dim); font-size: 13px;">•</span>
+            <span style="color: var(--uz-text-dim); font-size: 13px;">{{ ad.created_at|date:"d M Y" }}</span>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="uz-flex" style="gap: 12px; justify-content: center;">
+          <a href="{% url 'uzmat:ad_detail' slug=ad.slug %}" class="uz-btn uz-btn-outline" style="min-width: 140px;">
+            Отмена
+          </a>
+          <form method="post" style="display: inline-block; margin: 0;">
+            {% csrf_token %}
+            <button type="submit" class="uz-btn" style="min-width: 140px; background: var(--uz-danger); border-color: var(--uz-danger);">
+              Удалить
+            </button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  {% include 'uzmat/footer.html' %}
+
+  <!-- Django Messages to Toast -->
+  {% if messages %}
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      {% for message in messages %}
+        {% if 'auth' in message.extra_tags %}
+          {% if message.tags == 'error' %}
+            window.showToast('{{ message|escapejs }}', 'error');
+          {% elif message.tags == 'success' %}
+            window.showToast('{{ message|escapejs }}', 'success');
+          {% elif message.tags == 'warning' %}
+            window.showToast('{{ message|escapejs }}', 'warning');
+          {% else %}
+            window.showToast('{{ message|escapejs }}', 'info');
+          {% endif %}
+        {% endif %}
+      {% endfor %}
+    });
+  </script>
+  {% endif %}
+
+</body>
+</html>
+
+
+
+
+

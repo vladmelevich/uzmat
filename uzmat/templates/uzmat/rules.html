@@ -1,0 +1,163 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Правила — Uzmat</title>
+  <link rel="icon" type="image/svg+xml" href="{% static 'uzmat/logo-uzmat.svg' %}">
+  {% include 'uzmat/theme-init.html' %}
+  <link rel="stylesheet" href="{% static 'uzmat/styles.css' %}">
+  <script defer src="{% static 'uzmat/app.js' %}"></script>
+</head>
+
+<body class="uz-body">
+
+  <!-- Floating Header -->
+  <header class="uz-header">
+    <div class="uz-header-inner">
+      <a href="{% url 'uzmat:index' %}" class="uz-logo">
+        <img src="{% static 'uzmat/logo-uzmat.svg' %}" alt="Uzmat" class="uz-logo-mark">
+        <span>Uzmat</span>
+      </a>
+
+      {% include 'uzmat/nav.html' %}
+
+      <div class="uz-flex">
+        {% include 'uzmat/country-selector.html' %}
+        {% include 'uzmat/create-ad-button.html' %}
+        <button class="uz-btn uz-btn-ghost uz-hidden-mobile" data-theme-toggle>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+        </button>
+        {% include 'uzmat/user-avatar.html' %}
+      </div>
+    </div>
+  </header>
+
+  <main class="uz-container" style="max-width: 800px;">
+    <h1 style="font-size: 32px; font-weight: 700; margin-bottom: 8px;">Правила использования</h1>
+    <p style="font-size: 16px; color: var(--uz-text-dim); margin-bottom: 40px;">
+      Основные правила и условия использования платформы Uzmat
+    </p>
+
+    <div class="uz-flex-col" style="gap: 24px;">
+      
+      <div class="uz-card">
+        <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 12px;">1. Общие положения</h2>
+        <p style="color: var(--uz-text-dim); line-height: 1.6; margin-bottom: 12px;">
+          Платформа Uzmat предназначена для размещения объявлений о продаже и аренде спецтехники, запчастей и ремонтных услуг. Используя платформу, вы соглашаетесь с настоящими правилами.
+        </p>
+      </div>
+
+      <div class="uz-card">
+        <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 12px;">2. Размещение объявлений</h2>
+        <ul style="color: var(--uz-text-dim); line-height: 1.8; padding-left: 20px;">
+          <li>Размещать можно только объявления о реально существующей технике</li>
+          <li>Запрещено размещать дублирующие объявления</li>
+          <li>Все фотографии должны соответствовать фактическому состоянию техники</li>
+          <li>Цены должны быть актуальными и указаны в корректной валюте</li>
+          <li>Запрещено размещение объявлений о незаконной деятельности</li>
+        </ul>
+      </div>
+
+      <div class="uz-card">
+        <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 12px;">3. Общение между пользователями</h2>
+        <ul style="color: var(--uz-text-dim); line-height: 1.8; padding-left: 20px;">
+          <li>Соблюдайте вежливость и уважение в общении</li>
+          <li>Запрещены оскорбления, угрозы и дискриминация</li>
+          <li>Не публикуйте персональные данные других пользователей без их согласия</li>
+          <li>Запрещена рассылка спама и рекламы в личных сообщениях</li>
+        </ul>
+      </div>
+
+      <div class="uz-card">
+        <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 12px;">4. Безопасность сделок</h2>
+        <ul style="color: var(--uz-text-dim); line-height: 1.8; padding-left: 20px;">
+          <li>Платформа не является посредником в сделках</li>
+          <li>Все соглашения заключаются напрямую между пользователями</li>
+          <li>Рекомендуется личная встреча для проверки техники перед покупкой</li>
+          <li>Проверяйте документы на технику перед завершением сделки</li>
+        </ul>
+      </div>
+
+      <div class="uz-card">
+        <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 12px;">5. Модерация контента</h2>
+        <p style="color: var(--uz-text-dim); line-height: 1.6; margin-bottom: 12px;">
+          Администрация платформы оставляет за собой право модерировать и удалять объявления, нарушающие правила. При грубых нарушениях аккаунт может быть заблокирован.
+        </p>
+      </div>
+
+      <div class="uz-card">
+        <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 12px;">6. Ответственность</h2>
+        <p style="color: var(--uz-text-dim); line-height: 1.6;">
+          Платформа Uzmat не несет ответственности за содержание объявлений и результаты сделок между пользователями. Каждый пользователь несет ответственность за достоверность размещенной информации.
+        </p>
+      </div>
+
+    </div>
+  </main>
+
+  {% include 'uzmat/footer.html' %}
+
+  <!-- Mobile Navigation -->
+  <nav class="uz-bottom-nav uz-show-mobile">
+    <a href="{% url 'uzmat:index' %}" class="uz-bottom-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+      </svg>
+      <span>Главная</span>
+    </a>
+    <a href="{% url 'uzmat:chats' %}" class="uz-bottom-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+      </svg>
+      <span>Чаты</span>
+    </a>
+    <a href="{% url 'uzmat:auth' %}" class="uz-bottom-item" style="color: var(--uz-primary);">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="16"></line>
+        <line x1="8" y1="12" x2="16" y2="12"></line>
+      </svg>
+      <span>Создать</span>
+    </a>
+    <a href="{% url 'uzmat:auth' %}" class="uz-bottom-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+        <circle cx="12" cy="7" r="4"></circle>
+      </svg>
+      <span>Профиль</span>
+    </a>
+    <a href="{% url 'uzmat:settings' %}" class="uz-bottom-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"></circle>
+        <path
+          d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+        </path>
+      </svg>
+      <span>Меню</span>
+    </a>
+  </nav>
+
+</body>
+
+</html>
+

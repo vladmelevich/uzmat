@@ -1,0 +1,808 @@
+{% load static %}
+{% load dict_filters %}
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Чаты — Uzmat</title>
+  <link rel="icon" type="image/svg+xml" href="{% static 'uzmat/logo-uzmat.svg' %}">
+  {% include 'uzmat/theme-init.html' %}
+  <link rel="stylesheet" href="{% static 'uzmat/styles.css' %}">
+  <script defer src="{% static 'uzmat/app.js' %}"></script>
+  {% include 'uzmat/toast-container.html' %}
+  <style>
+    .chat-shell {display:grid; grid-template-columns: 360px 1fr; gap: 14px; height: calc(100vh - 120px); min-height: 520px; margin-top: 18px;}
+    @media (max-width: 920px) {.chat-shell {grid-template-columns: 1fr; height: auto; min-height: 0;}}
+
+    .chat-list {padding: 12px; overflow: auto; height: 100%;}
+    .chat-item {display:flex; gap: 12px; padding: 10px 10px; border-radius: 14px; border: 1px solid transparent; cursor:pointer; transition: all .15s ease; align-items: center;}
+    .chat-item:hover {background: var(--uz-bg-hover); border-color: var(--uz-border);}
+    .chat-item.active {background: var(--uz-primary-alpha); border-color: rgba(37,99,235,0.35);}
+    .chat-avatar {width: 42px; height: 42px; border-radius: 50%; background: var(--uz-bg-hover); display:flex; align-items:center; justify-content:center; font-weight: 800; color: var(--uz-primary); flex-shrink: 0; overflow:hidden;}
+    .chat-item-main {display:flex; gap: 12px; align-items:center; min-width: 0; flex: 1;}
+    .chat-meta {min-width: 0; flex: 1;}
+    .chat-name {font-weight: 700; font-size: 14px; color: var(--uz-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+    .chat-sub {font-size: 12px; color: var(--uz-text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px;}
+    .chat-time {font-size: 11px; color: var(--uz-text-muted); white-space: nowrap;}
+    .chat-side {display:flex; flex-direction: column; gap: 8px; align-items:flex-end; flex-shrink: 0;}
+    .chat-profile-btn {padding: 6px 10px; font-size: 12px;}
+
+    .chat-panel {display:flex; flex-direction: column; height: 100%; overflow:hidden;}
+    .chat-head {padding: 12px 14px; border-bottom: 1px solid var(--uz-border); display:flex; justify-content: space-between; gap: 12px; align-items: center;}
+    .chat-head-title {display:flex; flex-direction: column; min-width: 0;}
+    .chat-head-title b {font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+    .chat-head-title a {font-size: 12px; color: var(--uz-text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+    .chat-head-user {display:flex; gap: 10px; align-items:center; min-width: 0;}
+    .chat-head-user:hover b {text-decoration: underline;}
+    .chat-head-avatar {width: 34px; height: 34px; border-radius: 50%; background: var(--uz-bg-hover); overflow:hidden; display:flex; align-items:center; justify-content:center; font-weight: 800; color: var(--uz-primary); flex-shrink:0;}
+
+    .chat-messages {padding: 14px; overflow:auto; flex: 1; display:flex; flex-direction: column; gap: 10px; background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);}
+    .msg-row {display:flex;}
+    .msg-row.me {justify-content: flex-end;}
+    .msg-bubble {max-width: 72%; padding: 10px 12px; border-radius: 16px; border: 1px solid var(--uz-border); background: var(--uz-bg-card); box-shadow: var(--uz-shadow-card);}
+    .msg-row.me .msg-bubble {background: rgba(37,99,235,0.16); border-color: rgba(37,99,235,0.35);}
+    .msg-text {white-space: pre-wrap; word-wrap: break-word; font-size: 14px;}
+    .msg-time {margin-top: 6px; font-size: 11px; color: var(--uz-text-muted); text-align: right;}
+    .msg-images {display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 8px;}
+    .msg-images img {width:100%; height:auto; border-radius: 12px; border: 1px solid var(--uz-border); display:block;}
+    .msg-actions {display:flex; gap: 8px; justify-content: flex-end; margin-top: 8px;}
+    .msg-action {font-size: 12px; padding: 6px 10px;}
+    .msg-action-danger {color: var(--uz-danger);}
+
+    .chat-compose {padding: 12px 14px; border-top: 1px solid var(--uz-border); display:flex; gap: 10px; align-items: flex-end;}
+    .chat-compose textarea {flex: 1; min-height: 44px; max-height: 140px; resize: none;}
+    .chat-upload {position: relative; width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--uz-border); background: var(--uz-bg-hover); display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink: 0;}
+    .chat-upload input {position:absolute; inset:0; opacity:0; cursor:pointer;}
+    .chat-empty {padding: 26px; text-align:center; color: var(--uz-text-dim);}
+    .chat-preview {display:none; align-items:center; gap: 10px; padding: 8px 10px; border-radius: 12px; border: 1px solid var(--uz-border); background: var(--uz-bg-hover); margin: 0 14px 12px;}
+    .chat-preview img {width: 52px; height: 52px; object-fit: cover; border-radius: 10px; border: 1px solid var(--uz-border);}
+    .chat-preview-name {font-size: 12px; color: var(--uz-text-dim); overflow:hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;}
+    .chat-preview-remove {width: 34px; height: 34px; border-radius: 10px; border: 1px solid var(--uz-border); background: rgba(239,68,68,0.12); color: var(--uz-danger); cursor:pointer;}
+    .chat-modal {position: fixed; inset: 0; z-index: 9999; display: none; align-items: center; justify-content: center; padding: 18px;}
+    .chat-modal.open {display: flex;}
+    .chat-modal-backdrop {position:absolute; inset:0; background: rgba(2, 6, 23, 0.65); backdrop-filter: blur(6px);}
+    [data-theme="light"] .chat-modal-backdrop {background: rgba(15, 23, 42, 0.25);}
+    .chat-modal-card {position: relative; width: 100%; max-width: 420px; border-radius: var(--uz-radius-lg); background: var(--uz-bg-card); border: 1px solid var(--uz-border); box-shadow: var(--uz-shadow-popover); padding: 16px;}
+    .chat-modal-title {font-weight: 800; font-size: 16px; margin-bottom: 6px;}
+    .chat-modal-text {color: var(--uz-text-dim); font-size: 13px; margin-bottom: 14px; line-height: 1.5;}
+    .chat-modal-actions {display:flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap;}
+    .chat-modal-danger {background: rgba(239,68,68,0.12) !important; border-color: rgba(239,68,68,0.35) !important; color: var(--uz-danger) !important;}
+
+    /* Mobile: экран списка / экран диалога */
+    @media (max-width: 920px) {
+      .chat-shell {gap: 12px;}
+      .chat-list-card[data-mode="chat"] {display:none;}
+      .chat-panel-card[data-mode="list"] {display:none;}
+      .chat-shell[data-mobile-view="list"] .chat-list-card {display:block;}
+      .chat-shell[data-mobile-view="list"] .chat-panel-card {display:none;}
+      .chat-shell[data-mobile-view="chat"] .chat-list-card {display:none;}
+      .chat-shell[data-mobile-view="chat"] .chat-panel-card {display:block;}
+      .msg-bubble {max-width: 82%;}
+    }
+  </style>
+</head>
+
+<body class="uz-body">
+
+  <!-- Floating Header -->
+  <header class="uz-header">
+    <div class="uz-header-inner">
+      <a href="{% url 'uzmat:index' %}" class="uz-logo">
+        <img src="{% static 'uzmat/logo-uzmat.svg' %}" alt="Uzmat" class="uz-logo-mark">
+        <span>Uzmat</span>
+      </a>
+
+      {% include 'uzmat/nav.html' %}
+
+      <div class="uz-flex">
+        {% include 'uzmat/country-selector.html' %}
+        {% include 'uzmat/create-ad-button.html' %}
+        <button class="uz-btn uz-btn-ghost uz-hidden-mobile" data-theme-toggle>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+        </button>
+        {% include 'uzmat/user-avatar.html' %}
+      </div>
+    </div>
+  </header>
+
+  <main class="uz-container" style="max-width: 1100px;">
+    <div class="uz-flex" style="justify-content: space-between; align-items: center; margin-top: 18px;">
+      <h1 style="font-size: 22px; font-weight: 800;">Чаты</h1>
+      <button class="uz-btn uz-btn-ghost uz-show-mobile" id="show-all-dialogs" style="padding: 8px 12px; font-size: 13px;">
+        <span class="uz-badge">Все диалоги</span>
+      </button>
+    </div>
+
+    <div class="chat-shell" id="chat-shell" data-mobile-view="{% if active_thread %}chat{% else %}list{% endif %}">
+      <div class="uz-card chat-list-card" data-mode="list" style="padding: 0; overflow:hidden;">
+        <div class="chat-head">
+          <div class="chat-head-title">
+            <b>Диалоги</b>
+            <span style="font-size: 12px; color: var(--uz-text-dim);">{{ threads|length }} шт.</span>
+          </div>
+        </div>
+        <div class="chat-list">
+          {% if threads %}
+            {% for t in threads %}
+              {% if user.id == t.buyer_id %}
+                {% with other=t.seller %}
+                  <div class="chat-item {% if active_thread and active_thread.id == t.id %}active{% endif %}"
+                       data-thread-link
+                       data-href="{% url 'uzmat:chats' %}?t={{ t.id }}">
+                    <div class="chat-item-main">
+                      <div class="chat-avatar">
+                        {% if other.avatar %}
+                          <img src="{{ other.avatar.url }}" alt="" style="width:100%; height:100%; object-fit:cover;">
+                        {% else %}
+                          {{ other.first_name|default:other.username|first|upper }}
+                        {% endif %}
+                      </div>
+                      <div class="chat-meta">
+                        {% if t.thread_type == 'support' %}
+                          <div class="chat-name">{{ other.first_name|default:other.username }}</div>
+                          <div class="chat-sub">Техподдержка</div>
+                        {% else %}
+                          <div class="chat-name">{{ other.first_name|default:other.username }}</div>
+                          <div class="chat-sub">По объявлению: {{ t.advertisement.title }}</div>
+                        {% endif %}
+                      </div>
+                    </div>
+                    <div class="chat-side">
+                      <div class="chat-time">{% if t.last_message_at %}{{ t.last_message_at|date:"d.m H:i" }}{% endif %}</div>
+                      {% if unread_counts|get_item:t.id %}
+                      <span class="uz-badge" style="background: var(--uz-danger); color: white; min-width: 20px; height: 20px; padding: 0 6px; font-size: 11px; font-weight: 700; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-top: 4px;">{{ unread_counts|get_item:t.id }}</span>
+                      {% endif %}
+                      {% if t.thread_type != 'support' %}
+                        <a class="uz-btn uz-btn-ghost chat-profile-btn" href="{% url 'uzmat:user_profile' user_id=other.id %}" data-profile-link>Профиль</a>
+                      {% endif %}
+                    </div>
+                  </div>
+                {% endwith %}
+              {% else %}
+                {% with other=t.buyer %}
+                  <div class="chat-item {% if active_thread and active_thread.id == t.id %}active{% endif %}"
+                       data-thread-link
+                       data-href="{% url 'uzmat:chats' %}?t={{ t.id }}">
+                    <div class="chat-item-main">
+                      <div class="chat-avatar">
+                        {% if other.avatar %}
+                          <img src="{{ other.avatar.url }}" alt="" style="width:100%; height:100%; object-fit:cover;">
+                        {% else %}
+                          {{ other.first_name|default:other.username|first|upper }}
+                        {% endif %}
+                      </div>
+                      <div class="chat-meta">
+                        {% if t.thread_type == 'support' %}
+                          <div class="chat-name">{{ other.first_name|default:other.username }}</div>
+                          <div class="chat-sub">Техподдержка</div>
+                        {% else %}
+                          <div class="chat-name">{{ other.first_name|default:other.username }}</div>
+                          <div class="chat-sub">По объявлению: {{ t.advertisement.title }}</div>
+                        {% endif %}
+                      </div>
+                    </div>
+                    <div class="chat-side">
+                      <div class="chat-time">{% if t.last_message_at %}{{ t.last_message_at|date:"d.m H:i" }}{% endif %}</div>
+                      {% if unread_counts|get_item:t.id %}
+                      <span class="uz-badge" style="background: var(--uz-danger); color: white; min-width: 20px; height: 20px; padding: 0 6px; font-size: 11px; font-weight: 700; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-top: 4px;">{{ unread_counts|get_item:t.id }}</span>
+                      {% endif %}
+                      <a class="uz-btn uz-btn-ghost chat-profile-btn" href="{% url 'uzmat:user_profile' user_id=other.id %}" data-profile-link>Профиль</a>
+                    </div>
+                  </div>
+                {% endwith %}
+              {% endif %}
+            {% endfor %}
+          {% else %}
+            <div class="chat-empty">
+              Пока нет диалогов. Открой объявление и нажми «Написать сообщение».
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="uz-card chat-panel-card" data-mode="chat" style="padding: 0; overflow:hidden;">
+        {% if active_thread %}
+          {% if user.id == active_thread.buyer_id %}
+            {% with other=active_thread.seller %}
+              <div class="chat-panel" data-thread-id="{{ active_thread.id }}">
+                <div class="chat-head">
+                  <button class="uz-btn uz-btn-ghost uz-show-mobile" id="chat-back" style="padding: 8px 10px;">←</button>
+                  <a class="chat-head-user" href="{% url 'uzmat:user_profile' user_id=other.id %}" title="Открыть профиль">
+                    <div class="chat-head-avatar">
+                      {% if other.avatar %}
+                        <img src="{{ other.avatar.url }}" alt="" style="width:100%; height:100%; object-fit:cover;">
+                      {% else %}
+                        {{ other.first_name|default:other.username|first|upper }}
+                      {% endif %}
+                    </div>
+                    <div class="chat-head-title">
+                      {% if active_thread.thread_type == 'support' %}
+                        <b>{{ other.first_name|default:other.username }}</b>
+                      {% else %}
+                        <b>{{ other.first_name|default:other.username }}</b>
+                      {% endif %}
+                      {% if active_thread.thread_type == 'support' %}
+                        <span style="font-size: 12px; color: var(--uz-text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Тех.поддержка</span>
+                      {% else %}
+                        <span style="font-size: 12px; color: var(--uz-text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Открыть профиль</span>
+                      {% endif %}
+                    </div>
+                  </a>
+                  {% if active_thread.thread_type != 'support' and active_thread.advertisement %}
+                    <a class="uz-btn uz-btn-ghost" style="padding: 8px 10px;" href="{% url 'uzmat:ad_detail' slug=active_thread.advertisement.slug %}">Объявление</a>
+                  {% endif %}
+                </div>
+
+                <div class="chat-messages" id="chat-messages">
+                  {% if active_thread.thread_type != 'support' and active_thread.advertisement %}
+                    <div style="display:flex; justify-content:center; margin-bottom: 4px;">
+                      <a href="{% url 'uzmat:ad_detail' slug=active_thread.advertisement.slug %}" class="uz-badge uz-badge-primary" style="max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                        Вы общаетесь по объявлению: {{ active_thread.advertisement.title }}
+                      </a>
+                    </div>
+                  {% endif %}
+                  {% for m in messages %}
+                    <div class="msg-row {% if m.sender_id == user.id %}me{% endif %}" data-mid="{{ m.id }}">
+                      <div class="msg-bubble">
+                        {% if m.text %}
+                          <div class="msg-text">{{ m.text }}</div>
+                        {% endif %}
+                        {% if m.system_action == 'renew_badge' and m.system_url %}
+                          <div class="msg-actions" style="justify-content: flex-start;">
+                            <a class="uz-btn uz-btn-primary msg-action" href="{{ m.system_url }}">Продлить</a>
+                          </div>
+                        {% endif %}
+                        {% if m.images.all %}
+                          <div class="msg-images">
+                            {% for im in m.images.all %}
+                              <a href="{{ im.image.url }}" target="_blank" rel="noopener">
+                                <img src="{{ im.image.url }}" alt="Фото">
+                              </a>
+                            {% endfor %}
+                          </div>
+                        {% endif %}
+                        {% if m.sender_id == user.id %}
+                          <div class="msg-actions">
+                            <button type="button" class="uz-btn uz-btn-ghost msg-action" data-msg-edit="{{ m.id }}">Редактировать</button>
+                            <button type="button" class="uz-btn uz-btn-ghost msg-action msg-action-danger" data-msg-delete="{{ m.id }}">Удалить</button>
+                          </div>
+                        {% endif %}
+                        <div class="msg-time">{{ m.created_at|date:"H:i" }}</div>
+                      </div>
+                    </div>
+                  {% endfor %}
+                </div>
+
+                <div class="chat-preview" id="chat-preview">
+                  <img id="chat-preview-img" alt="Предпросмотр">
+                  <div class="chat-preview-name" id="chat-preview-name"></div>
+                  <button type="button" class="chat-preview-remove" id="chat-preview-remove">✕</button>
+                </div>
+
+                <div class="chat-compose">
+                  <div class="chat-upload" title="Прикрепить фото">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                      <polyline points="17 8 12 3 7 8"></polyline>
+                      <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    <input type="file" id="chat-image" accept="image/*">
+                  </div>
+                  <textarea id="chat-text" class="uz-input" placeholder="Напишите сообщение..."></textarea>
+                  <button class="uz-btn uz-btn-primary" id="chat-send">Отправить</button>
+                </div>
+              </div>
+            {% endwith %}
+          {% else %}
+            {% with other=active_thread.buyer %}
+              <div class="chat-panel" data-thread-id="{{ active_thread.id }}">
+                <div class="chat-head">
+                  <button class="uz-btn uz-btn-ghost uz-show-mobile" id="chat-back" style="padding: 8px 10px;">←</button>
+                  <a class="chat-head-user" href="{% url 'uzmat:user_profile' user_id=other.id %}" title="Открыть профиль">
+                    <div class="chat-head-avatar">
+                      {% if other.avatar %}
+                        <img src="{{ other.avatar.url }}" alt="" style="width:100%; height:100%; object-fit:cover;">
+                      {% else %}
+                        {{ other.first_name|default:other.username|first|upper }}
+                      {% endif %}
+                    </div>
+                    <div class="chat-head-title">
+                      {% if active_thread.thread_type == 'support' %}
+                        <b>{{ other.first_name|default:other.username }}</b>
+                      {% else %}
+                        <b>{{ other.first_name|default:other.username }}</b>
+                      {% endif %}
+                      {% if active_thread.thread_type == 'support' %}
+                        <span style="font-size: 12px; color: var(--uz-text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Тех.поддержка</span>
+                      {% else %}
+                        <span style="font-size: 12px; color: var(--uz-text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Открыть профиль</span>
+                      {% endif %}
+                    </div>
+                  </a>
+                  {% if active_thread.thread_type != 'support' and active_thread.advertisement %}
+                    <a class="uz-btn uz-btn-ghost" style="padding: 8px 10px;" href="{% url 'uzmat:ad_detail' slug=active_thread.advertisement.slug %}">Объявление</a>
+                  {% endif %}
+                </div>
+
+                <div class="chat-messages" id="chat-messages">
+                  {% if active_thread.thread_type != 'support' and active_thread.advertisement %}
+                    <div style="display:flex; justify-content:center; margin-bottom: 4px;">
+                      <a href="{% url 'uzmat:ad_detail' slug=active_thread.advertisement.slug %}" class="uz-badge uz-badge-primary" style="max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                        Вы общаетесь по объявлению: {{ active_thread.advertisement.title }}
+                      </a>
+                    </div>
+                  {% endif %}
+                  {% for m in messages %}
+                    <div class="msg-row {% if m.sender_id == user.id %}me{% endif %}" data-mid="{{ m.id }}">
+                      <div class="msg-bubble">
+                        {% if m.text %}
+                          <div class="msg-text">{{ m.text }}</div>
+                        {% endif %}
+                        {% if m.system_action == 'renew_badge' and m.system_url %}
+                          <div class="msg-actions" style="justify-content: flex-start;">
+                            <a class="uz-btn uz-btn-primary msg-action" href="{{ m.system_url }}">Продлить</a>
+                          </div>
+                        {% endif %}
+                        {% if m.images.all %}
+                          <div class="msg-images">
+                            {% for im in m.images.all %}
+                              <a href="{{ im.image.url }}" target="_blank" rel="noopener">
+                                <img src="{{ im.image.url }}" alt="Фото">
+                              </a>
+                            {% endfor %}
+                          </div>
+                        {% endif %}
+                        {% if m.sender_id == user.id %}
+                          <div class="msg-actions">
+                            <button type="button" class="uz-btn uz-btn-ghost msg-action" data-msg-edit="{{ m.id }}">Редактировать</button>
+                            <button type="button" class="uz-btn uz-btn-ghost msg-action msg-action-danger" data-msg-delete="{{ m.id }}">Удалить</button>
+                          </div>
+                        {% endif %}
+                        <div class="msg-time">{{ m.created_at|date:"H:i" }}</div>
+                      </div>
+                    </div>
+                  {% endfor %}
+                </div>
+
+                <div class="chat-preview" id="chat-preview">
+                  <img id="chat-preview-img" alt="Предпросмотр">
+                  <div class="chat-preview-name" id="chat-preview-name"></div>
+                  <button type="button" class="chat-preview-remove" id="chat-preview-remove">✕</button>
+                </div>
+
+                <div class="chat-compose">
+                  <div class="chat-upload" title="Прикрепить фото">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                      <polyline points="17 8 12 3 7 8"></polyline>
+                      <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    <input type="file" id="chat-image" accept="image/*">
+                  </div>
+                  <textarea id="chat-text" class="uz-input" placeholder="Напишите сообщение..."></textarea>
+                  <button class="uz-btn uz-btn-primary" id="chat-send">Отправить</button>
+                </div>
+              </div>
+            {% endwith %}
+          {% endif %}
+        {% else %}
+          <div class="chat-empty" style="padding: 24px;">
+            Выберите диалог слева или напишите продавцу из объявления.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </main>
+
+  <div class="chat-modal" id="chat-confirm-modal" aria-hidden="true">
+    <div class="chat-modal-backdrop" data-modal-close></div>
+    <div class="chat-modal-card" role="dialog" aria-modal="true" aria-labelledby="chat-confirm-title">
+      <div class="chat-modal-title" id="chat-confirm-title">Удалить сообщение?</div>
+      <div class="chat-modal-text">Сообщение будет удалено без возможности восстановления.</div>
+      <div class="chat-modal-actions">
+        <button type="button" class="uz-btn uz-btn-ghost" data-modal-close>Отмена</button>
+        <button type="button" class="uz-btn uz-btn-outline chat-modal-danger" id="chat-confirm-delete">Удалить</button>
+      </div>
+    </div>
+  </div>
+
+  {% include 'uzmat/footer.html' %}
+
+  <!-- Mobile Navigation -->
+  <nav class="uz-bottom-nav uz-show-mobile">
+    <a href="{% url 'uzmat:index' %}" class="uz-bottom-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+      </svg>
+      <span>Главная</span>
+    </a>
+    <a href="{% url 'uzmat:chats' %}" class="uz-bottom-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+      </svg>
+      <span>Чаты</span>
+    </a>
+    <a href="{% url 'uzmat:create_ad' %}" class="uz-bottom-item" style="color: var(--uz-primary);">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="16"></line>
+        <line x1="8" y1="12" x2="16" y2="12"></line>
+      </svg>
+      <span>Создать</span>
+    </a>
+    <a href="{% url 'uzmat:onboarding' %}" class="uz-bottom-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+        <circle cx="12" cy="7" r="4"></circle>
+      </svg>
+      <span>Профиль</span>
+    </a>
+    <a href="{% url 'uzmat:settings' %}" class="uz-bottom-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"></circle>
+        <path
+          d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+        </path>
+      </svg>
+      <span>Меню</span>
+    </a>
+  </nav>
+
+  <script>
+    (function() {
+      const shell = document.getElementById('chat-shell');
+      const panel = document.querySelector('.chat-panel');
+      const messagesBox = document.getElementById('chat-messages');
+      const sendBtn = document.getElementById('chat-send');
+      const textEl = document.getElementById('chat-text');
+      const imgEl = document.getElementById('chat-image');
+      const backBtn = document.getElementById('chat-back');
+      const preview = document.getElementById('chat-preview');
+      const previewImg = document.getElementById('chat-preview-img');
+      const previewName = document.getElementById('chat-preview-name');
+      const previewRemove = document.getElementById('chat-preview-remove');
+      let editingId = null;
+      let previewUrl = null;
+
+      function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+      }
+
+      function scrollToBottom() {
+        if (!messagesBox) return;
+        messagesBox.scrollTop = messagesBox.scrollHeight;
+      }
+
+      function lastMessageId() {
+        if (!messagesBox) return 0;
+        const last = messagesBox.querySelector('[data-mid]:last-child');
+        return last ? parseInt(last.getAttribute('data-mid'), 10) : 0;
+      }
+
+      function appendMessage(m) {
+        const row = document.createElement('div');
+        row.className = 'msg-row' + (m.sender_id === {{ user.id }} ? ' me' : '');
+        row.setAttribute('data-mid', m.id);
+
+        const bubble = document.createElement('div');
+        bubble.className = 'msg-bubble';
+
+        if (m.text) {
+          const t = document.createElement('div');
+          t.className = 'msg-text';
+          t.textContent = m.text;
+          bubble.appendChild(t);
+        }
+
+        if (m.system_action === 'renew_badge' && m.system_url) {
+          const actions = document.createElement('div');
+          actions.className = 'msg-actions';
+          actions.style.justifyContent = 'flex-start';
+          const btn = document.createElement('a');
+          btn.className = 'uz-btn uz-btn-primary msg-action';
+          btn.textContent = 'Продлить';
+          btn.href = m.system_url;
+          actions.appendChild(btn);
+          bubble.appendChild(actions);
+        }
+
+        if (m.images && m.images.length) {
+          const grid = document.createElement('div');
+          grid.className = 'msg-images';
+          m.images.forEach((url) => {
+            const a = document.createElement('a');
+            a.href = url;
+            a.target = '_blank';
+            a.rel = 'noopener';
+            const img = document.createElement('img');
+            img.src = url;
+            img.alt = 'Фото';
+            a.appendChild(img);
+            grid.appendChild(a);
+          });
+          bubble.appendChild(grid);
+        }
+
+        const time = document.createElement('div');
+        time.className = 'msg-time';
+        time.textContent = m.created_at || '';
+        bubble.appendChild(time);
+
+        if (m.sender_id === {{ user.id }}) {
+          const actions = document.createElement('div');
+          actions.className = 'msg-actions';
+
+          const editBtn = document.createElement('button');
+          editBtn.type = 'button';
+          editBtn.className = 'uz-btn uz-btn-ghost msg-action';
+          editBtn.textContent = 'Редактировать';
+          editBtn.setAttribute('data-msg-edit', m.id);
+
+          const delBtn = document.createElement('button');
+          delBtn.type = 'button';
+          delBtn.className = 'uz-btn uz-btn-ghost msg-action msg-action-danger';
+          delBtn.textContent = 'Удалить';
+          delBtn.setAttribute('data-msg-delete', m.id);
+
+          actions.appendChild(editBtn);
+          actions.appendChild(delBtn);
+          bubble.insertBefore(actions, time);
+        }
+
+        row.appendChild(bubble);
+        messagesBox.appendChild(row);
+      }
+
+      async function poll() {
+        if (!panel || !messagesBox) return;
+        const threadId = panel.getAttribute('data-thread-id');
+        if (!threadId) return;
+
+        try {
+          const after = lastMessageId();
+          const res = await fetch(`/chats/api/${threadId}/poll/?after_id=${after}`, { headers: { 'Accept': 'application/json' }});
+          const data = await res.json();
+          if (!data.ok) return;
+          if (data.messages && data.messages.length) {
+            data.messages.forEach(appendMessage);
+            scrollToBottom();
+          }
+        } catch (e) {}
+      }
+
+      async function send() {
+        if (!panel || !messagesBox) return;
+        const threadId = panel.getAttribute('data-thread-id');
+        if (!threadId) return;
+
+        const text = (textEl && textEl.value || '').trim();
+        const file = imgEl && imgEl.files && imgEl.files[0] ? imgEl.files[0] : null;
+        if (!text && !file) return;
+
+        if (editingId) {
+          if (file) {
+            alert('При редактировании нельзя прикреплять фото. Сначала сохраните текст.');
+            return;
+          }
+          try {
+            const res = await fetch(`/chats/api/message/${editingId}/edit/`, {
+              method: 'POST',
+              headers: {
+                'X-CSRFToken': getCookie('csrftoken') || '',
+                'Content-Type': 'application/x-www-form-urlencoded'
+              },
+              body: new URLSearchParams({ text })
+            });
+            const data = await res.json();
+            if (!data.ok) {
+              alert(data.error || 'Ошибка редактирования');
+              return;
+            }
+            const row = messagesBox.querySelector(`[data-mid="${editingId}"]`);
+            if (row) {
+              const t = row.querySelector('.msg-text');
+              if (t) t.textContent = data.message.text || '';
+            }
+            editingId = null;
+            if (sendBtn) sendBtn.textContent = 'Отправить';
+            if (textEl) textEl.value = '';
+          } catch (e) {
+            alert('Ошибка редактирования');
+          }
+          return;
+        }
+
+        const fd = new FormData();
+        fd.append('text', text);
+        if (file) fd.append('image', file);
+
+        try {
+          const res = await fetch(`/chats/api/${threadId}/send/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCookie('csrftoken') || '' },
+            body: fd
+          });
+          const data = await res.json();
+          if (!data.ok) {
+            alert(data.error || 'Ошибка отправки');
+            return;
+          }
+          appendMessage(data.message);
+          if (textEl) textEl.value = '';
+          if (imgEl) imgEl.value = '';
+          if (preview) preview.style.display = 'none';
+          if (previewUrl) { URL.revokeObjectURL(previewUrl); previewUrl = null; }
+          scrollToBottom();
+        } catch (e) {
+          alert('Ошибка отправки');
+        }
+      }
+
+      if (sendBtn) sendBtn.addEventListener('click', (e) => { e.preventDefault(); send(); });
+      if (textEl) textEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+      });
+
+      // Предпросмотр фото перед отправкой
+      function clearPreview() {
+        if (imgEl) imgEl.value = '';
+        if (preview) preview.style.display = 'none';
+        if (previewUrl) { URL.revokeObjectURL(previewUrl); previewUrl = null; }
+      }
+      if (imgEl) {
+        imgEl.addEventListener('change', () => {
+          const file = imgEl.files && imgEl.files[0] ? imgEl.files[0] : null;
+          if (!file || !preview || !previewImg || !previewName) {
+            clearPreview();
+            return;
+          }
+          if (previewUrl) URL.revokeObjectURL(previewUrl);
+          previewUrl = URL.createObjectURL(file);
+          previewImg.src = previewUrl;
+          previewName.textContent = file.name;
+          preview.style.display = 'flex';
+        });
+      }
+      if (previewRemove) previewRemove.addEventListener('click', clearPreview);
+
+      // Редактировать/удалить
+      let pendingDeleteId = null;
+
+      function openDeleteModal(id) {
+        pendingDeleteId = id;
+        const modal = document.getElementById('chat-confirm-modal');
+        if (!modal) return;
+        modal.classList.add('open');
+        modal.setAttribute('aria-hidden', 'false');
+      }
+
+      function closeDeleteModal() {
+        const modal = document.getElementById('chat-confirm-modal');
+        if (!modal) return;
+        modal.classList.remove('open');
+        modal.setAttribute('aria-hidden', 'true');
+        pendingDeleteId = null;
+      }
+
+      async function deleteMessage(id) {
+        try {
+          const res = await fetch(`/chats/api/message/${id}/delete/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCookie('csrftoken') || '' }
+          });
+          const data = await res.json();
+          if (!data.ok) {
+            alert(data.error || 'Ошибка удаления');
+            return;
+          }
+          const row = messagesBox.querySelector(`[data-mid="${id}"]`);
+          if (row) row.remove();
+          if (editingId === id) {
+            editingId = null;
+            if (sendBtn) sendBtn.textContent = 'Отправить';
+            if (textEl) textEl.value = '';
+          }
+        } catch (e) {
+          alert('Ошибка удаления');
+        }
+      }
+
+      function startEdit(id) {
+        const row = messagesBox.querySelector(`[data-mid="${id}"]`);
+        if (!row) return;
+        const t = row.querySelector('.msg-text');
+        const txt = t ? t.textContent : '';
+        editingId = id;
+        if (sendBtn) sendBtn.textContent = 'Сохранить';
+        if (textEl) {
+          textEl.value = txt;
+          textEl.focus();
+        }
+        clearPreview();
+      }
+
+      if (messagesBox) {
+        messagesBox.addEventListener('click', (e) => {
+          const editBtn = e.target && e.target.closest && e.target.closest('[data-msg-edit]');
+          const delBtn = e.target && e.target.closest && e.target.closest('[data-msg-delete]');
+          if (editBtn) {
+            startEdit(parseInt(editBtn.getAttribute('data-msg-edit'), 10));
+          } else if (delBtn) {
+            openDeleteModal(parseInt(delBtn.getAttribute('data-msg-delete'), 10));
+          }
+        });
+      }
+
+      // Модалка удаления
+      const modal = document.getElementById('chat-confirm-modal');
+      const modalConfirm = document.getElementById('chat-confirm-delete');
+      if (modal) {
+        modal.querySelectorAll('[data-modal-close]').forEach((el) => el.addEventListener('click', closeDeleteModal));
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDeleteModal(); });
+      }
+      if (modalConfirm) {
+        modalConfirm.addEventListener('click', async () => {
+          if (!pendingDeleteId) return;
+          const id = pendingDeleteId;
+          closeDeleteModal();
+          await deleteMessage(id);
+        });
+      }
+
+      if (backBtn && shell) {
+        backBtn.addEventListener('click', () => shell.setAttribute('data-mobile-view', 'list'));
+      }
+
+      const showAllDialogsBtn = document.getElementById('show-all-dialogs');
+      if (showAllDialogsBtn && shell) {
+        showAllDialogsBtn.addEventListener('click', () => {
+          shell.setAttribute('data-mobile-view', 'list');
+        });
+      }
+
+      document.querySelectorAll('[data-thread-link]').forEach((el) => {
+        el.addEventListener('click', (e) => {
+          const profile = e.target && e.target.closest && e.target.closest('[data-profile-link]');
+          if (profile) return;
+
+          const href = el.getAttribute('data-href') || el.getAttribute('href');
+          if (href) window.location.href = href;
+
+          if (shell && window.matchMedia('(max-width: 920px)').matches) {
+            shell.setAttribute('data-mobile-view', 'chat');
+          }
+        });
+      });
+
+      document.querySelectorAll('[data-profile-link]').forEach((a) => {
+        a.addEventListener('click', (e) => e.stopPropagation());
+      });
+
+      scrollToBottom();
+      setInterval(poll, 4000);
+    })();
+  </script>
+</body>
+
+</html>

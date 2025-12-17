@@ -1,0 +1,106 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Верификация — модерация</title>
+  <link rel="icon" type="image/svg+xml" href="{% static 'uzmat/logo-uzmat.svg' %}">
+  {% include 'uzmat/theme-init.html' %}
+  <link rel="stylesheet" href="{% static 'uzmat/styles.css' %}">
+  <script defer src="{% static 'uzmat/app.js' %}"></script>
+  {% include 'uzmat/toast-container.html' %}
+  <style>
+    .vm-tabs {display:flex; gap:10px; flex-wrap:wrap; margin-bottom: 14px;}
+    .vm-tab {display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border-radius: 999px; border:1px solid var(--uz-border); background: var(--uz-bg-card); color: var(--uz-text); font-size: 13px;}
+    .vm-tab.active {background: var(--uz-primary-alpha); color: var(--uz-primary); border-color: transparent;}
+    .vm-count {display:inline-flex; min-width: 26px; height: 20px; align-items:center; justify-content:center; border-radius: 999px; background: rgba(255,255,255,0.06); border: 1px solid var(--uz-border); font-weight: 700; font-size: 12px;}
+    .vm-list {display:grid; gap: 12px;}
+    .vm-row {display:flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: center;}
+    .vm-meta {display:flex; gap: 10px; flex-wrap: wrap; align-items:center; color: var(--uz-text-dim); font-size: 13px;}
+    .vm-title {font-weight: 700; font-size: 15px;}
+  </style>
+</head>
+<body class="uz-body">
+
+  <header class="uz-header">
+    <div class="uz-header-inner">
+      <a href="{% url 'uzmat:index' %}" class="uz-logo">
+        <img src="{% static 'uzmat/logo-uzmat.svg' %}" alt="Uzmat" class="uz-logo-mark">
+        <span>Uzmat</span>
+      </a>
+
+      {% include 'uzmat/nav.html' %}
+
+      <div class="uz-flex">
+        {% include 'uzmat/country-selector.html' %}
+        {% include 'uzmat/create-ad-button.html' %}
+        <button class="uz-btn uz-btn-ghost uz-hidden-mobile" data-theme-toggle>Тема</button>
+        {% include 'uzmat/user-avatar.html' %}
+      </div>
+    </div>
+  </header>
+
+  <main class="uz-container" style="max-width: 980px;">
+    <section class="uz-animate-in" style="margin-top: 18px;">
+      <div class="uz-card">
+        <div class="uz-flex" style="justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap;">
+          <div>
+            <h1 style="font-size: 22px; font-weight: 800; margin-bottom: 6px;">Заявки на верификацию</h1>
+            <div style="color: var(--uz-text-dim); font-size: 13px;">Открой заявку, проверь профиль пользователя, затем нажми «Верифицировать» или «Отклонить».</div>
+          </div>
+          <a href="{% url 'uzmat:profile' %}" class="uz-btn uz-btn-ghost">В профиль</a>
+        </div>
+
+        <div class="vm-tabs" style="margin-top: 14px;">
+          <a class="vm-tab {% if status == 'pending' %}active{% endif %}" href="{% url 'uzmat:verify_moderation_list' %}?status=pending">
+            В обработке <span class="vm-count">{{ counts.pending }}</span>
+          </a>
+          <a class="vm-tab {% if status == 'approved' %}active{% endif %}" href="{% url 'uzmat:verify_moderation_list' %}?status=approved">
+            Одобрено <span class="vm-count">{{ counts.approved }}</span>
+          </a>
+          <a class="vm-tab {% if status == 'rejected' %}active{% endif %}" href="{% url 'uzmat:verify_moderation_list' %}?status=rejected">
+            Отклонено <span class="vm-count">{{ counts.rejected }}</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section class="uz-animate-in" style="margin-top: 14px; animation-delay: .05s;">
+      <div class="vm-list">
+        {% if requests %}
+          {% for r in requests %}
+            <div class="uz-card" style="padding: 16px;">
+              <div class="vm-row">
+                <div style="min-width: 240px;">
+                  <div class="vm-title">Заявка #{{ r.id }} · {{ r.get_verification_type_display }}</div>
+                  <div class="vm-meta" style="margin-top: 6px;">
+                    <span>Пользователь: <b style="color: var(--uz-text); font-weight: 700;">{{ r.user.first_name|default:r.user.username }}</b></span>
+                    <span>·</span>
+                    <span>Email: {{ r.user.email|default:"—" }}</span>
+                    <span>·</span>
+                    <span>Телефон: {{ r.user.phone|default:"—" }}</span>
+                  </div>
+                  <div class="vm-meta" style="margin-top: 4px;">
+                    <span>Создано: {{ r.created_at|date:"d.m.Y H:i" }}</span>
+                  </div>
+                </div>
+                <div class="uz-flex" style="gap: 10px;">
+                  <a class="uz-btn uz-btn-primary" href="{% url 'uzmat:verify_moderation_detail' request_id=r.id %}">Открыть</a>
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        {% else %}
+          <div class="uz-card" style="padding: 16px;">
+            Заявок в выбранном статусе нет.
+          </div>
+        {% endif %}
+      </div>
+    </section>
+  </main>
+</body>
+</html>
+
+
+

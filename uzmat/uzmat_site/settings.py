@@ -16,9 +16,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-uzmat-premium-site-2024-secret-key-change-in-production'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'False') == 'True'
+DEBUG = True
 
-ALLOWED_HOSTS = ['109.199.127.149', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 
 # Application definition
@@ -71,7 +71,7 @@ WSGI_APPLICATION = 'uzmat_site.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'data', 'db.sqlite3'),
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
 
@@ -151,8 +151,6 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 20,
 }
 
-# CSRF настройки для работы по IP
-CSRF_TRUSTED_ORIGINS = ['http://109.199.127.149', 'http://localhost']
-CSRF_COOKIE_SECURE = False  # False для HTTP, True для HTTPS
-SESSION_COOKIE_SECURE = False  # False для HTTP, True для HTTPS
+# CSRF настройки для локальной разработки
+CSRF_TRUSTED_ORIGINS = ['http://localhost:8000', 'http://127.0.0.1:8000']
 

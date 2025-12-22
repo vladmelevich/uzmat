@@ -12,7 +12,7 @@
     </svg>
   </button>
   <div class="uz-nav-country-dropdown" data-nav-country-dropdown>
-    <button type="button" class="uz-nav-country-option active" data-nav-country="kz" data-currency="₸ KZT" data-lang="ru" data-flag="{% static 'uzmat/kazah.svg' %}">
+    <button type="button" class="uz-nav-country-option active" data-nav-country="kz" data-currency="₸ KZT" data-lang="kk" data-flag="{% static 'uzmat/kazah.svg' %}">
       <span class="uz-nav-country-flag">
         <img src="{% static 'uzmat/kazah.svg' %}" alt="KZ" class="uz-nav-country-flag-img" onerror="this.style.display='none'; if(this.nextElementSibling){this.nextElementSibling.style.display='block';}">
         <span class="uz-nav-country-flag-fallback" style="display:none;">🇰🇿</span>
@@ -56,7 +56,8 @@
 </div>
 
 <script>
-  document.addEventListener('DOMContentLoaded', function() {
+  // Функция инициализации селектора страны
+  function initCountrySelector() {
     const selector = document.querySelector('[data-nav-country-selector]');
     if (!selector) return;
 
@@ -74,6 +75,36 @@
       selector.setAttribute('data-open', 'true');
     }
 
+    // Восстанавливаем выбранную страну при загрузке (только UI, без переключения языка)
+    function restoreSelectedCountry() {
+      // Проверяем параметр country в URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlCountry = urlParams.get('country');
+      
+      // Используем страну из URL или из localStorage
+      const savedCountry = urlCountry || localStorage.getItem('selected_country');
+      
+      if (savedCountry) {
+        const savedOption = Array.from(options).find(opt => 
+          opt.getAttribute('data-nav-country') === savedCountry
+        );
+        if (savedOption) {
+          // Обновляем UI
+          options.forEach(o => o.classList.remove('active'));
+          savedOption.classList.add('active');
+          
+          const flagSrc = savedOption.getAttribute('data-flag') || '';
+          const code = savedOption.getAttribute('data-nav-country')?.toUpperCase() || '';
+          
+          if (flagImg && flagSrc) flagImg.src = flagSrc;
+          if (codeSpan) codeSpan.textContent = code;
+        }
+      }
+    }
+
+    // Восстанавливаем выбранную страну сразу
+    restoreSelectedCountry();
+
     if (toggleBtn) {
       toggleBtn.addEventListener('click', function(e) {
         e.stopPropagation();
@@ -90,33 +121,41 @@
         e.preventDefault();
         e.stopPropagation();
         
-        // Мгновенное обновление UI
-        options.forEach(o => o.classList.remove('active'));
-        option.classList.add('active');
-
-        const flagSrc = option.getAttribute('data-flag') || '';
-        const code = option.getAttribute('data-nav-country')?.toUpperCase() || '';
-        const lang = option.getAttribute('data-lang') || 'ru';
         const country = option.getAttribute('data-nav-country') || '';
+        const lang = option.getAttribute('data-lang') || 'ru';
 
-        if (flagImg && flagSrc) flagImg.src = flagSrc;
-        if (codeSpan) codeSpan.textContent = code;
-
-        // Сохраняем выбранную страну
+        // Сохраняем выбранную страну и язык
         localStorage.setItem('selected_country', country);
+        localStorage.setItem('i18n_lang', lang);
 
-        // Переключаем язык МГНОВЕННО если доступен i18n
-        if (window.i18n && lang) {
-          window.i18n.setLanguage(lang);
-        }
-
+        // Закрываем выпадающий список перед перезагрузкой
         closeDropdown();
+
+        // Получаем текущий URL и добавляем/обновляем параметр country
+        const url = new URL(window.location.href);
+        url.searchParams.set('country', country);
+        
+        // Перезагружаем страницу с новым параметром страны
+        window.location.href = url.toString();
       });
     });
 
-    document.addEventListener('click', closeDropdown);
+    document.addEventListener('click', function(e) {
+      if (!selector.contains(e.target)) {
+        closeDropdown();
+      }
+    });
+    
     document.addEventListener('keydown', function(e) {
       if (e.key === 'Escape') closeDropdown();
     });
-  });
+  }
+
+  // Инициализация при загрузке DOM
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initCountrySelector);
+  } else {
+    // DOM уже загружен
+    initCountrySelector();
+  }
 </script>

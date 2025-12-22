@@ -44,6 +44,7 @@ urlpatterns = [
     path('verify/moderation/', views.verify_moderation_list, name='verify_moderation_list'),
     path('verify/moderation/<int:request_id>/', views.verify_moderation_detail, name='verify_moderation_detail'),
     path('admin/notify/', views.admin_send_notification, name='admin_send_notification'),
+    path('payment/click/webhook/', views.click_webhook, name='click_webhook'),
 ]
 
 

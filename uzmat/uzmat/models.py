@@ -422,3 +422,5 @@ class ChatImage(models.Model):
 
     def __str__(self):
         return f"Фото #{self.id} для сообщения #{self.message_id}"
+
+

@@ -190,6 +190,17 @@
           </div>
         </div>
 
+        <div style="margin-top: 20px; padding: 16px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--uz-border); border-radius: var(--uz-radius-md);">
+          <div style="font-weight: 700; font-size: 16px; margin-bottom: 8px; color: var(--uz-text);">Стоимость верификации</div>
+          <div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;">
+            <div style="font-size: 24px; font-weight: 800; color: var(--uz-primary);">15$</div>
+            <div class="ver-price-in-currency" style="font-size: 18px; color: var(--uz-text-dim);">
+              ≈ {% if amount_in_currency %}{{ amount_in_currency|floatformat:0 }} {{ currency_code }}{% else %}~187 500 сум{% endif %}
+            </div>
+          </div>
+          <div style="font-size: 12px; color: var(--uz-text-muted); margin-top: 8px;">Оплата производится через платежную систему Click</div>
+        </div>
+
         <div class="ver-cta">
           {% if user.verification_status == 'pending' %}
             <button class="uz-btn uz-btn-outline" disabled style="opacity: .6; cursor: not-allowed;">Заявка уже в обработке</button>
@@ -201,11 +212,79 @@
               {% else %}
                 <input type="hidden" name="verification_type" value="individual">
               {% endif %}
-              <button type="submit" class="uz-btn uz-btn-primary" style="font-weight: 700;">Оформить верификацию</button>
+              <input type="hidden" name="country" value="{{ country }}" class="country-input">
+              <button type="submit" class="uz-btn uz-btn-primary" style="font-weight: 700;">
+                Оформить верификацию — 15$ (<span class="ver-price-text">{% if amount_in_currency %}{{ amount_in_currency|floatformat:0 }} {{ currency_code }}{% else %}~187 500 сум{% endif %}</span>)
+              </button>
             </form>
           {% endif %}
           <div class="ver-note">Займёт пару минут: выберите тип и отправьте заявку.</div>
         </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // Обновление цены верификации при смене страны
+    (function() {
+      const countrySelector = document.querySelector('[data-nav-country-selector]');
+      if (!countrySelector) return;
+
+      const countryOptions = countrySelector.querySelectorAll('[data-nav-country]');
+      const priceElement = document.querySelector('.ver-price-in-currency');
+      const priceText = document.querySelector('.ver-price-text');
+      const countryInput = document.querySelector('.country-input');
+      
+      function updatePrice(country) {
+        if (countryInput) {
+          countryInput.value = country;
+        }
+
+        const url = new URL(window.location.href);
+        url.searchParams.set('country', country);
+        
+        fetch(url.toString(), {
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+          }
+        })
+        .then(response => response.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(html, 'text/html');
+          
+          const newPriceElement = doc.querySelector('.ver-price-in-currency');
+          const newPriceText = doc.querySelector('.ver-price-text');
+          
+          if (newPriceElement && priceElement) {
+            priceElement.innerHTML = newPriceElement.innerHTML;
+          }
+          
+          if (newPriceText && priceText) {
+            priceText.innerHTML = newPriceText.innerHTML;
+          }
+        })
+        .catch(err => {
+          console.error('Ошибка обновления цены:', err);
+        });
+      }
+
+      countryOptions.forEach(option => {
+        option.addEventListener('click', function() {
+          const country = this.getAttribute('data-nav-country');
+          if (country) {
+            updatePrice(country);
+          }
+        });
+      });
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlCountry = urlParams.get('country');
+      if (urlCountry && urlCountry !== '{{ country }}') {
+        updatePrice(urlCountry);
+      }
+    })();
+  </script>
       </div>
     </section>
   </main>

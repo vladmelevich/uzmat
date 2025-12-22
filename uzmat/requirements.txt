@@ -4,6 +4,8 @@ Pillow>=10.0.0
 python-pptx>=0.6.21
 cryptography>=42.0.0
 gunicorn>=21.2.0
+forex-python>=1.0
+requests>=2.31.0
 
 
 

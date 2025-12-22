@@ -9,7 +9,6 @@
   <link rel="icon" type="image/svg+xml" href="{% static 'uzmat/logo-uzmat.svg' %}">
   {% include 'uzmat/theme-init.html' %}
   <link rel="stylesheet" href="{% static 'uzmat/styles.css' %}">
-  <script src="{% static 'uzmat/i18n.js' %}"></script>
   <script defer src="{% static 'uzmat/app.js' %}"></script>
 </head>
 
@@ -54,8 +53,7 @@
     <!-- Hero Section -->
     <section class="uz-hero uz-animate-in">
       <h1 class="uz-hero-title">
-        Аренда спецтехники<br>
-        бизнес-класса
+        <span data-translate="Аренда спецтехники бизнес-класса">Аренда спецтехники<br>бизнес-класса</span>
       </h1>
       <p class="uz-hero-subtitle">
         Единая платформа для поиска надежных подрядчиков и управления парком техники.

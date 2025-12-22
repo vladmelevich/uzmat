@@ -68,6 +68,9 @@
       <div class="promo-card">
         <div class="promo-badge badge-gold">GOLD • 3 дня</div>
         <h3 style="font-size: 18px; font-weight: 800; color: #92400e;">Ускоренный старт</h3>
+        <div class="promo-price" data-plan="gold" style="font-size: 24px; font-weight: 800; color: #92400e; margin: 12px 0 8px;">
+          {% if prices.gold %}{{ prices.gold|floatformat:0 }} {{ currency_code }}{% else %}30 000 сум{% endif %}
+        </div>
         <p style="color: #6b7280;">Идеально, чтобы быстро собрать первые звонки и тестировать спрос.</p>
         <ul class="promo-list">
           <li>Мгновенный вывод в «Горячие предложения»</li>
@@ -77,13 +80,19 @@
         <form method="post" action="{% url 'uzmat:promote_ad' slug=ad.slug %}" class="promo-cta">
           {% csrf_token %}
           <input type="hidden" name="plan" value="gold">
-          <button type="submit" class="uz-btn uz-btn-primary" style="width: 100%; background: linear-gradient(90deg, #f59e0b, #fbbf24); color: #78350f; font-weight: 800; border: none;">Оформить GOLD на 3 дня</button>
+          <input type="hidden" name="country" value="{{ country }}" class="country-input">
+          <button type="submit" class="uz-btn uz-btn-primary promo-btn" data-plan="gold" style="width: 100%; background: linear-gradient(90deg, #f59e0b, #fbbf24); color: #78350f; font-weight: 800; border: none;">
+            Оформить GOLD на 3 дня — <span class="price-text">{% if prices.gold %}{{ prices.gold|floatformat:0 }} {{ currency_code }}{% else %}30 000 сум{% endif %}</span>
+          </button>
         </form>
       </div>
 
       <div class="promo-card" style="border: 1px solid #bfdbfe; box-shadow: 0 16px 50px rgba(37,99,235,0.15);">
         <div class="promo-badge badge-premium">PREMIUM • 14 дней</div>
         <h3 style="font-size: 18px; font-weight: 800; color: #1d4ed8;">Баланс охвата и цены</h3>
+        <div class="promo-price" data-plan="premium" style="font-size: 24px; font-weight: 800; color: #1d4ed8; margin: 12px 0 8px;">
+          {% if prices.premium %}{{ prices.premium|floatformat:0 }} {{ currency_code }}{% else %}50 000 сум{% endif %}
+        </div>
         <p style="color: #6b7280;">Оптимально для стабильного потока лидов без переплат.</p>
         <ul class="promo-list">
           <li>Приоритетный показ 24/7 на 2 недели</li>
@@ -93,13 +102,19 @@
         <form method="post" action="{% url 'uzmat:promote_ad' slug=ad.slug %}" class="promo-cta">
           {% csrf_token %}
           <input type="hidden" name="plan" value="premium">
-          <button type="submit" class="uz-btn uz-btn-primary" style="width: 100%; background: linear-gradient(90deg, #1d4ed8, #60a5fa); color: white; font-weight: 800; border: none;">Оформить PREMIUM на 14 дней</button>
+          <input type="hidden" name="country" value="{{ country }}" class="country-input">
+          <button type="submit" class="uz-btn uz-btn-primary promo-btn" data-plan="premium" style="width: 100%; background: linear-gradient(90deg, #1d4ed8, #60a5fa); color: white; font-weight: 800; border: none;">
+            Оформить PREMIUM на 14 дней — <span class="price-text">{% if prices.premium %}{{ prices.premium|floatformat:0 }} {{ currency_code }}{% else %}50 000 сум{% endif %}</span>
+          </button>
         </form>
       </div>
 
       <div class="promo-card" style="border: 1px solid #ddd6fe; box-shadow: 0 16px 50px rgba(109,40,217,0.12);">
         <div class="promo-badge badge-vip">VIP • 30 дней</div>
         <h3 style="font-size: 18px; font-weight: 800; color: #6d28d9;">Максимум охвата</h3>
+        <div class="promo-price" data-plan="vip" style="font-size: 24px; font-weight: 800; color: #6d28d9; margin: 12px 0 8px;">
+          {% if prices.vip %}{{ prices.vip|floatformat:0 }} {{ currency_code }}{% else %}100 000 сум{% endif %}
+        </div>
         <p style="color: #6b7280;">Длинный срок для стабильных продаж без ежедневного контроля.</p>
         <ul class="promo-list">
           <li>Фиксация в «Горячих» на месяц</li>
@@ -109,11 +124,93 @@
         <form method="post" action="{% url 'uzmat:promote_ad' slug=ad.slug %}" class="promo-cta">
           {% csrf_token %}
           <input type="hidden" name="plan" value="vip">
-          <button type="submit" class="uz-btn uz-btn-primary" style="width: 100%; background: linear-gradient(90deg, #7c3aed, #a855f7); color: white; font-weight: 800; border: none;">Оформить VIP на 30 дней</button>
+          <input type="hidden" name="country" value="{{ country }}" class="country-input">
+          <button type="submit" class="uz-btn uz-btn-primary promo-btn" data-plan="vip" style="width: 100%; background: linear-gradient(90deg, #7c3aed, #a855f7); color: white; font-weight: 800; border: none;">
+            Оформить VIP на 30 дней — <span class="price-text">{% if prices.vip %}{{ prices.vip|floatformat:0 }} {{ currency_code }}{% else %}100 000 сум{% endif %}</span>
+          </button>
         </form>
       </div>
     </div>
   </div>
+
+  <script>
+    // Обновление цен при смене страны
+    (function() {
+      const countrySelector = document.querySelector('[data-nav-country-selector]');
+      if (!countrySelector) return;
+
+      const countryOptions = countrySelector.querySelectorAll('[data-nav-country]');
+      const priceElements = document.querySelectorAll('.promo-price');
+      const priceTexts = document.querySelectorAll('.price-text');
+      const countryInputs = document.querySelectorAll('.country-input');
+      
+      // Маппинг валют для отображения
+      const currencyMap = {
+        'kz': '₸',
+        'uz': 'сум',
+        'ru': '₽',
+        'by': 'Br',
+      };
+
+      function updatePrices(country) {
+        // Обновляем скрытые поля country в формах
+        countryInputs.forEach(input => {
+          input.value = country;
+        });
+
+        // Получаем новые цены через AJAX
+        const url = new URL(window.location.href);
+        url.searchParams.set('country', country);
+        
+        fetch(url.toString(), {
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+          }
+        })
+        .then(response => response.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(html, 'text/html');
+          
+          // Обновляем цены из нового HTML
+          const newPriceElements = doc.querySelectorAll('.promo-price');
+          const newPriceTexts = doc.querySelectorAll('.price-text');
+          
+          newPriceElements.forEach((newEl, index) => {
+            if (priceElements[index]) {
+              priceElements[index].innerHTML = newEl.innerHTML;
+            }
+          });
+          
+          newPriceTexts.forEach((newEl, index) => {
+            if (priceTexts[index]) {
+              priceTexts[index].innerHTML = newEl.innerHTML;
+            }
+          });
+        })
+        .catch(err => {
+          console.error('Ошибка обновления цен:', err);
+        });
+      }
+
+      // Слушаем изменения страны
+      countryOptions.forEach(option => {
+        option.addEventListener('click', function() {
+          const country = this.getAttribute('data-nav-country');
+          if (country) {
+            updatePrices(country);
+          }
+        });
+      });
+
+      // Обновляем при загрузке страницы, если страна изменилась
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlCountry = urlParams.get('country');
+      if (urlCountry && urlCountry !== '{{ country }}') {
+        updatePrices(urlCountry);
+      }
+    })();
+  </script>
 </body>
 </html>
 

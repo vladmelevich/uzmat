@@ -154,3 +154,19 @@ REST_FRAMEWORK = {
 # CSRF настройки для локальной разработки
 CSRF_TRUSTED_ORIGINS = ['http://localhost:8000', 'http://127.0.0.1:8000']
 
+# Click платежная система настройки
+CLICK_SETTINGS = {
+    'SERVICE_ID': '81723',
+    'MERCHANT_ID': '45447',
+    'SECRET_KEY': 'KvAacs6ABwlULaC',
+    'MERCHANT_USER_ID': '63140',
+    'API_URL': 'https://api.click.uz/v2/merchant/',
+}
+
+# Кэш для конвертации валют
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+    }
+}
+

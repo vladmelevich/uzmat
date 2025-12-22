@@ -3,7 +3,7 @@ from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib import messages
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.urls import reverse
 from django.db.models import Q, Count, Sum
 from django.db.models.functions import Coalesce
@@ -13,6 +13,8 @@ from django.utils import timezone
 from django.db import transaction
 from django.db.models import Case, When, Value, IntegerField
 from django.conf import settings as django_settings
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
 import os
 from .models import (
     User,
@@ -25,6 +27,13 @@ from .models import (
     ChatMessage,
     ChatImage,
 )
+from .utils.currency import (
+    convert_usd_to_uzs,
+    get_promotion_price_for_country,
+    get_verification_price_for_country,
+    get_currency_for_country,
+)
+from .utils.click_payment import verify_click_signature, generate_click_payment_url
 from decimal import Decimal, InvalidOperation
 from itertools import chain
 
@@ -1466,7 +1475,7 @@ def toggle_ad_status(request, slug):
 
 @login_required
 def promote_ad(request, slug):
-    """Продвигает объявление владельца и отправляет его в горячие предложения"""
+    """Создает платеж для продвижения объявления через Click"""
     ad = get_object_or_404(Advertisement, slug=slug)
     
     if ad.user != request.user:
@@ -1475,24 +1484,45 @@ def promote_ad(request, slug):
     
     if request.method == 'POST':
         plan = request.POST.get('plan')
+        country = request.POST.get('country') or request.GET.get('country') or 'uz'
+        
         durations = {
             'gold': 3,
             'premium': 14,
             'vip': 30,
         }
+        
         days = durations.get(plan)
         if not days:
             messages.error(request, 'Неизвестный тариф продвижения')
             return redirect('uzmat:promote_info', slug=slug)
         
-        now = timezone.now()
-        ad.is_promoted = True
-        ad.promoted_at = now
-        ad.promotion_until = now + timezone.timedelta(days=days)
-        ad.promotion_plan = plan
-        ad.save(update_fields=['is_promoted', 'promoted_at', 'promotion_until', 'promotion_plan'])
-        messages.success(request, f'Тариф "{plan.upper()}" оформлен. Объявление в горячих предложениях до {ad.promotion_until.strftime("%d.%m.%Y")}')
-        return redirect('uzmat:profile')
+        # Для Click всегда используем сумму в сумах (базовая цена)
+        from .utils.currency import BASE_PRICES_UZS
+        base_price_uzs = BASE_PRICES_UZS.get(plan, Decimal('0'))
+        
+        # Генерируем уникальный ID платежа (timestamp + user_id)
+        import time
+        payment_id = int(time.time() * 1000) + request.user.id
+        
+        # Сохраняем данные о платеже в кэше (не в БД, TTL 24 часа)
+        from django.core.cache import cache
+        payment_data = {
+            'payment_type': 'promotion',
+            'user_id': request.user.id,
+            'ad_id': ad.id,
+            'ad_slug': ad.slug,
+            'plan': plan,
+            'amount': str(base_price_uzs),
+            'created_at': timezone.now().isoformat(),
+        }
+        cache.set(f'payment_{payment_id}', payment_data, 3600 * 24)  # 24 часа
+        
+        # Генерируем URL для оплаты (Click принимает только сумы)
+        return_url = request.build_absolute_uri(reverse('uzmat:profile'))
+        payment_url = generate_click_payment_url(payment_id, base_price_uzs, return_url)
+        
+        return redirect(payment_url)
     
     return redirect('uzmat:promote_info', slug=slug)
 
@@ -1501,7 +1531,26 @@ def promote_ad(request, slug):
 def promote_info(request, slug):
     """Страница выбора тарифа продвижения"""
     ad = get_object_or_404(Advertisement, slug=slug, user=request.user)
-    return render(request, 'uzmat/promote_info.html', {'ad': ad, 'user': request.user})
+    
+    # Получаем страну из запроса или localStorage (по умолчанию uz)
+    country = request.GET.get('country') or 'uz'
+    
+    # Получаем цены для выбранной страны
+    prices = {
+        'gold': get_promotion_price_for_country('gold', country),
+        'premium': get_promotion_price_for_country('premium', country),
+        'vip': get_promotion_price_for_country('vip', country),
+    }
+    
+    currency_code = get_currency_for_country(country)
+    
+    return render(request, 'uzmat/promote_info.html', {
+        'ad': ad,
+        'user': request.user,
+        'prices': prices,
+        'currency_code': currency_code,
+        'country': country,
+    })
 
 
 @login_required
@@ -1518,23 +1567,46 @@ def verify_info(request):
         if v_type not in {'individual', 'company'}:
             v_type = 'company' if getattr(user, 'account_type', None) == 'company' else 'individual'
 
-        with transaction.atomic():
-            VerificationRequest.objects.create(
-                user=user,
-                verification_type=v_type,
-                status='pending',
-            )
+        # Конвертируем 15$ в сумы (для Click всегда используем сумы)
+        amount_usd = Decimal('15.00')
+        amount_uzs = convert_usd_to_uzs(float(amount_usd))
+        
+        # Генерируем уникальный ID платежа (timestamp + user_id)
+        import time
+        payment_id = int(time.time() * 1000) + user.id
+        
+        # Сохраняем данные о платеже в кэше (не в БД, TTL 24 часа)
+        from django.core.cache import cache
+        payment_data = {
+            'payment_type': 'verification',
+            'user_id': user.id,
+            'verification_type': v_type,
+            'amount': str(amount_uzs),
+            'amount_usd': str(amount_usd),
+            'created_at': timezone.now().isoformat(),
+        }
+        cache.set(f'payment_{payment_id}', payment_data, 3600 * 24)  # 24 часа
+        
+        # Генерируем URL для оплаты (Click принимает только сумы)
+        return_url = request.build_absolute_uri(reverse('uzmat:verify_info'))
+        payment_url = generate_click_payment_url(payment_id, amount_uzs, return_url)
+        
+        return redirect(payment_url)
 
-            user.verification_type = v_type
-            user.verification_status = 'pending'
-            user.is_verified = False
-            user.verified_until = None
-            user.save(update_fields=['verification_type', 'verification_status', 'is_verified', 'verified_until'])
-
-        messages.success(request, 'Заявка отправлена на верификацию. Статус обновится после проверки модератором.')
-        return redirect('uzmat:verify_info')
-
-    return render(request, 'uzmat/verify_info.html', {'user': user})
+    # Получаем страну из запроса или localStorage (по умолчанию uz)
+    country = request.GET.get('country') or 'uz'
+    
+    # Получаем цену верификации для выбранной страны
+    amount_in_currency, amount_usd = get_verification_price_for_country(country)
+    currency_code = get_currency_for_country(country)
+    
+    return render(request, 'uzmat/verify_info.html', {
+        'user': user,
+        'amount_usd': amount_usd,
+        'amount_in_currency': amount_in_currency,
+        'currency_code': currency_code,
+        'country': country,
+    })
 
 
 @staff_member_required(login_url='/auth/')
@@ -1801,3 +1873,172 @@ def add_cargo(request):
         'user': request.user,
     }
     return render(request, 'uzmat/add_cargo.html', context)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def click_webhook(request):
+    """
+    Webhook для обработки callback от Click платежной системы
+    Использует кэш вместо БД для хранения данных о платежах
+    """
+    from django.core.cache import cache
+    
+    try:
+        # Получаем параметры из запроса
+        merchant_trans_id = request.POST.get('merchant_trans_id', '')
+        click_trans_id = request.POST.get('click_trans_id', '')
+        amount = request.POST.get('amount', '')
+        action = int(request.POST.get('action', '0'))
+        sign_time = request.POST.get('sign_time', '')
+        sign_string = request.POST.get('sign_string', '')
+        merchant_prepare_id = request.POST.get('merchant_prepare_id', '')
+        error = request.POST.get('error', '')
+        error_note = request.POST.get('error_note', '')
+        
+        # Получаем данные о платеже из кэша
+        try:
+            payment_id = int(merchant_trans_id)
+            payment_data = cache.get(f'payment_{payment_id}')
+            
+            if not payment_data:
+                return JsonResponse({
+                    'error': -5,
+                    'error_note': 'Invalid merchant_trans_id'
+                })
+        except (ValueError, TypeError):
+            return JsonResponse({
+                'error': -5,
+                'error_note': 'Invalid merchant_trans_id'
+            })
+        
+        # Проверяем подпись
+        amount_decimal = Decimal(amount)
+        if not verify_click_signature(
+            merchant_trans_id=merchant_trans_id,
+            merchant_prepare_id=merchant_prepare_id or '',
+            amount=amount_decimal,
+            action=action,
+            sign_time=sign_time,
+            sign_string=sign_string
+        ):
+            return JsonResponse({
+                'error': -1,
+                'error_note': 'Invalid signature'
+            })
+        
+        # Обрабатываем действия
+        if action == 0:  # Prepare
+            # Проверяем сумму
+            expected_amount = Decimal(payment_data['amount'])
+            if amount_decimal != expected_amount:
+                return JsonResponse({
+                    'error': -2,
+                    'error_note': 'Invalid amount'
+                })
+            
+            # Сохраняем prepare_id в кэш
+            payment_data['click_payment_id'] = merchant_prepare_id
+            cache.set(f'payment_{payment_id}', payment_data, 3600 * 24)  # 24 часа
+            
+            return JsonResponse({
+                'click_trans_id': click_trans_id,
+                'merchant_trans_id': merchant_trans_id,
+                'merchant_prepare_id': merchant_prepare_id,
+                'error': 0,
+                'error_note': 'Success'
+            })
+        
+        elif action == 1:  # Complete
+            # Проверяем сумму
+            expected_amount = Decimal(payment_data['amount'])
+            if amount_decimal != expected_amount:
+                return JsonResponse({
+                    'error': -2,
+                    'error_note': 'Invalid amount'
+                })
+            
+            # Обрабатываем в зависимости от типа платежа
+            with transaction.atomic():
+                payment_type = payment_data.get('payment_type')
+                
+                if payment_type == 'promotion':
+                    # Активируем продвижение объявления
+                    ad_id = payment_data.get('ad_id')
+                    plan = payment_data.get('plan')
+                    
+                    if ad_id and plan:
+                        try:
+                            ad = Advertisement.objects.get(id=ad_id)
+                            durations = {
+                                'gold': 3,
+                                'premium': 14,
+                                'vip': 30,
+                            }
+                            days = durations.get(plan, 0)
+                            if days > 0:
+                                now = timezone.now()
+                                ad.is_promoted = True
+                                ad.promoted_at = now
+                                ad.promotion_until = now + timezone.timedelta(days=days)
+                                ad.promotion_plan = plan
+                                ad.save(update_fields=['is_promoted', 'promoted_at', 'promotion_until', 'promotion_plan'])
+                        except Advertisement.DoesNotExist:
+                            pass
+                
+                elif payment_type == 'verification':
+                    # Создаем заявку на верификацию
+                    user_id = payment_data.get('user_id')
+                    v_type = payment_data.get('verification_type', 'individual')
+                    
+                    if user_id:
+                        try:
+                            user = User.objects.get(id=user_id)
+                            
+                            VerificationRequest.objects.create(
+                                user=user,
+                                verification_type=v_type,
+                                status='pending',
+                            )
+                            
+                            user.verification_type = v_type
+                            user.verification_status = 'pending'
+                            user.is_verified = False
+                            user.verified_until = None
+                            user.save(update_fields=['verification_type', 'verification_status', 'is_verified', 'verified_until'])
+                        except User.DoesNotExist:
+                            pass
+            
+            # Удаляем данные о платеже из кэша после успешной обработки
+            cache.delete(f'payment_{payment_id}')
+            
+            return JsonResponse({
+                'click_trans_id': click_trans_id,
+                'merchant_trans_id': merchant_trans_id,
+                'merchant_confirm_id': merchant_trans_id,
+                'error': 0,
+                'error_note': 'Success'
+            })
+        
+        elif action == -1:  # Cancel
+            # Удаляем данные о платеже из кэша при отмене
+            cache.delete(f'payment_{payment_id}')
+            
+            return JsonResponse({
+                'click_trans_id': click_trans_id,
+                'merchant_trans_id': merchant_trans_id,
+                'error': 0,
+                'error_note': 'Success'
+            })
+        
+        else:
+            return JsonResponse({
+                'error': -8,
+                'error_note': 'Action not found'
+            })
+    
+    except Exception as e:
+        return JsonResponse({
+            'error': -9,
+            'error_note': f'System error: {str(e)}'
+        })

@@ -834,6 +834,28 @@
     
     if (catalogSearchInput && filterForm) {
       let searchTimeout;
+      let viewportMeta = document.querySelector('meta[name="viewport"]');
+      let originalViewport = viewportMeta ? viewportMeta.getAttribute('content') : 'width=device-width, initial-scale=1.0';
+      let isZoomed = false;
+
+      // Функция для увеличения масштаба
+      function zoomIn() {
+        if (!isZoomed && viewportMeta) {
+          viewportMeta.setAttribute('content', 'width=device-width, initial-scale=1.5, maximum-scale=1.5, user-scalable=no');
+          isZoomed = true;
+        }
+      }
+
+      // Функция для возврата масштаба
+      function zoomOut() {
+        if (isZoomed && viewportMeta) {
+          viewportMeta.setAttribute('content', originalViewport);
+          isZoomed = false;
+        }
+      }
+
+      // При фокусе - увеличиваем масштаб
+      catalogSearchInput.addEventListener('focus', zoomIn);
       
       catalogSearchInput.addEventListener('input', function(e) {
         const query = e.target.value.trim();
@@ -841,9 +863,14 @@
         // Убеждаемся, что значение обновлено
         catalogSearchInput.value = query;
         
+        if (!isZoomed) {
+          zoomIn();
+        }
+        
         clearTimeout(searchTimeout);
         // Поиск работает при вводе хотя бы одной буквы
         searchTimeout = setTimeout(() => {
+          zoomOut(); // Возвращаем масштаб перед отправкой
           // Отправляем форму через AJAX
           const formData = new FormData(filterForm);
           const params = new URLSearchParams();
@@ -906,6 +933,24 @@
             console.error('Ошибка при загрузке данных:', error);
           });
         }, 300);
+      });
+
+      // При нажатии Enter - возвращаем масштаб и отправляем
+      catalogSearchInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          zoomOut();
+          filterForm.submit();
+        }
+      });
+
+      // При потере фокуса без отправки - возвращаем масштаб через небольшую задержку
+      catalogSearchInput.addEventListener('blur', function() {
+        setTimeout(() => {
+          if (isZoomed && !catalogSearchInput.value.trim()) {
+            zoomOut();
+          }
+        }, 200);
       });
     }
   </script>

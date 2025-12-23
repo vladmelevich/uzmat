@@ -529,6 +529,28 @@
     
     if (partsSearchInput && filterForm && partsSearchHidden) {
       let searchTimeout;
+      let viewportMeta = document.querySelector('meta[name="viewport"]');
+      let originalViewport = viewportMeta ? viewportMeta.getAttribute('content') : 'width=device-width, initial-scale=1.0';
+      let isZoomed = false;
+
+      // Функция для увеличения масштаба
+      function zoomIn() {
+        if (!isZoomed && viewportMeta) {
+          viewportMeta.setAttribute('content', 'width=device-width, initial-scale=1.5, maximum-scale=1.5, user-scalable=no');
+          isZoomed = true;
+        }
+      }
+
+      // Функция для возврата масштаба
+      function zoomOut() {
+        if (isZoomed && viewportMeta) {
+          viewportMeta.setAttribute('content', originalViewport);
+          isZoomed = false;
+        }
+      }
+
+      // При фокусе - увеличиваем масштаб
+      partsSearchInput.addEventListener('focus', zoomIn);
       
       partsSearchInput.addEventListener('input', function(e) {
         const query = e.target.value.trim();
@@ -537,12 +559,26 @@
         partsSearchInput.value = query;
         partsSearchHidden.value = query;
         
+        if (!isZoomed) {
+          zoomIn();
+        }
+        
         clearTimeout(searchTimeout);
         // Поиск работает при вводе хотя бы одной буквы
         searchTimeout = setTimeout(() => {
+          zoomOut(); // Возвращаем масштаб перед отправкой
           // Отправляем форму с параметром search (работает даже при пустом запросе для сброса)
           filterForm.submit();
         }, 300); // Задержка 300ms для оптимизации
+      });
+
+      // При нажатии Enter - возвращаем масштаб и отправляем
+      partsSearchInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          zoomOut();
+          filterForm.submit();
+        }
       });
       
       // Обработка клавиши Backspace и Delete для немедленной очистки
@@ -552,10 +588,20 @@
           const emptyValue = '';
           this.value = emptyValue;
           partsSearchHidden.value = emptyValue;
+          zoomOut();
           searchTimeout = setTimeout(() => {
             filterForm.submit();
           }, 100);
         }
+      });
+
+      // При потере фокуса без отправки - возвращаем масштаб через небольшую задержку
+      partsSearchInput.addEventListener('blur', function() {
+        setTimeout(() => {
+          if (isZoomed && !partsSearchInput.value.trim()) {
+            zoomOut();
+          }
+        }, 200);
       });
     }
 

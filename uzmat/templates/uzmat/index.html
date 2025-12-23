@@ -809,13 +809,42 @@
     const heroSearchInput = document.getElementById('hero-search-input');
     if (heroSearchInput) {
       let searchTimeout;
+      let viewportMeta = document.querySelector('meta[name="viewport"]');
+      let originalViewport = viewportMeta ? viewportMeta.getAttribute('content') : 'width=device-width, initial-scale=1.0';
+      let isZoomed = false;
+
+      // Функция для увеличения масштаба
+      function zoomIn() {
+        if (!isZoomed && viewportMeta) {
+          viewportMeta.setAttribute('content', 'width=device-width, initial-scale=1.5, maximum-scale=1.5, user-scalable=no');
+          isZoomed = true;
+        }
+      }
+
+      // Функция для возврата масштаба
+      function zoomOut() {
+        if (isZoomed && viewportMeta) {
+          viewportMeta.setAttribute('content', originalViewport);
+          isZoomed = false;
+        }
+      }
+
+      // При фокусе - увеличиваем масштаб
+      heroSearchInput.addEventListener('focus', zoomIn);
+      
+      // При начале ввода - увеличиваем масштаб (на случай если фокус уже был)
       heroSearchInput.addEventListener('input', function(e) {
         const query = e.target.value.trim();
+        
+        if (!isZoomed) {
+          zoomIn();
+        }
         
         clearTimeout(searchTimeout);
         searchTimeout = setTimeout(() => {
           // Перенаправляем на каталог при вводе хотя бы одной буквы
           if (query.length >= 1) {
+            zoomOut(); // Возвращаем масштаб перед переходом
             window.location.href = "{% url 'uzmat:catalog' %}?search=" + encodeURIComponent(query);
           }
         }, 200); // Уменьшенная задержка для более быстрого поиска
@@ -826,9 +855,19 @@
           e.preventDefault();
           const query = e.target.value.trim();
           if (query.length >= 1) {
+            zoomOut(); // Возвращаем масштаб перед переходом
             window.location.href = "{% url 'uzmat:catalog' %}?search=" + encodeURIComponent(query);
           }
         }
+      });
+
+      // При потере фокуса без отправки - возвращаем масштаб
+      heroSearchInput.addEventListener('blur', function() {
+        setTimeout(() => {
+          if (isZoomed && !heroSearchInput.value.trim()) {
+            zoomOut();
+          }
+        }, 200);
       });
     }
 

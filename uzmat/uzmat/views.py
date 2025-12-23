@@ -1599,7 +1599,7 @@ def verify_info(request):
     # Получаем цену верификации для выбранной страны
     amount_in_currency, amount_usd = get_verification_price_for_country(country)
     currency_code = get_currency_for_country(country)
-    
+
     return render(request, 'uzmat/verify_info.html', {
         'user': user,
         'amount_usd': amount_usd,

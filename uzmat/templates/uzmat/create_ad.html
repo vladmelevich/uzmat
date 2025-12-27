@@ -141,19 +141,13 @@
           "Москва", "Санкт-Петербург", "Новосибирск", "Екатеринбург", "Казань", "Нижний Новгород",
           "Челябинск", "Самара", "Омск", "Ростов-на-Дону", "Уфа", "Красноярск", "Воронеж",
           "Пермь", "Волгоград", "Краснодар", "Саратов", "Тюмень", "Тольятти", "Ижевск"
-        ],
-        by: [
-          "Минск", "Гомель", "Могилёв", "Витебск", "Гродно", "Брест", "Бобруйск",
-          "Барановичи", "Борисов", "Пинск", "Орша", "Мозырь", "Солигорск", "Новополоцк",
-          "Лида", "Молодечно", "Полоцк", "Жлобин", "Светлогорск", "Речица"
         ]
       };
 
       const countryNames = {
         kz: 'Казахстан',
         uz: 'Узбекистан',
-        ru: 'Россия',
-        by: 'Беларусь'
+        ru: 'Россия'
       };
 
       let selectedCountry = '';
@@ -773,10 +767,6 @@
                   <span style="font-size: 18px; margin-right: 8px;">🇷🇺</span>
                   <span>Россия</span>
                 </button>
-                <button type="button" class="uz-filter-option" data-filter-value="by">
-                  <span style="font-size: 18px; margin-right: 8px;">🇧🇾</span>
-                  <span>Беларусь</span>
-                </button>
               </div>
               <input type="hidden" name="country" id="country_select" required>
             </div>
@@ -817,7 +807,6 @@
                 <option value="kzt" {% if edit_mode and ad.currency == 'kzt' %}selected{% endif %}>₸ KZT</option>
                 <option value="uzs" {% if edit_mode and ad.currency == 'uzs' %}selected{% endif %}>сум UZS</option>
                 <option value="rub" {% if edit_mode and ad.currency == 'rub' %}selected{% endif %}>₽ RUB</option>
-                <option value="byn" {% if edit_mode and ad.currency == 'byn' %}selected{% endif %}>Br BYN</option>
               </select>
             </div>
           </div>

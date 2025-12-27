@@ -42,16 +42,6 @@
         <span class="uz-nav-country-currency">₽ RUB</span>
       </div>
     </button>
-    <button type="button" class="uz-nav-country-option" data-nav-country="by" data-currency="Br BYN" data-lang="be" data-flag="{% static 'uzmat/bel.svg' %}">
-      <span class="uz-nav-country-flag">
-        <img src="{% static 'uzmat/bel.svg' %}" alt="BY" class="uz-nav-country-flag-img" onerror="this.style.display='none'; if(this.nextElementSibling){this.nextElementSibling.style.display='block';}">
-        <span class="uz-nav-country-flag-fallback" style="display:none;">🇧🇾</span>
-      </span>
-      <div class="uz-nav-country-info">
-        <span class="uz-nav-country-name">Беларусь</span>
-        <span class="uz-nav-country-currency">Br BYN</span>
-      </div>
-    </button>
   </div>
 </div>
 
@@ -124,19 +114,67 @@
         const country = option.getAttribute('data-nav-country') || '';
         const lang = option.getAttribute('data-lang') || 'ru';
 
+        // Сохраняем позицию скролла перед изменением
+        const scrollPosition = window.pageYOffset || document.documentElement.scrollTop;
+
         // Сохраняем выбранную страну и язык
         localStorage.setItem('selected_country', country);
         localStorage.setItem('i18n_lang', lang);
+        // Также сохраняем как фильтр страны (если пользователь на странице каталога)
+        localStorage.setItem('filter_country', country);
 
-        // Закрываем выпадающий список перед перезагрузкой
+        // Обновляем UI селектора
+        options.forEach(o => o.classList.remove('active'));
+        option.classList.add('active');
+        
+        const flagSrc = option.getAttribute('data-flag') || '';
+        const code = country.toUpperCase();
+        
+        if (flagImg && flagSrc) flagImg.src = flagSrc;
+        if (codeSpan) codeSpan.textContent = code;
+
+        // Закрываем выпадающий список
         closeDropdown();
 
-        // Получаем текущий URL и добавляем/обновляем параметр country
+        // Меняем язык БЕЗ перезагрузки страницы
+        // Ждем загрузки i18n если он еще не готов (максимум 1 секунда)
+        let attempts = 0;
+        function changeLanguage() {
+          if (window.i18n && window.i18n.setLanguage) {
+            window.i18n.setLanguage(lang);
+          } else if (attempts < 20) {
+            // Если i18n еще не загружен, ждем немного и пробуем снова (максимум 20 попыток)
+            attempts++;
+            setTimeout(changeLanguage, 50);
+          }
+        }
+        changeLanguage();
+
+        // Обновляем URL без перезагрузки страницы
         const url = new URL(window.location.href);
         url.searchParams.set('country', country);
-        
-        // Перезагружаем страницу с новым параметром страны
-        window.location.href = url.toString();
+        window.history.replaceState({}, '', url.toString());
+
+        // Обновляем фильтры на странице (если они есть)
+        // Используем небольшую задержку, чтобы убедиться что DOM готов
+        setTimeout(() => {
+          updatePageFilters(country);
+        }, 50);
+
+        // Восстанавливаем позицию скролла
+        window.scrollTo(0, scrollPosition);
+
+        // Показываем уведомление (опционально)
+        setTimeout(() => {
+          if (window.showToast) {
+            const countryNames = {
+              'kz': 'Казахстан',
+              'uz': 'Узбекистан',
+              'ru': 'Россия',
+            };
+            window.showToast(`Страна изменена на ${countryNames[country] || country}`, 'success');
+          }
+        }, 50);
       });
     });
 
@@ -149,6 +187,107 @@
     document.addEventListener('keydown', function(e) {
       if (e.key === 'Escape') closeDropdown();
     });
+  }
+
+  // Функция для обновления фильтров на странице при смене страны
+  function updatePageFilters(country) {
+    // Ищем форму фильтров
+    const filterForm = document.getElementById('filters-form');
+    if (!filterForm) return;
+
+    // Обновляем скрытое поле country в форме
+    const countryInput = filterForm.querySelector('input[name="country"]');
+    if (countryInput) {
+      countryInput.value = country === 'all' ? '' : country;
+    }
+
+    // Обновляем отображение выбранной страны в фильтре
+    const countrySelector = filterForm.querySelector('[data-filter-country]');
+    if (countrySelector) {
+      const countryDisplay = countrySelector.querySelector('[data-filter-country-display]');
+      const countryOptions = countrySelector.querySelectorAll('[data-filter-name="country"]');
+      
+      // Находим выбранную опцию
+      const selectedOption = Array.from(countryOptions).find(opt => {
+        const optValue = opt.getAttribute('data-filter-value');
+        return optValue === country || (country === 'all' && optValue === 'all');
+      });
+      
+      if (selectedOption && countryDisplay) {
+        // Обновляем отображение
+        countryDisplay.textContent = selectedOption.textContent.trim();
+        
+        // Обновляем активное состояние
+        countryOptions.forEach(opt => opt.classList.remove('active'));
+        selectedOption.classList.add('active');
+      }
+    }
+
+    // Обновляем список городов (используем глобальную функцию)
+    if (window.updateCityList && typeof window.updateCityList === 'function') {
+      window.updateCityList(country);
+    }
+
+    // Обновляем поля цены (включаем/выключаем) - ВАЖНО: делаем это сразу и принудительно
+    const priceInputs = filterForm.querySelectorAll('input[name="price_from"], input[name="price_to"]');
+    const hasCountry = country && country !== 'all' && country !== '';
+    
+    if (priceInputs.length > 0) {
+      priceInputs.forEach(input => {
+        if (hasCountry) {
+          // Если страна выбрана - активируем поля
+          input.removeAttribute('disabled');
+          input.disabled = false;
+        } else {
+          // Если страна не выбрана - деактивируем поля
+          input.setAttribute('disabled', 'disabled');
+          input.disabled = true;
+          input.value = '';
+        }
+      });
+      
+      // Также обновляем визуальное состояние (если есть стили для disabled)
+      const priceContainer = filterForm.querySelector('.uz-filter-price-range');
+      if (priceContainer) {
+        if (hasCountry) {
+          priceContainer.classList.remove('disabled');
+        } else {
+          priceContainer.classList.add('disabled');
+        }
+      }
+    } else {
+      // Если поля не найдены, пробуем найти их через другой селектор
+      const priceFrom = filterForm.querySelector('input[name="price_from"]');
+      const priceTo = filterForm.querySelector('input[name="price_to"]');
+      if (priceFrom) {
+        if (hasCountry) {
+          priceFrom.removeAttribute('disabled');
+          priceFrom.disabled = false;
+        } else {
+          priceFrom.setAttribute('disabled', 'disabled');
+          priceFrom.disabled = true;
+          priceFrom.value = '';
+        }
+      }
+      if (priceTo) {
+        if (hasCountry) {
+          priceTo.removeAttribute('disabled');
+          priceTo.disabled = false;
+        } else {
+          priceTo.setAttribute('disabled', 'disabled');
+          priceTo.disabled = true;
+          priceTo.value = '';
+        }
+      }
+    }
+
+    // Обновляем результаты через AJAX (используем глобальную функцию)
+    if (window.submitFormAjax && typeof window.submitFormAjax === 'function') {
+      // Небольшая задержка, чтобы дать время обновиться списку городов
+      setTimeout(() => {
+        window.submitFormAjax();
+      }, 100);
+    }
   }
 
   // Инициализация при загрузке DOM

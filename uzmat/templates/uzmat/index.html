@@ -199,7 +199,7 @@
               <label class="uz-filter-label">Страна</label>
               <div class="uz-filter-selector" data-filter-country>
                 <button type="button" class="uz-filter-button" data-filter-country-toggle>
-                  <span data-filter-country-display>{% if request.GET.country %}{% if request.GET.country == 'kz' %}🇰🇿 Казахстан{% elif request.GET.country == 'uz' %}🇺🇿 Узбекистан{% elif request.GET.country == 'ru' %}🇷🇺 Россия{% elif request.GET.country == 'by' %}🇧🇾 Беларусь{% else %}Все страны{% endif %}{% else %}Все страны{% endif %}</span>
+                  <span data-filter-country-display>{% if request.GET.country %}{% if request.GET.country == 'kz' %}🇰🇿 Казахстан{% elif request.GET.country == 'uz' %}🇺🇿 Узбекистан{% elif request.GET.country == 'ru' %}🇷🇺 Россия{% else %}Все страны{% endif %}{% else %}Все страны{% endif %}</span>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="6 9 12 15 18 9"></polyline>
                   </svg>
@@ -217,10 +217,6 @@
                   <button type="button" class="uz-filter-option {% if request.GET.country == 'ru' %}active{% endif %}" data-filter-value="ru" data-filter-name="country">
                     <span style="font-size: 18px; margin-right: 8px;">🇷🇺</span>
                     <span>Россия</span>
-                  </button>
-                  <button type="button" class="uz-filter-option {% if request.GET.country == 'by' %}active{% endif %}" data-filter-value="by" data-filter-name="country">
-                    <span style="font-size: 18px; margin-right: 8px;">🇧🇾</span>
-                    <span>Беларусь</span>
                   </button>
                 </div>
                 <input type="hidden" name="country" value="{{ request.GET.country|default:'' }}">
@@ -479,8 +475,8 @@
       const filterForm = document.getElementById('filters-form');
       if (!filterForm) return;
       
-      // Функция для отправки формы через AJAX (определяем заранее)
-      function submitFormAjax() {
+      // Функция для отправки формы через AJAX (делаем глобальной для доступа из country-selector)
+      window.submitFormAjax = function submitFormAjax() {
         const formData = new FormData(filterForm);
         const params = new URLSearchParams();
         
@@ -665,16 +661,11 @@
           "Москва", "Санкт-Петербург", "Новосибирск", "Екатеринбург", "Казань", "Нижний Новгород",
           "Челябинск", "Самара", "Омск", "Ростов-на-Дону", "Уфа", "Красноярск", "Воронеж",
           "Пермь", "Волгоград", "Краснодар", "Саратов", "Тюмень", "Тольятти", "Ижевск"
-        ],
-        by: [
-          "Минск", "Гомель", "Могилёв", "Витебск", "Гродно", "Брест", "Бобруйск",
-          "Барановичи", "Борисов", "Пинск", "Орша", "Мозырь", "Солигорск", "Новополоцк",
-          "Лида", "Молодечно", "Полоцк", "Жлобин", "Светлогорск", "Речица"
         ]
       };
 
-      // Функция для обновления списка городов
-      function updateCityList(country) {
+      // Функция для обновления списка городов (делаем глобальной для доступа из country-selector)
+      window.updateCityList = function updateCityList(country) {
         const cityList = citySelector.querySelector('[data-filter-city-list]');
         if (!cityList) return;
         
@@ -753,6 +744,24 @@
             
             // Обновляем список городов
             updateCityList(value);
+            
+            // Обновляем поля цены (включаем/выключаем)
+            const priceInputs = filterForm.querySelectorAll('input[name="price_from"], input[name="price_to"]');
+            if (priceInputs.length > 0) {
+              const hasCountry = value && value !== 'all' && value !== '';
+              priceInputs.forEach(input => {
+                // Принудительно снимаем атрибут disabled
+                input.removeAttribute('disabled');
+                // Устанавливаем disabled только если страна не выбрана
+                if (!hasCountry) {
+                  input.setAttribute('disabled', 'disabled');
+                  input.value = '';
+                } else {
+                  // Если страна выбрана, убеждаемся что disabled снят
+                  input.removeAttribute('disabled');
+                }
+              });
+            }
             
             // Закрываем дропдаун страны
             countrySelector.removeAttribute('data-open');

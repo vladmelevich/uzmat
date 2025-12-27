@@ -15,12 +15,23 @@
         Галочка
       </span>
     {% else %}
-      <a href="{% url 'uzmat:verify_info' %}" class="uz-btn uz-btn-outline uz-hidden-mobile" style="font-size: 13px; padding: 8px 12px;" title="Оформить галочку профиля">
+      <a href="{% url 'uzmat:verify_info' %}" class="uz-btn uz-btn-outline uz-hidden-mobile verify-link" style="font-size: 13px; padding: 8px 12px;" title="Оформить галочку профиля">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;">
           <polyline points="20 6 9 17 4 12"></polyline>
         </svg>
         Оформить галочку
       </a>
+      <script>
+        (function() {
+          const verifyLink = document.querySelector('.verify-link');
+          if (verifyLink) {
+            const url = new URL(verifyLink.href);
+            const savedCountry = localStorage.getItem('selected_country') || 'uz';
+            url.searchParams.set('country', savedCountry);
+            verifyLink.href = url.toString();
+          }
+        })();
+      </script>
     {% endif %}
   {% endif %}
 <a href="{% url 'uzmat:profile' %}" class="uz-header-user-avatar" title="Профиль">

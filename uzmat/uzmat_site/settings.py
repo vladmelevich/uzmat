@@ -163,10 +163,34 @@ CLICK_SETTINGS = {
     'API_URL': 'https://api.click.uz/v2/merchant/',
 }
 
-# Кэш для конвертации валют
+# Кэш для конвертации валют и оптимизации производительности
+# Для production используйте Redis, для разработки - локальный кэш
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
+        'OPTIONS': {
+            'MAX_ENTRIES': 10000,
+            'CULL_FREQUENCY': 3,
+        },
+        'TIMEOUT': 300,  # 5 минут по умолчанию
     }
 }
+
+# Для production раскомментируйте и настройте Redis:
+# CACHES = {
+#     'default': {
+#         'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+#         'LOCATION': 'redis://127.0.0.1:6379/1',
+#         'OPTIONS': {
+#             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+#             'SOCKET_CONNECT_TIMEOUT': 5,
+#             'SOCKET_TIMEOUT': 5,
+#             'COMPRESSOR': 'django_redis.compressors.zlib.ZlibCompressor',
+#             'IGNORE_EXCEPTIONS': True,
+#         },
+#         'KEY_PREFIX': 'uzmat',
+#         'TIMEOUT': 300,
+#     }
+# }
 

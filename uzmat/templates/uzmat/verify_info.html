@@ -236,6 +236,7 @@
       const countryInput = document.querySelector('.country-input');
       
       function updatePrice(country) {
+        
         if (countryInput) {
           countryInput.value = country;
         }
@@ -243,12 +244,20 @@
         const url = new URL(window.location.href);
         url.searchParams.set('country', country);
         
+        // Обновляем URL без перезагрузки страницы
+        window.history.replaceState({}, '', url.toString());
+        
         fetch(url.toString(), {
           headers: {
             'X-Requested-With': 'XMLHttpRequest',
           }
         })
-        .then(response => response.text())
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Network response was not ok');
+          }
+          return response.text();
+        })
         .then(html => {
           const parser = new DOMParser();
           const doc = parser.parseFromString(html, 'text/html');
@@ -266,22 +275,52 @@
         })
         .catch(err => {
           console.error('Ошибка обновления цены:', err);
+          // Не блокируем отправку формы при ошибке обновления цены
+          // Форма все равно будет работать
         });
+      }
+      
+      // Обработчик отправки формы - убеждаемся что country передается
+      const form = document.querySelector('form[action*="verify_info"]');
+      if (form) {
+        form.addEventListener('submit', function(e) {
+          const countryInput = form.querySelector('.country-input');
+          if (countryInput) {
+            // Берем country из URL, localStorage или используем текущее значение
+            const urlParams = new URLSearchParams(window.location.search);
+            const urlCountry = urlParams.get('country');
+            const savedCountry = localStorage.getItem('selected_country') || 'uz';
+            
+            let finalCountry = countryInput.value || urlCountry || savedCountry;
+            
+            countryInput.value = finalCountry;
+          }
+        });
+      }
+      
+      // Обновляем country при загрузке страницы
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlCountry = urlParams.get('country');
+      const countryInput = document.querySelector('.country-input');
+      
+      if (countryInput && urlCountry) {
+        countryInput.value = urlCountry;
       }
 
       countryOptions.forEach(option => {
         option.addEventListener('click', function() {
-          const country = this.getAttribute('data-nav-country');
+          let country = this.getAttribute('data-nav-country');
           if (country) {
             updatePrice(country);
           }
         });
       });
 
-      const urlParams = new URLSearchParams(window.location.search);
-      const urlCountry = urlParams.get('country');
-      if (urlCountry && urlCountry !== '{{ country }}') {
-        updatePrice(urlCountry);
+      // Обновляем цену при загрузке страницы, если country в URL отличается
+      if (urlCountry) {
+        if (urlCountry !== '{{ country }}') {
+          updatePrice(urlCountry);
+        }
       }
     })();
   </script>

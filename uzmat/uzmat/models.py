@@ -117,7 +117,6 @@ class Advertisement(models.Model):
         ('kzt', '₸ KZT'),
         ('uzs', 'сум UZS'),
         ('rub', '₽ RUB'),
-        ('byn', 'Br BYN'),
     ]
     
     # Основная информация
@@ -199,6 +198,11 @@ class Advertisement(models.Model):
             models.Index(fields=['ad_type', 'is_active']),
             models.Index(fields=['city', 'country']),
             models.Index(fields=['-created_at']),
+            models.Index(fields=['is_promoted', 'promotion_until']),
+            models.Index(fields=['user', 'is_active']),
+            models.Index(fields=['country', 'city', 'is_active']),
+            models.Index(fields=['is_active', 'last_bumped_at']),
+            models.Index(fields=['promotion_plan', 'promoted_at']),
         ]
     
     def __str__(self):
@@ -227,7 +231,6 @@ class Advertisement(models.Model):
             'kzt': '₸',
             'uzs': 'сум',
             'rub': '₽',
-            'byn': 'Br',
         }
         
         symbol = currency_symbols.get(self.currency, '')
@@ -247,7 +250,6 @@ class Advertisement(models.Model):
             'kz': 'Казахстан',
             'uz': 'Узбекистан',
             'ru': 'Россия',
-            'by': 'Беларусь',
         }
         return countries.get(self.country, 'Казахстан')
 
@@ -344,6 +346,12 @@ class ChatThread(models.Model):
             models.UniqueConstraint(fields=['thread_type', 'advertisement', 'buyer', 'seller'], name='unique_chat_by_type_ad_and_users'),
         ]
         ordering = ['-last_message_at', '-created_at']
+        indexes = [
+            models.Index(fields=['buyer', '-last_message_at']),
+            models.Index(fields=['seller', '-last_message_at']),
+            models.Index(fields=['-last_message_at']),
+            models.Index(fields=['advertisement', 'thread_type']),
+        ]
 
     def __str__(self):
         if self.thread_type == 'support':
@@ -378,6 +386,11 @@ class ChatMessage(models.Model):
         verbose_name = 'Сообщение'
         verbose_name_plural = 'Сообщения'
         ordering = ['created_at']
+        indexes = [
+            models.Index(fields=['thread', '-created_at']),
+            models.Index(fields=['sender', 'created_at']),
+            models.Index(fields=['thread', 'id']),
+        ]
 
     def __str__(self):
         return f"Сообщение #{self.id} в чате #{self.thread_id}"

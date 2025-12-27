@@ -101,7 +101,7 @@
               <label class="uz-filter-label">Страна</label>
               <div class="uz-filter-selector" data-filter-country>
                 <button type="button" class="uz-filter-button" data-filter-country-toggle>
-                  <span data-filter-country-display>{% if request.GET.country %}{% if request.GET.country == 'kz' %}🇰🇿 Казахстан{% elif request.GET.country == 'uz' %}🇺🇿 Узбекистан{% elif request.GET.country == 'ru' %}🇷🇺 Россия{% elif request.GET.country == 'by' %}🇧🇾 Беларусь{% else %}Все страны{% endif %}{% else %}Все страны{% endif %}</span>
+                  <span data-filter-country-display>{% if request.GET.country %}{% if request.GET.country == 'kz' %}🇰🇿 Казахстан{% elif request.GET.country == 'uz' %}🇺🇿 Узбекистан{% elif request.GET.country == 'ru' %}🇷🇺 Россия{% else %}Все страны{% endif %}{% else %}Все страны{% endif %}</span>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="6 9 12 15 18 9"></polyline>
                   </svg>
@@ -119,10 +119,6 @@
                   <button type="button" class="uz-filter-option {% if request.GET.country == 'ru' %}active{% endif %}" data-filter-value="ru" data-filter-name="country">
                     <span style="font-size: 18px; margin-right: 8px;">🇷🇺</span>
                     <span>Россия</span>
-                  </button>
-                  <button type="button" class="uz-filter-option {% if request.GET.country == 'by' %}active{% endif %}" data-filter-value="by" data-filter-name="country">
-                    <span style="font-size: 18px; margin-right: 8px;">🇧🇾</span>
-                    <span>Беларусь</span>
                   </button>
                 </div>
                 <input type="hidden" name="country" value="{{ request.GET.country|default:'' }}">
@@ -393,6 +389,122 @@
       const filterForm = document.getElementById('filters-form');
       if (!filterForm) return;
       
+      // Функция для отправки формы через AJAX (делаем глобальной для доступа из country-selector)
+      window.submitFormAjax = function submitFormAjax() {
+        const formData = new FormData(filterForm);
+        const params = new URLSearchParams();
+        
+        // Собираем все параметры формы
+        // ВАЖНО: country и city должны передаваться ВСЕГДА, даже если пустые (для сброса фильтра)
+        const countryValue = formData.get('country') || '';
+        const cityValue = formData.get('city') || '';
+        const searchValue = formData.get('search') || '';
+        
+        // Принудительно добавляем country, city и search в параметры
+        if (countryValue && countryValue.trim() !== '') {
+          params.append('country', countryValue.trim());
+        }
+        if (cityValue && cityValue.trim() !== '') {
+          params.append('city', cityValue.trim());
+        }
+        if (searchValue && searchValue.trim() !== '') {
+          params.append('search', searchValue.trim());
+        }
+        
+        // Остальные параметры добавляем только если они не пустые
+        for (const [key, value] of formData.entries()) {
+          if (key !== 'country' && key !== 'city' && key !== 'search') {
+            if (value && value.trim() !== '') {
+              params.append(key, value.trim());
+            }
+          }
+        }
+        
+        // Получаем правильный URL для страницы запчастей
+        let partsUrl = filterForm.action || window.location.pathname;
+        if (!partsUrl || partsUrl === '') {
+          partsUrl = '/parts/';
+        }
+        partsUrl = partsUrl.split('?')[0];
+        
+        const fullUrl = partsUrl + '?' + params.toString();
+        
+        // Сохраняем позицию скролла
+        const scrollPosition = window.pageYOffset || document.documentElement.scrollTop;
+        
+        // Показываем индикатор загрузки
+        const adsContainer = document.querySelector('.uz-bento-grid');
+        if (adsContainer) {
+          adsContainer.style.opacity = '0.5';
+        }
+        
+        // Отправляем AJAX запрос
+        fetch(fullUrl, {
+          method: 'GET',
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+          }
+        })
+        .then(response => response.text())
+        .then(html => {
+          // Убираем индикатор загрузки
+          if (adsContainer) {
+            adsContainer.style.opacity = '1';
+          }
+          
+          // Создаем временный контейнер для парсинга HTML
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(html, 'text/html');
+          
+          // Обновляем список объявлений
+          if (adsContainer) {
+            const newAdsContainer = doc.querySelector('.uz-bento-grid');
+            if (newAdsContainer) {
+              adsContainer.innerHTML = newAdsContainer.innerHTML;
+            }
+          }
+          
+          // Обновляем счетчик найденных объявлений
+          const countElement = document.querySelector('[data-translate="Найдено:"]')?.parentElement;
+          if (countElement) {
+            const newCountElement = doc.querySelector('[data-translate="Найдено:"]')?.parentElement;
+            if (newCountElement) {
+              countElement.innerHTML = newCountElement.innerHTML;
+            }
+          }
+          
+          // Обновляем фильтры (если они изменились на сервере)
+          const newFilterForm = doc.getElementById('filters-form');
+          if (newFilterForm) {
+            // Обновляем значения скрытых полей
+            const currentCountryInput = filterForm.querySelector('input[name="country"]');
+            const newCountryInput = newFilterForm.querySelector('input[name="country"]');
+            if (currentCountryInput && newCountryInput) {
+              currentCountryInput.value = newCountryInput.value;
+            }
+            
+            const currentCityInput = filterForm.querySelector('input[name="city"]');
+            const newCityInput = newFilterForm.querySelector('input[name="city"]');
+            if (currentCityInput && newCityInput) {
+              currentCityInput.value = newCityInput.value;
+            }
+          }
+          
+          // Обновляем URL без перезагрузки страницы
+          window.history.pushState({}, '', fullUrl);
+          
+          // Восстанавливаем позицию скролла
+          window.scrollTo(0, scrollPosition);
+        })
+        .catch(error => {
+          console.error('Ошибка при обновлении фильтров:', error);
+          // В случае ошибки убираем индикатор загрузки
+          if (adsContainer) {
+            adsContainer.style.opacity = '1';
+          }
+        });
+      };
+      
       // Открытие/закрытие дропдауна страны
       const countryToggle = filterForm.querySelector('[data-filter-country-toggle]');
       const countryDropdown = filterForm.querySelector('[data-filter-country-dropdown]');
@@ -472,6 +584,112 @@
         }
       });
       
+      // Список городов по странам
+      const citiesByCountry = {
+        kz: [
+          "Алматы", "Астана", "Шымкент", "Караганда", "Актобе", "Тараз", "Павлодар",
+          "Усть-Каменогорск", "Семей", "Костанай", "Кызылорда", "Уральск", "Петропавловск",
+          "Атырау", "Туркестан", "Кокшетау", "Темиртау", "Экибастуз", "Рудный", "Жанаозен"
+        ],
+        uz: [
+          "Ташкент", "Самарканд", "Наманган", "Андижан", "Нукус", "Бухара", "Карши",
+          "Фергана", "Коканд", "Маргилан", "Джизак", "Гулистан", "Термез", "Ургенч",
+          "Навои", "Ангрен", "Чирчик", "Бекабад", "Денау", "Шахрисабз"
+        ],
+        ru: [
+          "Москва", "Санкт-Петербург", "Новосибирск", "Екатеринбург", "Казань", "Нижний Новгород",
+          "Челябинск", "Самара", "Омск", "Ростов-на-Дону", "Уфа", "Красноярск", "Воронеж",
+          "Пермь", "Волгоград", "Краснодар", "Саратов", "Тюмень", "Тольятти", "Ижевск"
+        ]
+      };
+
+      // Функция для обновления списка городов (делаем глобальной для доступа из country-selector)
+      window.updateCityList = function updateCityList(country) {
+        const cityList = citySelector.querySelector('[data-filter-city-list]');
+        if (!cityList) return;
+        
+        const cityHiddenInput = filterForm.querySelector('input[name="city"]');
+        const cityDisplay = citySelector.querySelector('[data-filter-city-display]');
+        const currentCity = cityHiddenInput ? cityHiddenInput.value : '';
+        
+        // Если выбрана страна, проверяем, относится ли текущий город к этой стране
+        if (country && country !== 'all' && citiesByCountry[country]) {
+          const cities = citiesByCountry[country];
+          // Если текущий город не относится к выбранной стране, сбрасываем его
+          if (currentCity && currentCity !== 'all' && !cities.includes(currentCity)) {
+            if (cityHiddenInput) {
+              cityHiddenInput.value = '';
+            }
+            if (cityDisplay) {
+              cityDisplay.textContent = 'Все города';
+            }
+          }
+        } else if (country === 'all' || !country) {
+          // Если выбраны "Все страны", сбрасываем город
+          if (cityHiddenInput) {
+            cityHiddenInput.value = '';
+          }
+          if (cityDisplay) {
+            cityDisplay.textContent = 'Все города';
+          }
+        }
+        
+        // Сохраняем кнопку "Все города"
+        const allCitiesBtn = cityList.querySelector('[data-filter-value="all"]');
+        const allCitiesHtml = allCitiesBtn ? allCitiesBtn.outerHTML : '<button type="button" class="uz-filter-option" data-filter-value="all" data-filter-name="city">Все города</button>';
+        
+        // Очищаем список
+        cityList.innerHTML = allCitiesHtml;
+        
+        // Если выбрана страна, добавляем города этой страны
+        if (country && country !== 'all' && citiesByCountry[country]) {
+          const cities = citiesByCountry[country];
+          cities.forEach(city => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'uz-filter-option';
+            if (currentCity === city) {
+              button.classList.add('active');
+            }
+            button.setAttribute('data-filter-value', city);
+            button.setAttribute('data-filter-name', 'city');
+            button.textContent = city;
+            cityList.appendChild(button);
+          });
+        }
+        
+        // Добавляем обработчики для всех кнопок городов (включая "Все города")
+        cityList.querySelectorAll('[data-filter-name="city"]').forEach(btn => {
+          btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const value = this.getAttribute('data-filter-value');
+            const hiddenInput = filterForm.querySelector('input[name="city"]');
+            if (hiddenInput) {
+              hiddenInput.value = value === 'all' ? '' : value;
+              // Обновляем отображаемый текст
+              const display = citySelector.querySelector('[data-filter-city-display]');
+              if (display) {
+                display.textContent = this.textContent.trim();
+              }
+              // Обновляем активное состояние
+              cityList.querySelectorAll('[data-filter-name="city"]').forEach(b => b.classList.remove('active'));
+              this.classList.add('active');
+              // Закрываем дропдаун
+              citySelector.removeAttribute('data-open');
+              // Отправляем форму через AJAX
+              submitFormAjax();
+            }
+          });
+        });
+      };
+      
+      // Инициализация списка городов при загрузке страницы
+      const currentCountry = filterForm.querySelector('input[name="country"]')?.value || '';
+      if (currentCountry) {
+        updateCityList(currentCountry);
+      }
+      
       // Обработка выбора страны
       filterForm.querySelectorAll('[data-filter-name="country"]').forEach(option => {
         option.addEventListener('click', function(e) {
@@ -486,9 +704,33 @@
             if (display) {
               display.textContent = this.textContent.trim();
             }
+            
+            // Обновляем поля цены (включаем/выключаем)
+            const priceInputs = filterForm.querySelectorAll('input[name="price_from"], input[name="price_to"]');
+            if (priceInputs.length > 0) {
+              const hasCountry = value && value !== 'all' && value !== '';
+              priceInputs.forEach(input => {
+                if (hasCountry) {
+                  // Если страна выбрана - активируем поля
+                  input.removeAttribute('disabled');
+                  input.disabled = false;
+                } else {
+                  // Если страна не выбрана - деактивируем поля
+                  input.setAttribute('disabled', 'disabled');
+                  input.disabled = true;
+                  input.value = '';
+                }
+              });
+            }
+            
+            // Обновляем список городов
+            updateCityList(value);
+            
             // Закрываем дропдаун
             countrySelector.removeAttribute('data-open');
-            filterForm.submit();
+            
+            // Отправляем форму через AJAX для обновления объявлений
+            submitFormAjax();
           }
         });
       });
@@ -509,7 +751,9 @@
             }
             // Закрываем дропдаун
             citySelector.removeAttribute('data-open');
-            filterForm.submit();
+            
+            // Отправляем форму через AJAX
+            submitFormAjax();
           }
         });
       });
@@ -517,8 +761,15 @@
       // Обработка текстовых полей - отправка при потере фокуса
       filterForm.querySelectorAll('input[name="equipment_type"], input[name="brand"], input[name="price_from"], input[name="price_to"]').forEach(input => {
         input.addEventListener('change', function() {
-          filterForm.submit();
+          submitFormAjax();
         });
+      });
+      
+      // Предотвращаем стандартную отправку формы
+      filterForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        submitFormAjax();
+        return false;
       });
     });
 
@@ -567,8 +818,8 @@
         // Поиск работает при вводе хотя бы одной буквы
         searchTimeout = setTimeout(() => {
           zoomOut(); // Возвращаем масштаб перед отправкой
-          // Отправляем форму с параметром search (работает даже при пустом запросе для сброса)
-          filterForm.submit();
+          // Отправляем форму с параметром search через AJAX
+          submitFormAjax();
         }, 300); // Задержка 300ms для оптимизации
       });
 
@@ -577,7 +828,7 @@
         if (e.key === 'Enter') {
           e.preventDefault();
           zoomOut();
-          filterForm.submit();
+          submitFormAjax();
         }
       });
       
@@ -590,7 +841,7 @@
           partsSearchHidden.value = emptyValue;
           zoomOut();
           searchTimeout = setTimeout(() => {
-            filterForm.submit();
+            submitFormAjax();
           }, 100);
         }
       });
@@ -614,8 +865,8 @@
           if (partsSearchHidden) {
             partsSearchHidden.value = query;
           }
-          if (filterForm) {
-            filterForm.submit();
+          if (filterForm && window.submitFormAjax) {
+            submitFormAjax();
           }
         }
       });

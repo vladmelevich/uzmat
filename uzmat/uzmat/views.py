@@ -5,7 +5,7 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from django.urls import reverse
-from django.db.models import Q, Count, Sum
+from django.db.models import Q, Count, Sum, F
 from django.db.models.functions import Coalesce
 from django.core.paginator import Paginator
 from django.utils.text import slugify
@@ -40,23 +40,28 @@ from itertools import chain
 
 def index(request):
     """Главная страница со списком объявлений (только продажа и аренда)"""
+    from django.core.cache import cache
+    from .utils.background_tasks import run_in_background, bump_ads_async
+    
     now = timezone.now()
     
-    # Автоподнятие каждые 3 часа (bulk, ограничиваем партию)
-    bump_candidates = list(
-        Advertisement.objects.filter(
-            is_active=True
-        ).filter(
-            Q(last_bumped_at__isnull=True) | Q(last_bumped_at__lte=now - timezone.timedelta(hours=3))
-        ).values_list('id', flat=True)[:500]
-    )
-    if bump_candidates:
-        Advertisement.objects.filter(id__in=bump_candidates).update(last_bumped_at=now)
+    # Автоподнятие каждые 3 часа (выполняется АСИНХРОННО в фоновом потоке)
+    # Используем кэш для предотвращения частых обновлений
+    last_bump_key = 'last_bump_update'
+    last_bump_time = cache.get(last_bump_key)
+    
+    if not last_bump_time or (now - last_bump_time).total_seconds() > 300:  # Каждые 5 минут максимум
+        # Запускаем обновление в фоновом потоке (НЕ блокирует ответ)
+        run_in_background(bump_ads_async)
+        cache.set(last_bump_key, now, 300)  # Кэшируем на 5 минут
     
     # На /catalog/ фильтрация работает через get_filtered_ads(). На главной тоже применяем те же GET-фильтры
     # (в первую очередь country/city из селектора), но оставляем только sale/rent.
+    # Оптимизация: используем select_related и only для загрузки только нужных полей
     base_active = (get_filtered_ads(request)
                    .filter(ad_type__in=['sale', 'rent'])
+                   .select_related('user')
+                   .prefetch_related('images')
                    .annotate(bump_order=Coalesce('last_bumped_at', 'created_at')))
     
     promoted_active = base_active.filter(
@@ -81,63 +86,111 @@ def index(request):
     POPULAR_LIMIT = 10
     
     # Горячие предложения: до 16 по приоритету тарифа, затем по времени продвижения; дальше проверенные
-    hot_promoted = list(promoted_active.annotate(plan_priority=plan_priority).order_by('plan_priority', '-promoted_at', '-created_at')[:HOT_LIMIT])
+    # Оптимизация: используем only для загрузки только нужных полей
+    hot_promoted = list(
+        promoted_active.annotate(plan_priority=plan_priority)
+        .only('id', 'title', 'slug', 'price', 'currency', 'city', 'country', 'ad_type', 
+              'promoted_at', 'created_at', 'promotion_plan', 'user_id', 'image')
+        .order_by('plan_priority', '-promoted_at', '-created_at')[:HOT_LIMIT]
+    )
     hot_ids = [ad.id for ad in hot_promoted]
     slots_left = max(0, HOT_LIMIT - len(hot_promoted))
     hot_verified = []
     if slots_left > 0:
         hot_verified = list(
-            verified_active.exclude(id__in=hot_ids).order_by('-user__verified_until', '-bump_order')[:slots_left]
+            verified_active.exclude(id__in=hot_ids)
+            .only('id', 'title', 'slug', 'price', 'currency', 'city', 'country', 'ad_type',
+                  'created_at', 'user_id', 'image')
+            .order_by('-user__verified_until', '-bump_order')[:slots_left]
         )
         hot_ids.extend([ad.id for ad in hot_verified])
     hot_offers = hot_promoted + hot_verified
     
     if not hot_offers:
-        hot_offers = base_active.order_by('-bump_order')[:7]
+        hot_offers = list(base_active.only('id', 'title', 'slug', 'price', 'currency', 'city', 
+                                          'country', 'ad_type', 'created_at', 'user_id', 'image')
+                         .order_by('-bump_order')[:7])
     
     # Популярные: до 10, GOLD держится в топ-4 первые 12 часов, далее общий приоритет VIP > PREMIUM > GOLD, затем проверенные
+    # Оптимизация: используем only для загрузки только нужных полей
     fresh_gold = list(
         promoted_active.filter(
             promotion_plan='gold',
             promoted_at__gte=now - timezone.timedelta(hours=12)
-        ).order_by('-promoted_at')[:4]
+        ).only('id', 'title', 'slug', 'price', 'currency', 'city', 'country', 'ad_type',
+               'promoted_at', 'created_at', 'user_id', 'image')
+        .order_by('-promoted_at')[:4]
     )
     
     exclude_ids = [ad.id for ad in fresh_gold]
     rest_popular = list(
         promoted_active.exclude(id__in=exclude_ids)
         .annotate(plan_priority=plan_priority)
+        .only('id', 'title', 'slug', 'price', 'currency', 'city', 'country', 'ad_type',
+              'promoted_at', 'created_at', 'promotion_plan', 'user_id', 'image')
         .order_by('plan_priority', '-promoted_at', '-created_at')[: max(0, POPULAR_LIMIT - len(fresh_gold))]
     )
     exclude_ids.extend([ad.id for ad in rest_popular])
     
     verified_popular = list(
-        verified_active.exclude(id__in=exclude_ids).order_by('-user__verified_until', '-bump_order')[: max(0, POPULAR_LIMIT - len(fresh_gold) - len(rest_popular))]
+        verified_active.exclude(id__in=exclude_ids)
+        .only('id', 'title', 'slug', 'price', 'currency', 'city', 'country', 'ad_type',
+              'created_at', 'user_id', 'image')
+        .order_by('-user__verified_until', '-bump_order')[: max(0, POPULAR_LIMIT - len(fresh_gold) - len(rest_popular))]
     )
     
     popular_ads = (fresh_gold + rest_popular + verified_popular)[:POPULAR_LIMIT]
     
     # Общая подборка на главной (превью)
-    ads = base_active.order_by('-bump_order')[:8]
+    ads = list(base_active.only('id', 'title', 'slug', 'price', 'currency', 'city', 'country', 
+                                'ad_type', 'created_at', 'user_id', 'image')
+              .order_by('-bump_order')[:8])
     
     # Подсчитываем непрочитанные сообщения для авторизованных пользователей
+    # Оптимизация: используем кэширование и ограничиваем количество запросов
     unread_count = 0
     if request.user.is_authenticated:
         me = request.user
-        threads = ChatThread.objects.filter(Q(buyer=me) | Q(seller=me))
-        for thread in threads:
-            last_read = thread.buyer_last_read_at if me.id == thread.buyer_id else thread.seller_last_read_at
-            if last_read and thread.last_message_at and thread.last_message_at > last_read:
-                unread = ChatMessage.objects.filter(
-                    thread=thread,
-                    created_at__gt=last_read
-                ).exclude(sender=me).count()
-                unread_count += unread
-            elif not last_read and thread.last_message_at:
-                unread = ChatMessage.objects.filter(
-                    thread=thread
-                ).exclude(sender=me).count()
-                unread_count += unread
+        cache_key = f'unread_count_{me.id}'
+        cached_unread = cache.get(cache_key)
+        
+        if cached_unread is not None:
+            unread_count = cached_unread
+        else:
+            # Оптимизированный подсчет: получаем только нужные треды
+            threads = ChatThread.objects.filter(
+                Q(buyer=me) | Q(seller=me)
+            ).select_related('buyer', 'seller')[:100]  # Ограничиваем количество
+            
+            thread_ids = [t.id for t in threads]
+            if thread_ids:
+                # Получаем все непрочитанные сообщения одним запросом
+                buyer_threads = [t.id for t in threads if t.buyer_id == me.id]
+                seller_threads = [t.id for t in threads if t.seller_id == me.id]
+                
+                # Подсчитываем непрочитанные для покупателя
+                if buyer_threads:
+                    buyer_unread = ChatMessage.objects.filter(
+                        thread_id__in=buyer_threads
+                    ).exclude(sender=me).filter(
+                        Q(thread__buyer_last_read_at__isnull=True) |
+                        Q(created_at__gt=F('thread__buyer_last_read_at'))
+                    ).count()
+                    unread_count += buyer_unread
+                
+                # Подсчитываем непрочитанные для продавца
+                if seller_threads:
+                    seller_unread = ChatMessage.objects.filter(
+                        thread_id__in=seller_threads
+                    ).exclude(sender=me).filter(
+                        Q(thread__seller_last_read_at__isnull=True) |
+                        Q(created_at__gt=F('thread__seller_last_read_at'))
+                    ).count()
+                    unread_count += seller_unread
+            
+            # Кэшируем результат на 30 секунд (асинхронно)
+            from .utils.background_tasks import run_in_background, update_unread_count_cache_async
+            run_in_background(update_unread_count_cache_async, me.id, unread_count)
     
     context = {
         'user': request.user,
@@ -161,9 +214,15 @@ def ad_detail(request, slug):
             raise Http404("Объявление не найдено")
     
     # Увеличиваем счетчик просмотров только для активных объявлений или для владельца
+    # Оптимизация: выполняем АСИНХРОННО в фоновом потоке (не блокирует запрос)
     if ad.is_active or (request.user.is_authenticated and ad.user == request.user):
-        ad.views_count += 1
-        ad.save(update_fields=['views_count'])
+        from .utils.background_tasks import run_in_background, increment_ad_views_async
+        
+        user_ip = request.META.get("REMOTE_ADDR", "unknown")
+        # Запускаем обновление счетчика в фоновом потоке
+        run_in_background(increment_ad_views_async, ad.id, user_ip)
+        # Обновляем объект в памяти (может быть немного устаревшим, но это нормально)
+        ad.refresh_from_db()
     
     # Проверяем, добавлено ли в избранное
     is_favorited = False
@@ -767,7 +826,13 @@ def logout_user(request):
 
 def get_filtered_ads(request, limit=None, ad_type_filter=None):
     """Вспомогательная функция для фильтрации объявлений"""
-    ads = Advertisement.objects.filter(is_active=True).exclude(slug='').exclude(slug__isnull=True).select_related('user')
+    # Оптимизация: используем select_related и prefetch_related для уменьшения количества запросов
+    ads = (Advertisement.objects
+           .filter(is_active=True)
+           .exclude(slug='')
+           .exclude(slug__isnull=True)
+           .select_related('user')
+           .prefetch_related('images'))
     
     # Фильтр по пользователю (для просмотра объявлений конкретного пользователя)
     user_id = request.GET.get('user')
@@ -1596,9 +1661,16 @@ def verify_info(request):
     # Получаем страну из запроса или localStorage (по умолчанию uz)
     country = request.GET.get('country') or 'uz'
     
+    
     # Получаем цену верификации для выбранной страны
-    amount_in_currency, amount_usd = get_verification_price_for_country(country)
-    currency_code = get_currency_for_country(country)
+    try:
+        amount_in_currency, amount_usd = get_verification_price_for_country(country)
+        currency_code = get_currency_for_country(country)
+    except Exception:
+        # В случае ошибки используем дефолтные значения
+        country = 'uz'
+        amount_in_currency, amount_usd = get_verification_price_for_country(country)
+        currency_code = get_currency_for_country(country)
 
     return render(request, 'uzmat/verify_info.html', {
         'user': user,

@@ -48,6 +48,9 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'uzmat.middleware_security.SecurityHeadersMiddleware',  # Безопасные HTTP заголовки
+    'uzmat.middleware_security.RateLimitMiddleware',  # Защита от брутфорса
+    'uzmat.middleware_security.InputSanitizationMiddleware',  # Санитизация входных данных
     'uzmat.middleware.FileUploadErrorMiddleware',  # Обработка ошибок загрузки файлов
 ]
 
@@ -172,9 +175,16 @@ DATA_UPLOAD_MAX_NUMBER_FIELDS = 1000
 # Session settings (запоминание пользователя)
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 30  # 30 дней
 SESSION_SAVE_EVERY_REQUEST = True
+SESSION_COOKIE_SECURE = not DEBUG  # HTTPS только в production
+SESSION_COOKIE_HTTPONLY = True  # Защита от XSS
+SESSION_COOKIE_SAMESITE = 'Lax'  # Защита от CSRF
 
 # Login URL для редиректа неавторизованных пользователей
 LOGIN_URL = '/auth/'
+
+# Безопасность: количество попыток входа
+LOGIN_ATTEMPTS_LIMIT = 5  # Максимум попыток входа
+LOGIN_ATTEMPTS_TIMEOUT = 300  # Блокировка на 5 минут (в секундах)
 
 # Django REST Framework settings
 REST_FRAMEWORK = {
@@ -188,6 +198,28 @@ REST_FRAMEWORK = {
 # CSRF настройки для локальной разработки
 CSRF_TRUSTED_ORIGINS_STR = os.environ.get('CSRF_TRUSTED_ORIGINS', 'http://localhost:8000,http://127.0.0.1:8000')
 CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in CSRF_TRUSTED_ORIGINS_STR.split(',') if origin.strip()]
+CSRF_COOKIE_SECURE = not DEBUG  # HTTPS только в production
+CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_SAMESITE = 'Lax'
+CSRF_USE_SESSIONS = False  # Используем cookies для CSRF токена
+
+# Безопасные HTTP заголовки
+SECURE_BROWSER_XSS_FILTER = True  # XSS фильтр браузера
+SECURE_CONTENT_TYPE_NOSNIFF = True  # Защита от MIME-sniffing
+X_FRAME_OPTIONS = 'DENY'  # Защита от clickjacking (уже есть в middleware, но дублируем)
+SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0  # HSTS только в production
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True if not DEBUG else False
+SECURE_HSTS_PRELOAD = True if not DEBUG else False
+SECURE_SSL_REDIRECT = False  # Nginx должен обрабатывать редирект на HTTPS
+
+# Content Security Policy (базовая защита от XSS)
+# В production можно настроить более строгую политику
+if not DEBUG:
+    SECURE_CSP_DEFAULT_SRC = "'self'"
+    SECURE_CSP_SCRIPT_SRC = "'self' 'unsafe-inline'"  # Для Django admin и некоторых скриптов
+    SECURE_CSP_STYLE_SRC = "'self' 'unsafe-inline'"
+    SECURE_CSP_IMG_SRC = "'self' data: https:"
+    SECURE_CSP_FONT_SRC = "'self' data:"
 
 # Click платежная система настройки
 CLICK_SETTINGS = {
@@ -239,4 +271,41 @@ CACHES = {
 # EMAIL_HOST_PASSWORD = 'your-app-password'
 # DEFAULT_FROM_EMAIL = 'your-email@yandex.ru'
 # DEFAULT_FROM_NAME = 'Uzmat'
+
+# Логирование для безопасности
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'security_file': {
+            'level': 'WARNING',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'security.log'),
+            'formatter': 'verbose',
+        },
+        'console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'security': {
+            'handlers': ['security_file', 'console'],
+            'level': 'WARNING',
+            'propagate': True,
+        },
+        'django.security': {
+            'handlers': ['security_file', 'console'],
+            'level': 'WARNING',
+            'propagate': True,
+        },
+    },
+}
 

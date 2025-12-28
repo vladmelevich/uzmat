@@ -34,6 +34,13 @@ from .utils.currency import (
     get_currency_for_country,
 )
 from .utils.click_payment import verify_click_signature, generate_click_payment_url
+from .utils.security import (
+    sanitize_string,
+    validate_email,
+    validate_phone,
+    sanitize_search_query,
+    check_sql_injection_patterns,
+)
 from decimal import Decimal, InvalidOperation
 from itertools import chain
 
@@ -278,12 +285,36 @@ def auth(request):
             email = request.POST.get('email', '').strip()
             password = request.POST.get('password', '').strip()
             
+            # Валидация входных данных (защита от SQL инъекций и XSS)
             if not email or not password:
                 messages.error(request, 'Заполните все поля', extra_tags='auth')
                 return render(request, 'uzmat/auth.html')
             
+            # Валидация email с использованием утилиты безопасности
+            if not validate_email(email):
+                messages.error(request, 'Неверный формат email', extra_tags='auth')
+                return render(request, 'uzmat/auth.html')
+            
+            # Проверка на SQL инъекции (дополнительная защита)
+            if check_sql_injection_patterns(email) or check_sql_injection_patterns(password):
+                messages.error(request, 'Обнаружены недопустимые символы', extra_tags='auth')
+                return render(request, 'uzmat/auth.html')
+            
+            # Проверка длины пароля
+            if len(password) > 128:
+                messages.error(request, 'Пароль слишком длинный', extra_tags='auth')
+                return render(request, 'uzmat/auth.html')
+            
+            # Django ORM автоматически защищает от SQL инъекций через параметризованные запросы
             user = authenticate(request, username=email, password=password)
             if user:
+                # Успешный вход - сбрасываем счетчик попыток
+                from django.core.cache import cache
+                ip_address = request.META.get('HTTP_X_FORWARDED_FOR', '').split(',')[0] if request.META.get('HTTP_X_FORWARDED_FOR') else request.META.get('REMOTE_ADDR', '')
+                if ip_address:
+                    cache.delete(f'login_attempts_{ip_address}')
+                    cache.delete(f'rate_limit_login_{ip_address}')
+                
                 login(request, user)
                 messages.success(request, 'Вход выполнен успешно!', extra_tags='auth')
                 return redirect('uzmat:profile')
@@ -639,6 +670,19 @@ def chat_send(request, thread_id: int):
 
         if not text and not image:
             return JsonResponse({'ok': False, 'error': 'Введите текст или прикрепите фото'}, status=400)
+        
+        # Санитизация текста сообщения (защита от XSS и SQL инъекций)
+        if text:
+            # Ограничиваем длину сообщения
+            if len(text) > 5000:
+                return JsonResponse({'ok': False, 'error': 'Сообщение слишком длинное (максимум 5000 символов)'}, status=400)
+            
+            # Проверка на SQL инъекции (дополнительная защита)
+            if check_sql_injection_patterns(text):
+                import logging
+                logger = logging.getLogger('security')
+                logger.warning(f'Обнаружена попытка SQL инъекции в сообщении чата от пользователя {me.id}')
+                return JsonResponse({'ok': False, 'error': 'Сообщение содержит недопустимые символы'}, status=400)
 
         MAX_IMAGE_BYTES = 2 * 1024 * 1024  # 2 МБ
 
@@ -876,17 +920,21 @@ def get_filtered_ads(request, limit=None, ad_type_filter=None):
         except (ValueError, TypeError):
             pass
     
-    # Поиск по тексту
+    # Поиск по тексту (с санитизацией для защиты от SQL инъекций)
     search = request.GET.get('search')
     if search:
-        ads = ads.filter(
-            Q(title__icontains=search) |
-            Q(description__icontains=search) |
-            Q(equipment_type__icontains=search) |
-            Q(brand__icontains=search) |
-            Q(part_name__icontains=search) |
-            Q(service_name__icontains=search)
-        )
+        # Санитизируем поисковый запрос
+        search = sanitize_search_query(search)
+        if search:  # Проверяем, что после санитизации запрос не пустой
+            # Django ORM автоматически защищает от SQL инъекций через параметризованные запросы
+            ads = ads.filter(
+                Q(title__icontains=search) |
+                Q(description__icontains=search) |
+                Q(equipment_type__icontains=search) |
+                Q(brand__icontains=search) |
+                Q(part_name__icontains=search) |
+                Q(service_name__icontains=search)
+            )
     
     # Если нужен лимит, применяем его, но возвращаем QuerySet для пагинации
     if limit:

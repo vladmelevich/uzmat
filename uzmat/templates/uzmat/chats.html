@@ -273,7 +273,7 @@
                     <div class="msg-row {% if m.sender_id == user.id %}me{% endif %}" data-mid="{{ m.id }}">
                       <div class="msg-bubble">
                         {% if m.text %}
-                          <div class="msg-text">{{ m.text }}</div>
+                          <div class="msg-text">{{ m.text|escape }}</div>
                         {% endif %}
                         {% if m.system_action == 'renew_badge' and m.system_url %}
                           <div class="msg-actions" style="justify-content: flex-start;">
@@ -362,7 +362,7 @@
                     <div class="msg-row {% if m.sender_id == user.id %}me{% endif %}" data-mid="{{ m.id }}">
                       <div class="msg-bubble">
                         {% if m.text %}
-                          <div class="msg-text">{{ m.text }}</div>
+                          <div class="msg-text">{{ m.text|escape }}</div>
                         {% endif %}
                         {% if m.system_action == 'renew_badge' and m.system_url %}
                           <div class="msg-actions" style="justify-content: flex-start;">

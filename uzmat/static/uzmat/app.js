@@ -21,6 +21,7 @@
       }
       
       // Проверяем каждый файл
+      const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10 МБ
       const validFiles = [];
       for (const file of files) {
         // Проверяем тип файла
@@ -28,6 +29,14 @@
           alert('Файл "' + file.name + '" не является изображением. Пропущен.');
           continue;
         }
+        
+        // Проверяем размер файла
+        if (file.size > MAX_IMAGE_SIZE) {
+          const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+          alert('Файл "' + file.name + '" слишком большой (' + sizeMB + ' МБ). Максимальный размер: 10 МБ. Файл пропущен.');
+          continue;
+        }
+        
         validFiles.push(file);
       }
       
@@ -130,11 +139,26 @@
           return;
         }
         
-        // Добавляем файлы
-        selectedFiles = selectedFiles.concat(files);
-        updateFileInput();
-        renderPhotoPreview();
-        console.log('Файлы добавлены через drag-and-drop:', files.length);
+        // Проверяем размер каждого файла
+        const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10 МБ
+        const validFiles = [];
+        for (const file of files) {
+          // Проверяем размер файла
+          if (file.size > MAX_IMAGE_SIZE) {
+            const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+            alert('Файл "' + file.name + '" слишком большой (' + sizeMB + ' МБ). Максимальный размер: 10 МБ. Файл пропущен.');
+            continue;
+          }
+          validFiles.push(file);
+        }
+        
+        // Добавляем только валидные файлы
+        if (validFiles.length > 0) {
+          selectedFiles = selectedFiles.concat(validFiles);
+          updateFileInput();
+          renderPhotoPreview();
+          console.log('Файлы добавлены через drag-and-drop:', validFiles.length);
+        }
       }
     });
   }

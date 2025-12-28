@@ -343,19 +343,21 @@
               display: block !important;
             }
           </style>
-            {% if user.is_authenticated %}
+            {% if user.is_authenticated and user.id != ad.user.id %}
               <a class="uz-btn uz-btn-outline" style="width: 100%; margin-top: 20px;" href="{% url 'uzmat:chat_start' ad_id=ad.id %}">Написать сообщение</a>
-            {% else %}
+            {% elif not user.is_authenticated %}
               <a class="uz-btn uz-btn-outline" style="width: 100%; margin-top: 20px;" href="{% url 'uzmat:onboarding' %}">Написать сообщение</a>
             {% endif %}
-            {% if user.is_authenticated %}
+            {% if user.is_authenticated and user.id != ad.user.id %}
             <button class="uz-btn uz-btn-ghost" style="width: 100%; text-align: center; font-size: 13px;" onclick="toggleFavoriteDetail({{ ad.id }})" id="favorite-btn">
               {% if is_favorited %}Удалить из избранного{% else %}Добавить в избранное{% endif %}
             </button>
             {% endif %}
+            {% if not user.is_authenticated or user.id != ad.user.id %}
             <a href="{% url 'uzmat:user_profile' user_id=ad.user.id %}" class="uz-btn uz-btn-ghost" style="width: 100%; text-align: center; font-size: 13px;">
               Все объявления продавца
             </a>
+            {% endif %}
           </div>
         </div>
       </aside>

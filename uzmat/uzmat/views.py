@@ -628,49 +628,72 @@ def chat_send(request, thread_id: int):
     if request.method != 'POST':
         return JsonResponse({'ok': False, 'error': 'Метод не поддерживается'}, status=405)
 
-    me = request.user
-    thread = get_object_or_404(ChatThread.objects.select_related('advertisement', 'buyer', 'seller'), id=thread_id)
-    if me.id not in (thread.buyer_id, thread.seller_id):
-        return JsonResponse({'ok': False, 'error': 'Нет доступа'}, status=403)
+    try:
+        me = request.user
+        thread = get_object_or_404(ChatThread.objects.select_related('advertisement', 'buyer', 'seller'), id=thread_id)
+        if me.id not in (thread.buyer_id, thread.seller_id):
+            return JsonResponse({'ok': False, 'error': 'Нет доступа'}, status=403)
 
-    text = (request.POST.get('text') or '').strip()
-    image = request.FILES.get('image')
+        text = (request.POST.get('text') or '').strip()
+        image = request.FILES.get('image')
 
-    if not text and not image:
-        return JsonResponse({'ok': False, 'error': 'Введите текст или прикрепите фото'}, status=400)
+        if not text and not image:
+            return JsonResponse({'ok': False, 'error': 'Введите текст или прикрепите фото'}, status=400)
 
-    MAX_IMAGE_BYTES = 2 * 1024 * 1024  # 2 МБ
-
-    if image:
-        content_type = getattr(image, 'content_type', '') or ''
-        if not content_type.startswith('image/'):
-            return JsonResponse({'ok': False, 'error': 'Можно прикреплять только изображения'}, status=400)
-        if image.size and image.size > MAX_IMAGE_BYTES:
-            return JsonResponse({'ok': False, 'error': 'Размер фото слишком большой (макс. 2 МБ)'}, status=400)
-
-    with transaction.atomic():
-        msg = ChatMessage(thread=thread, sender=me)
-        msg.set_text(text)
-        msg.save()
+        MAX_IMAGE_BYTES = 2 * 1024 * 1024  # 2 МБ
 
         if image:
-            ChatImage.objects.create(message=msg, image=image)
+            # Проверяем, что файл был загружен (может быть None, если nginx отклонил запрос)
+            if not hasattr(image, 'size') or image.size is None:
+                return JsonResponse({'ok': False, 'error': 'Размер фотографии слишком большой. Максимальный размер: 2 МБ. Выберите файл меньшего размера.'}, status=400)
+            
+            content_type = getattr(image, 'content_type', '') or ''
+            if not content_type.startswith('image/'):
+                return JsonResponse({'ok': False, 'error': 'Можно прикреплять только изображения'}, status=400)
+            
+            if image.size > MAX_IMAGE_BYTES:
+                size_mb = (image.size / (1024 * 1024)).toFixed(2)
+                return JsonResponse({
+                    'ok': False, 
+                    'error': f'Размер фотографии слишком большой ({size_mb} МБ). Максимальный размер: 2 МБ. Выберите файл меньшего размера.'
+                }, status=400)
 
-        thread.last_message_at = timezone.now()
-        thread.save(update_fields=['last_message_at'])
+        with transaction.atomic():
+            msg = ChatMessage(thread=thread, sender=me)
+            msg.set_text(text)
+            msg.save()
 
-    return JsonResponse({
-        'ok': True,
-        'message': {
-            'id': msg.id,
-            'sender_id': msg.sender_id,
-            'text': msg.text,
-            'created_at': msg.created_at.strftime('%H:%M'),
-            'images': [img.image.url for img in msg.images.all()],
-            'system_action': msg.system_action,
-            'system_url': msg.system_url,
-        }
-    })
+            if image:
+                ChatImage.objects.create(message=msg, image=image)
+
+            thread.last_message_at = timezone.now()
+            thread.save(update_fields=['last_message_at'])
+
+        return JsonResponse({
+            'ok': True,
+            'message': {
+                'id': msg.id,
+                'sender_id': msg.sender_id,
+                'text': msg.text,
+                'created_at': msg.created_at.strftime('%H:%M'),
+                'images': [img.image.url for img in msg.images.all()],
+                'system_action': msg.system_action,
+                'system_url': msg.system_url,
+            }
+        })
+    except Exception as e:
+        # Обрабатываем любые ошибки, связанные с размером файла
+        error_msg = str(e).lower()
+        if any(keyword in error_msg for keyword in ['413', 'too large', 'file size', 'request entity']):
+            return JsonResponse({
+                'ok': False, 
+                'error': 'Размер фотографии слишком большой. Максимальный размер: 2 МБ. Выберите файл меньшего размера.'
+            }, status=400)
+        # Для других ошибок возвращаем общее сообщение
+        return JsonResponse({
+            'ok': False, 
+            'error': 'Произошла ошибка при отправке сообщения. Попробуйте еще раз.'
+        }, status=500)
 
 
 @login_required
@@ -1006,6 +1029,23 @@ def catalog(request):
 def create_ad(request):
     """Страница создания объявления"""
     if request.method == 'POST':
+        # Проверяем размер запроса до обработки (если nginx не отклонил)
+        try:
+            # Проверяем Content-Length заголовок
+            content_length = request.META.get('CONTENT_LENGTH', '0')
+            if content_length:
+                try:
+                    content_length = int(content_length)
+                    # Если размер запроса больше 50 МБ (лимит nginx), предупреждаем
+                    if content_length > 50 * 1024 * 1024:
+                        messages.error(request, 'Размер загружаемых файлов слишком большой. Максимальный размер одного фото: 10 МБ. Выберите файлы меньшего размера.')
+                        context = {'user': request.user}
+                        return render(request, 'uzmat/create_ad.html', context)
+                except (ValueError, TypeError):
+                    pass
+        except Exception:
+            pass  # Игнорируем ошибки проверки
+        
         try:
             # Получаем данные формы
             ad_type = request.POST.get('ad_type')
@@ -1177,7 +1217,31 @@ def create_ad(request):
                         if len(photos) > 10:
                             messages.warning(request, 'Загружено больше 10 фотографий. Сохранены первые 10.')
                         
-                        for index, photo in enumerate(photos[:10]):  # Ограничиваем до 10
+                        MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10 МБ на фото
+                        valid_photos = []
+                        
+                        for photo in photos[:10]:
+                            # Проверяем, что файл был загружен (может быть None, если nginx отклонил запрос)
+                            if not hasattr(photo, 'size') or photo.size is None:
+                                messages.error(request, f'Файл "{getattr(photo, "name", "неизвестный")}" не был загружен. Размер файла слишком большой. Максимальный размер: 10 МБ.')
+                                continue
+                            
+                            # Проверяем размер фото
+                            if photo.size > MAX_IMAGE_SIZE:
+                                size_mb = (photo.size / (1024 * 1024)).toFixed(2)
+                                messages.error(request, f'Фото "{photo.name}" слишком большое ({size_mb} МБ). Максимальный размер: 10 МБ. Выберите файл меньшего размера.')
+                                continue
+                            
+                            # Проверяем тип файла
+                            content_type = getattr(photo, 'content_type', '') or ''
+                            if not content_type.startswith('image/'):
+                                messages.warning(request, f'Файл "{photo.name}" не является изображением. Пропущен.')
+                                continue
+                            
+                            valid_photos.append(photo)
+                        
+                        # Сохраняем валидные фото
+                        for index, photo in enumerate(valid_photos):
                             AdvertisementImage.objects.create(
                                 advertisement=ad,
                                 image=photo,
@@ -1203,10 +1267,19 @@ def create_ad(request):
         except Exception as e:
             import traceback
             error_detail = traceback.format_exc()
-            messages.error(request, f'Ошибка при создании объявления: {str(e)}')
-            # В режиме отладки выводим детали ошибки
-            if django_settings.DEBUG:
-                messages.error(request, f'Детали: {error_detail[:500]}')
+            error_msg = str(e).lower()
+            
+            # Проверяем, является ли это ошибкой размера файла
+            if any(keyword in error_msg for keyword in [
+                '413', 'too large', 'file size', 'max upload size', 
+                'request entity', 'request body too large', 'content-length'
+            ]):
+                messages.error(request, 'Размер фотографии слишком большой. Максимальный размер одного фото: 10 МБ. Выберите файл меньшего размера.')
+            else:
+                messages.error(request, f'Ошибка при создании объявления: {str(e)}')
+                # В режиме отладки выводим детали ошибки
+                if django_settings.DEBUG:
+                    messages.error(request, f'Детали: {error_detail[:500]}')
             context = {'user': request.user}
             return render(request, 'uzmat/create_ad.html', context)
     
@@ -1396,9 +1469,21 @@ def edit_ad(request, slug):
                 ad.slug = new_slug
             
             # Обработка изображений
+            MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10 МБ на фото
+            
             # Основное изображение (если загружено)
             if 'image' in request.FILES:
-                ad.image = request.FILES['image']
+                main_image = request.FILES['image']
+                # Проверяем размер
+                if main_image.size and main_image.size > MAX_IMAGE_SIZE:
+                    messages.error(request, f'Основное фото слишком большое (макс. 10 МБ).')
+                else:
+                    # Проверяем тип файла
+                    content_type = getattr(main_image, 'content_type', '') or ''
+                    if content_type.startswith('image/'):
+                        ad.image = main_image
+                    else:
+                        messages.error(request, 'Основной файл не является изображением.')
             
             # Дополнительные изображения (multiple files)
             photos = request.FILES.getlist('photos')
@@ -1411,15 +1496,31 @@ def edit_ad(request, slug):
                 current_images_count = ad.images.count()
                 max_images = 10 - current_images_count
                 
-                if max_images > 0:
-                    for index, photo in enumerate(photos[:max_images]):
+                valid_photos = []
+                for photo in photos[:max_images]:
+                    # Проверяем размер фото
+                    if photo.size and photo.size > MAX_IMAGE_SIZE:
+                        messages.warning(request, f'Фото "{photo.name}" слишком большое (макс. 10 МБ). Пропущено.')
+                        continue
+                    
+                    # Проверяем тип файла
+                    content_type = getattr(photo, 'content_type', '') or ''
+                    if not content_type.startswith('image/'):
+                        messages.warning(request, f'Файл "{photo.name}" не является изображением. Пропущен.')
+                        continue
+                    
+                    valid_photos.append(photo)
+                
+                # Сохраняем валидные фото
+                if max_images > 0 and valid_photos:
+                    for index, photo in enumerate(valid_photos[:max_images]):
                         AdvertisementImage.objects.create(
                             advertisement=ad,
                             image=photo,
                             is_main=False,
                             order=current_images_count + index
                         )
-                else:
+                elif max_images <= 0:
                     messages.warning(request, 'Достигнут лимит в 10 фотографий. Удалите старые фотографии, чтобы добавить новые.')
             
             ad.save()

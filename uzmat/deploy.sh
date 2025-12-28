@@ -51,7 +51,11 @@ docker-compose exec -T web python manage.py migrate --noinput
 echo -e "${YELLOW}📦 Собираем статические файлы...${NC}"
 docker-compose exec -T web python manage.py collectstatic --noinput
 
-# 9. Проверяем статус
+# 9. Создаем суперпользователя (если еще не существует)
+echo -e "${YELLOW}👤 Создаем суперпользователя...${NC}"
+docker-compose exec -T web python manage.py create_default_superuser
+
+# 10. Проверяем статус
 echo -e "${YELLOW}🔍 Проверяем статус контейнеров...${NC}"
 docker-compose ps
 

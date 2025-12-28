@@ -33,6 +33,7 @@ services:
     command: >
       sh -c "python manage.py migrate --noinput &&
              python manage.py collectstatic --noinput &&
+             python manage.py create_default_superuser &&
              gunicorn --bind 0.0.0.0:8000 --workers 3 --timeout 120 --access-logfile - --error-logfile - uzmat_site.wsgi:application"
     volumes:
       - ./media:/app/media
@@ -46,6 +47,9 @@ services:
       - DB_HOST=db
       - DB_PORT=3306
       - DB_ENGINE=mysql
+      - DJANGO_SUPERUSER_USERNAME=admin
+      - DJANGO_SUPERUSER_EMAIL=admin@gmail.com
+      - DJANGO_SUPERUSER_PASSWORD=12133
     depends_on:
       db:
         condition: service_healthy

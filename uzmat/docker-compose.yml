@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  # MySQL база данных
+  db:
+    image: mysql:8.0
+    container_name: uzmat_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_NAME:-uzmat}
+      MYSQL_USER: ${DB_USER:-uzmat_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-uzmat_password}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_password}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./backups:/backups
+    ports:
+      - "3306:3306"
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-root_password}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - uzmat_network
+
+  # Django приложение
+  web:
+    build: .
+    container_name: uzmat_web
+    restart: unless-stopped
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py collectstatic --noinput &&
+             gunicorn --bind 0.0.0.0:8000 --workers 3 --timeout 120 --access-logfile - --error-logfile - uzmat_site.wsgi:application"
+    volumes:
+      - ./media:/app/media
+      - ./staticfiles:/app/staticfiles
+      - .:/app
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_ENGINE=mysql
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - uzmat_network
+
+  # Nginx (опционально, для production)
+  nginx:
+    image: nginx:alpine
+    container_name: uzmat_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./staticfiles:/usr/share/nginx/html/static:ro
+      - ./media:/usr/share/nginx/html/media:ro
+    depends_on:
+      - web
+    networks:
+      - uzmat_network
+
+volumes:
+  mysql_data:
+    driver: local
+
+networks:
+  uzmat_network:
+    driver: bridge
+

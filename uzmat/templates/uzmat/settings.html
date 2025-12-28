@@ -214,32 +214,19 @@
           const lang = this.getAttribute('data-lang');
           const country = this.getAttribute('data-country');
           
-          if (lang && window.i18n) {
-            // Мгновенное обновление активного состояния кнопок (без задержек)
-            countryButtons.forEach(btn => {
-              btn.classList.remove('uz-btn-outline');
-              btn.classList.add('uz-btn-ghost');
-            });
-            this.classList.remove('uz-btn-ghost');
-            this.classList.add('uz-btn-outline');
-            
-            // Сохраняем выбранную страну
+          if (lang) {
+            // Сохраняем выбранную страну и язык
             localStorage.setItem('selected_country', country);
+            localStorage.setItem('i18n_lang', lang);
             
-            // Устанавливаем язык МГНОВЕННО (синхронно)
-            window.i18n.setLanguage(lang);
+            // Устанавливаем язык через i18n (если доступен)
+            if (window.i18n && window.i18n.setLanguage) {
+              window.i18n.setLanguage(lang);
+            }
             
-            // Показываем уведомление асинхронно, чтобы не блокировать перевод
-            setTimeout(() => {
-              if (window.showToast) {
-                const langNames = {
-                  'ru': 'Русский',
-                  'uz': 'O\'zbek',
-                  'kk': 'Қазақ',
-                };
-                window.showToast(`Язык изменен на ${langNames[lang] || lang}`, 'success');
-              }
-            }, 50);
+            // Перезагружаем страницу для применения изменений языка
+            // Это гарантирует, что все элементы будут отображаться на правильном языке
+            window.location.reload();
           }
         });
       });

@@ -312,7 +312,7 @@ def register_individual(request):
             messages.error(request, 'Пользователь с таким email уже существует', extra_tags='auth')
             return render(request, 'uzmat/auth.html', {'show_register': True})
         
-        # Создаем пользователя (но не логиним сразу)
+        # Создаем пользователя и сразу логиним
         user = User.objects.create_user(
             username=email,
             email=email,
@@ -321,13 +321,10 @@ def register_individual(request):
             account_type='individual'
         )
         
-        # Сохраняем email в сессии для проверки кода
-        request.session['registration_email'] = email
-        request.session['registration_user_id'] = user.id
-        
-        # Редиректим на страницу ввода кода
-        messages.info(request, 'Код подтверждения отправлен на вашу почту', extra_tags='auth')
-        return redirect('uzmat:auth_code')
+        # Сразу логиним пользователя
+        login(request, user)
+        messages.success(request, 'Регистрация успешно завершена! Добро пожаловать в Uzmat!', extra_tags='auth')
+        return redirect('uzmat:profile')
     
     # Если GET запрос, показываем страницу регистрации
     return render(request, 'uzmat/auth.html', {'show_register': True})
@@ -359,7 +356,7 @@ def register_company(request):
             messages.error(request, 'Пользователь с таким email уже существует', extra_tags='auth')
             return render(request, 'uzmat/register_company.html')
         
-        # Создаем пользователя для компании
+        # Создаем пользователя для компании и сразу логиним
         user = User.objects.create_user(
             username=email,
             email=email,
@@ -376,56 +373,12 @@ def register_company(request):
             company_website=company_website if company_website else None,
         )
         
-        # Сохраняем email в сессии для проверки кода
-        request.session['registration_email'] = email
-        request.session['registration_user_id'] = user.id
-        
-        # Редиректим на страницу ввода кода
-        messages.info(request, 'Код подтверждения отправлен на вашу почту', extra_tags='auth')
-        return redirect('uzmat:auth_code')
-    
-    return render(request, 'uzmat/register_company.html')
-
-
-def auth_code(request):
-    """Страница ввода кода подтверждения"""
-    # Если пользователь уже авторизован, редиректим в профиль
-    if request.user.is_authenticated:
+        # Сразу логиним пользователя
+        login(request, user)
+        messages.success(request, 'Регистрация успешно завершена! Добро пожаловать в Uzmat!', extra_tags='auth')
         return redirect('uzmat:profile')
     
-    # Проверяем, есть ли email в сессии (пользователь пришел с регистрации)
-    registration_email = request.session.get('registration_email')
-    registration_user_id = request.session.get('registration_user_id')
-    
-    if not registration_email or not registration_user_id:
-        # Если нет данных о регистрации, редиректим на страницу входа
-        messages.warning(request, 'Сначала пройдите регистрацию', extra_tags='auth')
-        return redirect('uzmat:auth')
-    
-    if request.method == 'POST':
-        code = request.POST.get('code', '').strip()
-        
-        # Проверка кода - базовый код для входа: 1234
-        if code == '1234':
-            # Код принят, логиним пользователя
-            try:
-                user = User.objects.get(id=registration_user_id, email=registration_email)
-                login(request, user)
-                
-                # Очищаем сессию
-                del request.session['registration_email']
-                del request.session['registration_user_id']
-                
-                # Сообщение об успешной регистрации
-                messages.success(request, 'Регистрация успешно завершена! Добро пожаловать в Uzmat!', extra_tags='auth')
-                return redirect('uzmat:profile')
-            except User.DoesNotExist:
-                messages.error(request, 'Ошибка при подтверждении регистрации', extra_tags='auth')
-                return redirect('uzmat:auth')
-        else:
-            messages.error(request, 'Неверный код подтверждения. Используйте код: 1234', extra_tags='auth')
-    
-    return render(request, 'uzmat/auth_code.html', {'email': registration_email})
+    return render(request, 'uzmat/register_company.html')
 
 
 @login_required(login_url='/onboarding/')

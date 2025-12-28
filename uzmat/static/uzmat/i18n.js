@@ -2609,9 +2609,19 @@
   function init() {
     // Восстанавливаем язык из localStorage (приоритет у сохраненного языка)
     const savedLang = localStorage.getItem('i18n_lang');
-    if (savedLang && translations[savedLang]) {
-      currentLang = savedLang;
-      document.documentElement.setAttribute('lang', savedLang);
+    const savedCountry = localStorage.getItem('selected_country');
+    
+    // Если есть сохраненная страна, используем язык из страны
+    let langToUse = savedLang;
+    if (savedCountry && !savedLang) {
+      langToUse = getLangByCountry(savedCountry);
+    }
+    
+    if (langToUse && translations[langToUse]) {
+      currentLang = langToUse;
+      document.documentElement.setAttribute('lang', langToUse);
+      // Сохраняем язык в localStorage для надежности
+      localStorage.setItem('i18n_lang', langToUse);
     } else {
       // Если язык не сохранен, используем язык из HTML или дефолтный
       const htmlLang = document.documentElement.getAttribute('lang') || 'ru';
@@ -2628,7 +2638,7 @@
         // Сбрасываем кэш для перестроения на новой странице
         translationCache = null;
         buildTranslationCache();
-        translatePage();
+        translatePage(currentLang);
       } catch (e) {
         console.error('Ошибка при применении переводов:', e);
         // Повторная попытка через небольшую задержку
@@ -2641,13 +2651,24 @@
       document.addEventListener('DOMContentLoaded', () => {
         // Задержка для полной загрузки всех элементов
         setTimeout(applyTranslations, 150);
+        // Дополнительное обновление через небольшую задержку для динамических элементов
+        setTimeout(() => {
+          translatePage(currentLang);
+        }, 300);
       });
     } else if (document.readyState === 'interactive' || document.readyState === 'complete') {
       // DOM уже загружен или загружается
       setTimeout(applyTranslations, 150);
+      // Дополнительное обновление
+      setTimeout(() => {
+        translatePage(currentLang);
+      }, 300);
     } else {
       // Если состояние неизвестно, пробуем сразу
       applyTranslations();
+      setTimeout(() => {
+        translatePage(currentLang);
+      }, 300);
     }
   }
 

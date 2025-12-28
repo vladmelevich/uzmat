@@ -4,6 +4,10 @@ Django settings for uzmat_site project.
 
 from pathlib import Path
 import os
+from dotenv import load_dotenv
+
+# Загружаем переменные окружения из .env файла
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -13,12 +17,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-uzmat-premium-site-2024-secret-key-change-in-production'
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-uzmat-premium-site-2024-secret-key-change-in-production')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+# Разрешенные хосты (из переменной окружения или по умолчанию)
+ALLOWED_HOSTS_STR = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1')
+ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS_STR.split(',') if host.strip()]
 
 
 # Application definition
@@ -68,12 +74,39 @@ WSGI_APPLICATION = 'uzmat_site.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+# Настройки базы данных из переменных окружения
+# Если не указаны, используется SQLite для разработки
+DB_ENGINE = os.environ.get('DB_ENGINE', 'sqlite3')
+DB_NAME = os.environ.get('DB_NAME', '')
+DB_USER = os.environ.get('DB_USER', '')
+DB_PASSWORD = os.environ.get('DB_PASSWORD', '')
+DB_HOST = os.environ.get('DB_HOST', '')
+DB_PORT = os.environ.get('DB_PORT', '')
+
+if DB_ENGINE == 'mysql' and DB_NAME and DB_USER and DB_PASSWORD:
+    # MySQL база данных
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': DB_NAME,
+            'USER': DB_USER,
+            'PASSWORD': DB_PASSWORD,
+            'HOST': DB_HOST or 'localhost',
+            'PORT': DB_PORT or '3306',
+            'OPTIONS': {
+                'charset': 'utf8mb4',
+                'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+            },
+        }
     }
-}
+else:
+    # SQLite для разработки (по умолчанию)
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 
 # Password validation
@@ -152,14 +185,15 @@ REST_FRAMEWORK = {
 }
 
 # CSRF настройки для локальной разработки
-CSRF_TRUSTED_ORIGINS = ['http://localhost:8000', 'http://127.0.0.1:8000']
+CSRF_TRUSTED_ORIGINS_STR = os.environ.get('CSRF_TRUSTED_ORIGINS', 'http://localhost:8000,http://127.0.0.1:8000')
+CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in CSRF_TRUSTED_ORIGINS_STR.split(',') if origin.strip()]
 
 # Click платежная система настройки
 CLICK_SETTINGS = {
-    'SERVICE_ID': '81723',
-    'MERCHANT_ID': '45447',
-    'SECRET_KEY': 'KvAacs6ABwlULaC',
-    'MERCHANT_USER_ID': '63140',
+    'SERVICE_ID': os.environ.get('CLICK_SERVICE_ID', '81723'),
+    'MERCHANT_ID': os.environ.get('CLICK_MERCHANT_ID', '45447'),
+    'SECRET_KEY': os.environ.get('CLICK_SECRET_KEY', 'KvAacs6ABwlULaC'),
+    'MERCHANT_USER_ID': os.environ.get('CLICK_MERCHANT_USER_ID', '63140'),
     'API_URL': 'https://api.click.uz/v2/merchant/',
 }
 
@@ -193,4 +227,15 @@ CACHES = {
 #         'TIMEOUT': 300,
 #     }
 # }
+
+# Настройки email отключены (не используются в проекте)
+# Если понадобится отправка email в будущем, раскомментируйте и настройте:
+# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# EMAIL_HOST = 'smtp.yandex.ru'
+# EMAIL_PORT = 465
+# EMAIL_USE_SSL = True
+# EMAIL_HOST_USER = 'your-email@yandex.ru'
+# EMAIL_HOST_PASSWORD = 'your-app-password'
+# DEFAULT_FROM_EMAIL = 'your-email@yandex.ru'
+# DEFAULT_FROM_NAME = 'Uzmat'
 

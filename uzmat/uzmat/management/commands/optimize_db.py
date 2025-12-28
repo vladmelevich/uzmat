@@ -26,3 +26,6 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS('Оптимизация завершена!'))
         self.stdout.write('Примечание: Для production рекомендуется использовать PostgreSQL с правильными индексами')
 
+
+
+

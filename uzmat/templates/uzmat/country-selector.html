@@ -88,6 +88,18 @@
           
           if (flagImg && flagSrc) flagImg.src = flagSrc;
           if (codeSpan) codeSpan.textContent = code;
+          
+          // Восстанавливаем язык из страны, если он не сохранен
+          const savedLang = localStorage.getItem('i18n_lang');
+          if (!savedLang && window.i18n) {
+            const lang = savedOption.getAttribute('data-lang') || 'ru';
+            if (window.i18n.setLanguage) {
+              // Небольшая задержка, чтобы i18n был готов
+              setTimeout(() => {
+                window.i18n.setLanguage(lang);
+              }, 100);
+            }
+          }
         }
       }
     }
@@ -136,19 +148,17 @@
         // Закрываем выпадающий список
         closeDropdown();
 
-        // Меняем язык БЕЗ перезагрузки страницы
-        // Ждем загрузки i18n если он еще не готов (максимум 1 секунда)
-        let attempts = 0;
-        function changeLanguage() {
-          if (window.i18n && window.i18n.setLanguage) {
-            window.i18n.setLanguage(lang);
-          } else if (attempts < 20) {
-            // Если i18n еще не загружен, ждем немного и пробуем снова (максимум 20 попыток)
-            attempts++;
-            setTimeout(changeLanguage, 50);
-          }
+        // Сохраняем язык в localStorage сразу
+        localStorage.setItem('i18n_lang', lang);
+        
+        // Устанавливаем язык через i18n (если доступен)
+        if (window.i18n && window.i18n.setLanguage) {
+          window.i18n.setLanguage(lang);
         }
-        changeLanguage();
+        
+        // Перезагружаем страницу для применения изменений языка
+        // Это гарантирует, что все элементы будут отображаться на правильном языке
+        window.location.reload();
 
         // Обновляем URL без перезагрузки страницы
         const url = new URL(window.location.href);
@@ -289,6 +299,17 @@
       }, 100);
     }
   }
+
+  // Слушатель события изменения языка для обновления всех элементов
+  document.addEventListener('languageChanged', function(e) {
+    const lang = e.detail.lang;
+    // Принудительно обновляем все элементы после смены языка
+    setTimeout(() => {
+      if (window.i18n && window.i18n.translatePage) {
+        window.i18n.translatePage(lang);
+      }
+    }, 50);
+  });
 
   // Инициализация при загрузке DOM
   if (document.readyState === 'loading') {

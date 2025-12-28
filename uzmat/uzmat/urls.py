@@ -8,7 +8,6 @@ urlpatterns = [
     path('ad/<slug:slug>/', views.ad_detail, name='ad_detail'),
     path('onboarding/', views.onboarding, name='onboarding'),
     path('auth/', views.auth, name='auth'),
-    path('auth/code/', views.auth_code, name='auth_code'),
     path('register/individual/', views.register_individual, name='register_individual'),
     path('register/company/', views.register_company, name='register_company'),
     path('profile/', views.profile, name='profile'),

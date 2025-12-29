@@ -18,14 +18,32 @@ class SecurityHeadersMiddleware(MiddlewareMixin):
         """
         Проверяет, является ли origin надежным (HTTPS или localhost)
         Cross-Origin-Opener-Policy работает только для надежных origins
+        Согласно спецификации: https://www.w3.org/TR/powerful-features/#potentially-trustworthy-origin
         """
-        # Проверяем, используется ли HTTPS
-        is_https = request.is_secure() or request.META.get('HTTP_X_FORWARDED_PROTO') == 'https'
+        # Проверяем схему запроса напрямую
+        scheme = request.scheme.lower()
+        is_https = scheme == 'https'
         
-        # Проверяем, является ли это localhost
+        # Также проверяем заголовки прокси (для случаев, когда Django за прокси)
+        if not is_https:
+            is_https = (
+                request.is_secure() or 
+                request.META.get('HTTP_X_FORWARDED_PROTO', '').lower() == 'https' or
+                request.META.get('HTTP_X_FORWARDED_SSL', '').lower() == 'on'
+            )
+        
+        # Проверяем, является ли это localhost (для HTTP localhost тоже надежный)
         host = request.get_host().lower()
-        is_localhost = host.startswith('localhost') or host.startswith('127.0.0.1') or host.startswith('::1')
+        # Убираем порт из host для проверки
+        host_without_port = host.split(':')[0]
+        is_localhost = (
+            host_without_port == 'localhost' or 
+            host_without_port == '127.0.0.1' or 
+            host_without_port == '::1' or
+            host_without_port.startswith('localhost.')
+        )
         
+        # Origin надежный, если это HTTPS или localhost
         return is_https or is_localhost
     
     def process_response(self, request, response):
@@ -45,9 +63,14 @@ class SecurityHeadersMiddleware(MiddlewareMixin):
         response['Permissions-Policy'] = 'geolocation=(), microphone=(), camera=()'
         
         # Cross-Origin-Opener-Policy: добавляем только для надежных origins
-        # (HTTPS или localhost), иначе браузер будет игнорировать заголовок
+        # (HTTPS или localhost), иначе браузер будет игнорировать заголовок и выдавать предупреждение
+        # Если origin не надежный, явно удаляем заголовок, если он был установлен ранее
         if self._is_trustworthy_origin(request):
             response['Cross-Origin-Opener-Policy'] = 'same-origin'
+        else:
+            # Явно удаляем заголовок для ненадежных origins, чтобы избежать предупреждений
+            # Используем pop() с default, чтобы безопасно удалить заголовок
+            response.pop('Cross-Origin-Opener-Policy', None)
         
         return response
 

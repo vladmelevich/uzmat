@@ -14,6 +14,20 @@ class SecurityHeadersMiddleware(MiddlewareMixin):
     Middleware для добавления безопасных HTTP заголовков
     """
     
+    def _is_trustworthy_origin(self, request):
+        """
+        Проверяет, является ли origin надежным (HTTPS или localhost)
+        Cross-Origin-Opener-Policy работает только для надежных origins
+        """
+        # Проверяем, используется ли HTTPS
+        is_https = request.is_secure() or request.META.get('HTTP_X_FORWARDED_PROTO') == 'https'
+        
+        # Проверяем, является ли это localhost
+        host = request.get_host().lower()
+        is_localhost = host.startswith('localhost') or host.startswith('127.0.0.1') or host.startswith('::1')
+        
+        return is_https or is_localhost
+    
     def process_response(self, request, response):
         # X-Content-Type-Options: nosniff
         response['X-Content-Type-Options'] = 'nosniff'
@@ -29,6 +43,11 @@ class SecurityHeadersMiddleware(MiddlewareMixin):
         
         # Permissions-Policy (бывший Feature-Policy)
         response['Permissions-Policy'] = 'geolocation=(), microphone=(), camera=()'
+        
+        # Cross-Origin-Opener-Policy: добавляем только для надежных origins
+        # (HTTPS или localhost), иначе браузер будет игнорировать заголовок
+        if self._is_trustworthy_origin(request):
+            response['Cross-Origin-Opener-Policy'] = 'same-origin'
         
         return response
 

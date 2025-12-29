@@ -440,6 +440,19 @@
 
   {% include 'uzmat/footer.html' %}
 
+  <!-- CSRF Token для JavaScript -->
+  {% csrf_token %}
+  <script>
+    // Устанавливаем CSRF токен в глобальную переменную для удобства
+    window.csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+                       (function() {
+                         const value = `; ${document.cookie}`;
+                         const parts = value.split(`; csrftoken=`);
+                         if (parts.length === 2) return parts.pop().split(';').shift();
+                         return null;
+                       })();
+  </script>
+
   <!-- Mobile Navigation -->
   <nav class="uz-bottom-nav uz-show-mobile">
     <a href="{% url 'uzmat:index' %}" class="uz-bottom-item">
@@ -511,17 +524,20 @@
       
       // Альтернативный способ получения CSRF токена из скрытого поля
       function getCSRFToken() {
-        // Сначала пытаемся получить из cookies
+        // Сначала пытаемся получить из глобальной переменной (если установлена)
+        if (window.csrftoken) return window.csrftoken;
+        
+        // Затем пытаемся получить из скрытого поля (если есть форма на странице)
+        const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
+        if (csrfInput && csrfInput.value) {
+          return csrfInput.value;
+        }
+        
+        // В последнюю очередь пытаемся получить из cookies
         let token = getCookie('csrftoken');
         if (token) return token;
         
-        // Если нет в cookies, пытаемся получить из скрытого поля (если есть форма на странице)
-        const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
-        if (csrfInput) {
-          token = csrfInput.value;
-        }
-        
-        return token;
+        return null;
       }
 
       function scrollToBottom() {

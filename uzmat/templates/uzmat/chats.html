@@ -506,6 +506,22 @@
         const value = `; ${document.cookie}`;
         const parts = value.split(`; ${name}=`);
         if (parts.length === 2) return parts.pop().split(';').shift();
+        return null;
+      }
+      
+      // Альтернативный способ получения CSRF токена из скрытого поля
+      function getCSRFToken() {
+        // Сначала пытаемся получить из cookies
+        let token = getCookie('csrftoken');
+        if (token) return token;
+        
+        // Если нет в cookies, пытаемся получить из скрытого поля (если есть форма на странице)
+        const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
+        if (csrfInput) {
+          token = csrfInput.value;
+        }
+        
+        return token;
       }
 
       function scrollToBottom() {
@@ -621,6 +637,13 @@
         const text = (textEl && textEl.value || '').trim();
         const file = imgEl && imgEl.files && imgEl.files[0] ? imgEl.files[0] : null;
         if (!text && !file) return;
+        
+        // Сохраняем оригинальный текст кнопки и блокируем её
+        const originalText = sendBtn ? sendBtn.textContent : 'Отправить';
+        if (sendBtn) {
+          sendBtn.disabled = true;
+          sendBtn.textContent = 'Отправка...';
+        }
 
         if (editingId) {
           if (file) {
@@ -628,11 +651,13 @@
             return;
           }
           try {
-            const csrftoken = getCookie('csrftoken');
-            const params = new URLSearchParams({ text });
-            if (csrftoken) {
-              params.append('csrfmiddlewaretoken', csrftoken);
+            const csrftoken = getCSRFToken();
+            if (!csrftoken) {
+              alert('Ошибка: CSRF токен не найден. Перезагрузите страницу и попробуйте снова.');
+              return;
             }
+            const params = new URLSearchParams({ text });
+            params.append('csrfmiddlewaretoken', csrftoken);
             const res = await fetch(`/chats/api/message/${editingId}/edit/`, {
               method: 'POST',
               headers: {
@@ -666,17 +691,22 @@
         fd.append('text', text);
         if (file) fd.append('image', file);
         
-        // Добавляем CSRF токен в FormData
-        const csrftoken = getCookie('csrftoken');
-        if (csrftoken) {
-          fd.append('csrfmiddlewaretoken', csrftoken);
+        // Получаем CSRF токен
+        const csrftoken = getCSRFToken();
+        if (!csrftoken) {
+          alert('Ошибка: CSRF токен не найден. Перезагрузите страницу и попробуйте снова.');
+          console.error('CSRF token not found. Cookies:', document.cookie);
+          return;
         }
+        
+        // Добавляем CSRF токен в FormData (Django ищет его здесь)
+        fd.append('csrfmiddlewaretoken', csrftoken);
 
         try {
           const res = await fetch(`/chats/api/${threadId}/send/`, {
             method: 'POST',
             headers: { 
-              'X-CSRFToken': csrftoken || '',
+              'X-CSRFToken': csrftoken,
               'X-Requested-With': 'XMLHttpRequest'
             },
             body: fd,
@@ -686,16 +716,28 @@
           // Проверяем статус ответа
           if (res.status === 403) {
             // Ошибка доступа или CSRF
-            let errorMessage = 'Ошибка доступа. Перезагрузите страницу и попробуйте снова.';
+            let errorMessage = 'Ошибка доступа (403). Перезагрузите страницу и попробуйте снова.';
             try {
-              const data = await res.json();
-              if (data.error) {
-                errorMessage = data.error;
+              const contentType = res.headers.get('content-type') || '';
+              if (contentType.includes('application/json')) {
+                const data = await res.json();
+                if (data.error) {
+                  errorMessage = data.error;
+                }
+              } else {
+                // Если сервер вернул HTML (обычно это CSRF ошибка Django)
+                errorMessage = 'Ошибка CSRF токена. Перезагрузите страницу и попробуйте снова.';
+                console.error('CSRF error: Server returned HTML instead of JSON');
               }
             } catch (e) {
-              // Если не удалось распарсить JSON
+              console.error('Error parsing 403 response:', e);
             }
             alert(errorMessage);
+            // Разблокируем кнопку
+            if (sendBtn) {
+              sendBtn.disabled = false;
+              sendBtn.textContent = originalText;
+            }
             return;
           }
           
@@ -717,6 +759,11 @@
             if (imgEl) imgEl.value = '';
             if (preview) preview.style.display = 'none';
             if (previewUrl) { URL.revokeObjectURL(previewUrl); previewUrl = null; }
+            // Разблокируем кнопку
+            if (sendBtn) {
+              sendBtn.disabled = false;
+              sendBtn.textContent = originalText;
+            }
             return;
           }
           
@@ -724,6 +771,11 @@
           const contentType = res.headers.get('content-type') || '';
           if (!contentType.includes('application/json')) {
             alert('Ошибка сервера. Перезагрузите страницу и попробуйте снова.');
+            // Разблокируем кнопку
+            if (sendBtn) {
+              sendBtn.disabled = false;
+              sendBtn.textContent = originalText;
+            }
             return;
           }
           
@@ -736,6 +788,11 @@
               if (preview) preview.style.display = 'none';
               if (previewUrl) { URL.revokeObjectURL(previewUrl); previewUrl = null; }
             }
+            // Разблокируем кнопку
+            if (sendBtn) {
+              sendBtn.disabled = false;
+              sendBtn.textContent = originalText;
+            }
             return;
           }
           appendMessage(data.message);
@@ -744,6 +801,11 @@
           if (preview) preview.style.display = 'none';
           if (previewUrl) { URL.revokeObjectURL(previewUrl); previewUrl = null; }
           scrollToBottom();
+          // Разблокируем кнопку после успешной отправки
+          if (sendBtn) {
+            sendBtn.disabled = false;
+            sendBtn.textContent = originalText;
+          }
         } catch (e) {
           // Обрабатываем сетевые ошибки и ошибки парсинга
           let errorMessage = 'Ошибка отправки сообщения.';
@@ -754,6 +816,11 @@
           if (imgEl) imgEl.value = '';
           if (preview) preview.style.display = 'none';
           if (previewUrl) { URL.revokeObjectURL(previewUrl); previewUrl = null; }
+          // Разблокируем кнопку
+          if (sendBtn) {
+            sendBtn.disabled = false;
+            sendBtn.textContent = originalText;
+          }
         }
       }
 
@@ -824,11 +891,13 @@
 
       async function deleteMessage(id) {
         try {
-          const csrftoken = getCookie('csrftoken');
-          const formData = new FormData();
-          if (csrftoken) {
-            formData.append('csrfmiddlewaretoken', csrftoken);
+          const csrftoken = getCSRFToken();
+          if (!csrftoken) {
+            alert('Ошибка: CSRF токен не найден. Перезагрузите страницу и попробуйте снова.');
+            return;
           }
+          const formData = new FormData();
+          formData.append('csrfmiddlewaretoken', csrftoken);
           const res = await fetch(`/chats/api/message/${id}/delete/`, {
             method: 'POST',
             headers: { 

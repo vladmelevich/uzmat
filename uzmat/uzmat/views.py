@@ -13,7 +13,7 @@ from django.utils import timezone
 from django.db import transaction
 from django.db.models import Case, When, Value, IntegerField
 from django.conf import settings as django_settings
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 import os
 from .models import (
@@ -534,10 +534,10 @@ def user_profile(request, user_id):
     return render(request, 'uzmat/user_profile.html', context)
 
 
+@ensure_csrf_cookie
+@login_required
 def chats(request):
     """Страница с переписками пользователя (мессенджер)"""
-    if not request.user.is_authenticated:
-        return redirect('uzmat:onboarding')
 
     me = request.user
 

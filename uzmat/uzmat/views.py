@@ -539,55 +539,18 @@ def user_profile(request, user_id):
 @login_required
 def chats(request):
     """Страница с переписками пользователя (мессенджер)"""
-
-    me = request.user
-
-    # Превью напоминания о продлении (для визуальной проверки)
-    # Открой /chats/?preview_badge_renew=1
-    if (request.GET.get('preview_badge_renew') or '').strip() == '1':
-        try:
-            now = timezone.now()
-            # не спамим при обновлении страницы
-            if not request.session.get('preview_badge_renew_sent'):
-                support_agent = User.objects.filter(is_staff=True, is_active=True).order_by('id').first()
-                if support_agent and support_agent.id != me.id:
-                    support_thread = (ChatThread.objects
-                                      .filter(thread_type='support', advertisement__isnull=True, buyer=me, seller=support_agent)
-                                      .order_by('id')
-                                      .first())
-                    if not support_thread:
-                        support_thread = ChatThread.objects.create(
-                            thread_type='support',
-                            advertisement=None,
-                            buyer=me,
-                            seller=support_agent,
-                            last_message_at=now,
-                        )
-
-                    msg = ChatMessage(
-                        thread=support_thread,
-                        sender=support_agent,
-                        system_action='renew_badge',
-                        system_url=reverse('uzmat:verify_renew'),
-                    )
-                    msg.set_text('Превью: срок действия галочки скоро истекает. Продлите её, чтобы она не пропала.')
-                    msg.save()
-
-                    support_thread.last_message_at = msg.created_at
-                    support_thread.save(update_fields=['last_message_at'])
-                request.session['preview_badge_renew_sent'] = True
-        except Exception:
-            pass
-
-    # Напоминание о продлении галочки: срабатывает при заходе в /chats/
     try:
-        if me.is_verified_active and me.verified_until:
-            remind_days = 7
-            now = timezone.now()
-            if me.verified_until <= now + timezone.timedelta(days=remind_days):
-                if not me.badge_expiry_notified_until or me.badge_expiry_notified_until != me.verified_until:
+        me = request.user
+
+        # Превью напоминания о продлении (для визуальной проверки)
+        # Открой /chats/?preview_badge_renew=1
+        if (request.GET.get('preview_badge_renew') or '').strip() == '1':
+            try:
+                now = timezone.now()
+                # не спамим при обновлении страницы
+                if not request.session.get('preview_badge_renew_sent'):
                     support_agent = User.objects.filter(is_staff=True, is_active=True).order_by('id').first()
-                    if support_agent:
+                    if support_agent and support_agent.id != me.id:
                         support_thread = (ChatThread.objects
                                           .filter(thread_type='support', advertisement__isnull=True, buyer=me, seller=support_agent)
                                           .order_by('id')
@@ -601,85 +564,163 @@ def chats(request):
                                 last_message_at=now,
                             )
 
-                        txt = f"Срок действия галочки истекает {me.verified_until.strftime('%d.%m.%Y')}. Продлите её, чтобы она не пропала."
-                        msg = ChatMessage(thread=support_thread, sender=support_agent, system_action='renew_badge', system_url=reverse('uzmat:verify_renew'))
-                        msg.set_text(txt)
+                        msg = ChatMessage(
+                            thread=support_thread,
+                            sender=support_agent,
+                            system_action='renew_badge',
+                            system_url=reverse('uzmat:verify_renew'),
+                        )
+                        msg.set_text('Превью: срок действия галочки скоро истекает. Продлите её, чтобы она не пропала.')
                         msg.save()
 
                         support_thread.last_message_at = msg.created_at
                         support_thread.save(update_fields=['last_message_at'])
+                    request.session['preview_badge_renew_sent'] = True
+            except Exception as e:
+                logger = logging.getLogger('django.request')
+                logger.error(f'Ошибка в preview_badge_renew: {str(e)}', exc_info=True)
 
-                        me.badge_expiry_notified_until = me.verified_until
-                        me.save(update_fields=['badge_expiry_notified_until'])
-    except Exception:
-        # Не ломаем /chats/ из-за напоминаний
-        pass
-    threads_qs = (ChatThread.objects
-               .filter(Q(buyer=me) | Q(seller=me))
-               .select_related('advertisement', 'buyer', 'seller')
-               .order_by('-last_message_at', '-created_at'))
-    threads = list(threads_qs[:200])
-
-
-    active_thread = None
-    active_messages = []
-
-    t_id = request.GET.get('t')
-    if t_id:
+        # Напоминание о продлении галочки: срабатывает при заходе в /chats/
         try:
-            tid_int = int(t_id)
-            active_thread = next((t for t in threads if t.id == tid_int), None)
-        except (ValueError, TypeError):
-            active_thread = None
+            if me.is_verified_active and me.verified_until:
+                remind_days = 7
+                now = timezone.now()
+                if me.verified_until <= now + timezone.timedelta(days=remind_days):
+                    if not me.badge_expiry_notified_until or me.badge_expiry_notified_until != me.verified_until:
+                        support_agent = User.objects.filter(is_staff=True, is_active=True).order_by('id').first()
+                        if support_agent:
+                            support_thread = (ChatThread.objects
+                                              .filter(thread_type='support', advertisement__isnull=True, buyer=me, seller=support_agent)
+                                              .order_by('id')
+                                              .first())
+                            if not support_thread:
+                                support_thread = ChatThread.objects.create(
+                                    thread_type='support',
+                                    advertisement=None,
+                                    buyer=me,
+                                    seller=support_agent,
+                                    last_message_at=now,
+                                )
 
-    if not active_thread and threads:
-        active_thread = threads[0]
+                            txt = f"Срок действия галочки истекает {me.verified_until.strftime('%d.%m.%Y')}. Продлите её, чтобы она не пропала."
+                            msg = ChatMessage(thread=support_thread, sender=support_agent, system_action='renew_badge', system_url=reverse('uzmat:verify_renew'))
+                            msg.set_text(txt)
+                            msg.save()
 
-    if active_thread:
-        active_messages = (ChatMessage.objects
-                           .filter(thread=active_thread)
-                           .select_related('sender')
-                           .prefetch_related('images')
-                           .order_by('-created_at')[:60])
-        active_messages = list(reversed(active_messages))
+                            support_thread.last_message_at = msg.created_at
+                            support_thread.save(update_fields=['last_message_at'])
+
+                            me.badge_expiry_notified_until = me.verified_until
+                            me.save(update_fields=['badge_expiry_notified_until'])
+        except Exception as e:
+            # Не ломаем /chats/ из-за напоминаний
+            logger = logging.getLogger('django.request')
+            logger.error(f'Ошибка в напоминании о продлении галочки: {str(e)}', exc_info=True)
         
-        # Помечаем тред как прочитанный при открытии
-        now = timezone.now()
-        if me.id == active_thread.buyer_id:
-            active_thread.buyer_last_read_at = now
-            active_thread.save(update_fields=['buyer_last_read_at'])
-        elif me.id == active_thread.seller_id:
-            active_thread.seller_last_read_at = now
-            active_thread.save(update_fields=['seller_last_read_at'])
+        # Получаем список тредов
+        try:
+            threads_qs = (ChatThread.objects
+                       .filter(Q(buyer=me) | Q(seller=me))
+                       .select_related('advertisement', 'buyer', 'seller')
+                       .order_by('-last_message_at', '-created_at'))
+            threads = list(threads_qs[:200])
+        except Exception as e:
+            logger = logging.getLogger('django.request')
+            logger.error(f'Ошибка при получении списка тредов: {str(e)}', exc_info=True)
+            threads = []
 
-    # Подсчитываем непрочитанные сообщения для каждого треда
-    unread_counts = {}
-    for thread in threads:
-        last_read = thread.buyer_last_read_at if me.id == thread.buyer_id else thread.seller_last_read_at
-        if last_read and thread.last_message_at and thread.last_message_at > last_read:
-            unread = ChatMessage.objects.filter(
-                thread=thread,
-                created_at__gt=last_read
-            ).exclude(sender=me).count()
-            if unread > 0:
-                unread_counts[thread.id] = unread
-        elif not last_read and thread.last_message_at:
-            # Если никогда не читал, считаем все сообщения не от себя
-            unread = ChatMessage.objects.filter(
-                thread=thread
-            ).exclude(sender=me).count()
-            if unread > 0:
-                unread_counts[thread.id] = unread
+        active_thread = None
+        active_messages = []
 
-    context = {
-        'user': me,
-        'threads': threads,
-        'active_thread': active_thread,
-        'messages': active_messages,
-        'unread_counts': unread_counts,
-        'total_unread': sum(unread_counts.values()),
-    }
-    return render(request, 'uzmat/chats.html', context)
+        t_id = request.GET.get('t')
+        if t_id:
+            try:
+                tid_int = int(t_id)
+                active_thread = next((t for t in threads if t.id == tid_int), None)
+            except (ValueError, TypeError):
+                active_thread = None
+
+        if not active_thread and threads:
+            active_thread = threads[0]
+
+        if active_thread:
+            try:
+                active_messages = (ChatMessage.objects
+                               .filter(thread=active_thread)
+                               .select_related('sender')
+                               .prefetch_related('images')
+                               .order_by('-created_at')[:60])
+                active_messages = list(reversed(active_messages))
+            except Exception as e:
+                logger = logging.getLogger('django.request')
+                logger.error(f'Ошибка при получении сообщений для треда {active_thread.id}: {str(e)}', exc_info=True)
+                active_messages = []
+            
+            # Помечаем тред как прочитанный при открытии
+            try:
+                now = timezone.now()
+                if me.id == active_thread.buyer_id:
+                    active_thread.buyer_last_read_at = now
+                    active_thread.save(update_fields=['buyer_last_read_at'])
+                elif me.id == active_thread.seller_id:
+                    active_thread.seller_last_read_at = now
+                    active_thread.save(update_fields=['seller_last_read_at'])
+            except Exception as e:
+                logger = logging.getLogger('django.request')
+                logger.error(f'Ошибка при обновлении времени прочтения треда: {str(e)}', exc_info=True)
+
+        # Подсчитываем непрочитанные сообщения для каждого треда
+        unread_counts = {}
+        try:
+            for thread in threads:
+                try:
+                    last_read = thread.buyer_last_read_at if me.id == thread.buyer_id else thread.seller_last_read_at
+                    if last_read and thread.last_message_at and thread.last_message_at > last_read:
+                        unread = ChatMessage.objects.filter(
+                            thread=thread,
+                            created_at__gt=last_read
+                        ).exclude(sender=me).count()
+                        if unread > 0:
+                            unread_counts[thread.id] = unread
+                    elif not last_read and thread.last_message_at:
+                        # Если никогда не читал, считаем все сообщения не от себя
+                        unread = ChatMessage.objects.filter(
+                            thread=thread
+                        ).exclude(sender=me).count()
+                        if unread > 0:
+                            unread_counts[thread.id] = unread
+                except Exception as e:
+                    # Пропускаем проблемный тред, но продолжаем обработку остальных
+                    logger = logging.getLogger('django.request')
+                    logger.error(f'Ошибка при подсчете непрочитанных для треда {thread.id}: {str(e)}', exc_info=True)
+                    continue
+        except Exception as e:
+            logger = logging.getLogger('django.request')
+            logger.error(f'Ошибка при подсчете непрочитанных сообщений: {str(e)}', exc_info=True)
+
+        context = {
+            'user': me,
+            'threads': threads,
+            'active_thread': active_thread,
+            'messages': active_messages,
+            'unread_counts': unread_counts,
+            'total_unread': sum(unread_counts.values()),
+        }
+        return render(request, 'uzmat/chats.html', context)
+    except Exception as e:
+        # Логируем общую ошибку и возвращаем страницу с ошибкой
+        logger = logging.getLogger('django.request')
+        logger.error(f'Критическая ошибка в chats view: {str(e)}', exc_info=True)
+        # Возвращаем страницу с пустым контекстом, чтобы не упасть с 500
+        context = {
+            'user': request.user,
+            'threads': [],
+            'active_thread': None,
+            'messages': [],
+            'unread_counts': {},
+            'total_unread': 0,
+        }
+        return render(request, 'uzmat/chats.html', context)
 
 
 @login_required

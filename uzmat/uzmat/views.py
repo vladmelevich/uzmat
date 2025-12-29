@@ -2186,6 +2186,14 @@ def sitemap(request):
     return render(request, 'uzmat/sitemap.html', context)
 
 
+def about(request):
+    """Страница о нас"""
+    context = {
+        'user': request.user,
+    }
+    return render(request, 'uzmat/about.html', context)
+
+
 def logistics(request):
     """Страница ремонта - показывает все объявления типа 'service'"""
     # Получаем объявления типа 'service' с применением фильтров

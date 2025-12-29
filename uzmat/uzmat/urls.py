@@ -29,6 +29,7 @@ urlpatterns = [
     path('privacy/', views.privacy_policy, name='privacy_policy'),
     path('terms/', views.terms_of_use, name='terms_of_use'),
     path('sitemap/', views.sitemap, name='sitemap'),
+    path('about/', views.about, name='about'),
     path('logistics/', views.logistics, name='logistics'),
     path('logistics/add/', views.add_cargo, name='add_cargo'),
     path('favorite/<int:ad_id>/', views.toggle_favorite, name='toggle_favorite'),

@@ -38,9 +38,7 @@
     <div class="uz-footer-column">
       <h3 class="uz-footer-title">О компании</h3>
       <nav class="uz-footer-links">
-        <a href="#" class="uz-footer-link">О нас</a>
-        <a href="#" class="uz-footer-link">Партнерам</a>
-        <a href="#" class="uz-footer-link">Вакансии</a>
+        <a href="{% url 'uzmat:about' %}" class="uz-footer-link">О нас</a>
       </nav>
     </div>
     <div class="uz-footer-column">
@@ -50,6 +48,7 @@
         <a href="{% url 'uzmat:rules' %}" class="uz-footer-link">Правила</a>
         <a href="{% url 'uzmat:settings' %}" class="uz-footer-link">Настройки</a>
         <a href="{% url 'uzmat:safety' %}" class="uz-footer-link">Безопасность</a>
+        <a href="mailto:vmelevic44@gmail.com" class="uz-footer-link">Техническая поддержка</a>
       </nav>
     </div>
   </div>

@@ -26,19 +26,41 @@ DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 ALLOWED_HOSTS_STR = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,109.199.127.149,uzmat.uz,www.uzmat.uz')
 ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS_STR.split(',') if host.strip()]
 
-# Для работы с Cloudflare: добавляем домены без портов и с портами
+# Для работы с Cloudflare: добавляем все возможные варианты доменов
+# Django проверяет Host заголовок строго, поэтому нужно добавить все варианты
 # Это помогает избежать ошибок 400 Bad Request
-if not DEBUG:
-    # В production добавляем варианты доменов для Cloudflare
-    additional_hosts = []
-    for host in ALLOWED_HOSTS:
-        if 'uzmat.uz' in host or 'www.uzmat.uz' in host:
-            # Добавляем варианты без www и с www
-            if 'www.' in host:
-                additional_hosts.append(host.replace('www.', ''))
-            else:
-                additional_hosts.append('www.' + host)
-    ALLOWED_HOSTS.extend([h for h in additional_hosts if h not in ALLOWED_HOSTS])
+additional_hosts = []
+for host in ALLOWED_HOSTS.copy():
+    host_clean = host.split(':')[0]  # Убираем порт если есть
+    # Добавляем варианты с портами (80, 443, 8000) и без порта
+    if 'uzmat.uz' in host_clean:
+        # Базовые варианты
+        additional_hosts.extend([
+            host_clean,
+            f'{host_clean}:80',
+            f'{host_clean}:443',
+            f'{host_clean}:8000',
+        ])
+        # Варианты с www и без www
+        if 'www.' in host_clean:
+            base_host = host_clean.replace('www.', '')
+            additional_hosts.extend([
+                base_host,
+                f'{base_host}:80',
+                f'{base_host}:443',
+                f'{base_host}:8000',
+            ])
+        else:
+            www_host = f'www.{host_clean}'
+            additional_hosts.extend([
+                www_host,
+                f'{www_host}:80',
+                f'{www_host}:443',
+                f'{www_host}:8000',
+            ])
+
+# Добавляем все варианты, убираем дубликаты
+ALLOWED_HOSTS = list(set(ALLOWED_HOSTS + additional_hosts))
 
 
 # Application definition

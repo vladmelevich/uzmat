@@ -1830,6 +1830,35 @@ def promote_info(request, slug):
     """Страница выбора тарифа продвижения"""
     ad = get_object_or_404(Advertisement, slug=slug, user=request.user)
     
+    # Обработка возврата после оплаты от Click
+    merchant_trans_id = request.GET.get('merchant_trans_id')
+    click_trans_id = request.GET.get('click_trans_id')
+    error = request.GET.get('error')
+    
+    if merchant_trans_id and click_trans_id:
+        from django.core.cache import cache
+        try:
+            payment_id = int(merchant_trans_id)
+            # Проверяем, был ли платеж успешно обработан
+            payment_success_key = f'payment_success_{payment_id}'
+            payment_success = cache.get(payment_success_key)
+            
+            if payment_success:
+                # Платеж успешно обработан
+                plan_names = {'gold': 'GOLD', 'premium': 'PREMIUM', 'vip': 'VIP'}
+                plan_name = plan_names.get(payment_success.get('plan', ''), '')
+                messages.success(request, f'Платеж успешно обработан! Продвижение {plan_name} активировано для объявления "{ad.title}".')
+                cache.delete(payment_success_key)
+            elif error:
+                # Была ошибка при оплате
+                error_note = request.GET.get('error_note', 'Неизвестная ошибка')
+                messages.error(request, f'Ошибка при оплате: {error_note}')
+            else:
+                # Платеж еще обрабатывается
+                messages.info(request, 'Платеж обрабатывается. Продвижение будет активировано в течение нескольких минут.')
+        except (ValueError, TypeError):
+            pass
+    
     # Получаем страну из запроса или localStorage (по умолчанию uz)
     country = request.GET.get('country') or 'uz'
     
@@ -1855,6 +1884,33 @@ def promote_info(request, slug):
 def verify_info(request):
     """Информационная страница верификации (описание + кнопка)"""
     user = request.user
+
+    # Обработка возврата после оплаты от Click
+    merchant_trans_id = request.GET.get('merchant_trans_id')
+    click_trans_id = request.GET.get('click_trans_id')
+    error = request.GET.get('error')
+    
+    if merchant_trans_id and click_trans_id:
+        from django.core.cache import cache
+        try:
+            payment_id = int(merchant_trans_id)
+            # Проверяем, был ли платеж успешно обработан
+            payment_success_key = f'payment_success_{payment_id}'
+            payment_success = cache.get(payment_success_key)
+            
+            if payment_success:
+                # Платеж успешно обработан
+                messages.success(request, 'Платеж успешно обработан! Заявка на верификацию создана и отправлена на модерацию. Вы получите уведомление после проверки.')
+                cache.delete(payment_success_key)
+            elif error:
+                # Была ошибка при оплате
+                error_note = request.GET.get('error_note', 'Неизвестная ошибка')
+                messages.error(request, f'Ошибка при оплате: {error_note}')
+            else:
+                # Платеж еще обрабатывается
+                messages.info(request, 'Платеж обрабатывается. Заявка на верификацию будет создана в течение нескольких минут.')
+        except (ValueError, TypeError):
+            pass
 
     if request.method == 'POST':
         if user.verification_status == 'pending':
@@ -2258,12 +2314,19 @@ def click_webhook(request):
             # Проверяем сумму
             expected_amount = Decimal(payment_data['amount'])
             if amount_decimal != expected_amount:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f'Click webhook: Invalid amount. Expected: {expected_amount}, Got: {amount_decimal}, Payment ID: {payment_id}')
                 return JsonResponse({
                     'error': -2,
                     'error_note': 'Invalid amount'
                 })
             
             # Обрабатываем в зависимости от типа платежа
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f'Click webhook: Processing payment complete. Payment ID: {payment_id}, Type: {payment_data.get("payment_type")}')
+            
             with transaction.atomic():
                 payment_type = payment_data.get('payment_type')
                 
@@ -2288,7 +2351,16 @@ def click_webhook(request):
                                 ad.promotion_until = now + timezone.timedelta(days=days)
                                 ad.promotion_plan = plan
                                 ad.save(update_fields=['is_promoted', 'promoted_at', 'promotion_until', 'promotion_plan'])
+                                
+                                # Сохраняем флаг успешной оплаты для уведомления пользователя
+                                cache.set(f'payment_success_{payment_id}', {
+                                    'plan': plan,
+                                    'ad_id': ad_id,
+                                    'ad_title': ad.title,
+                                }, 3600)  # 1 час
+                                logger.info(f'Click webhook: Promotion activated. Ad ID: {ad_id}, Plan: {plan}, Payment ID: {payment_id}')
                         except Advertisement.DoesNotExist:
+                            logger.error(f'Click webhook: Advertisement not found. Ad ID: {ad_id}, Payment ID: {payment_id}')
                             pass
                 
                 elif payment_type == 'verification':
@@ -2311,7 +2383,15 @@ def click_webhook(request):
                             user.is_verified = False
                             user.verified_until = None
                             user.save(update_fields=['verification_type', 'verification_status', 'is_verified', 'verified_until'])
+                            
+                            # Сохраняем флаг успешной оплаты для уведомления пользователя
+                            cache.set(f'payment_success_{payment_id}', {
+                                'verification_type': v_type,
+                                'user_id': user_id,
+                            }, 3600)  # 1 час
+                            logger.info(f'Click webhook: Verification request created. User ID: {user_id}, Type: {v_type}, Payment ID: {payment_id}')
                         except User.DoesNotExist:
+                            logger.error(f'Click webhook: User not found. User ID: {user_id}, Payment ID: {payment_id}')
                             pass
             
             # Удаляем данные о платеже из кэша после успешной обработки
@@ -2343,6 +2423,9 @@ def click_webhook(request):
             })
     
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f'Click webhook: System error. Error: {str(e)}', exc_info=True)
         return JsonResponse({
             'error': -9,
             'error_note': f'System error: {str(e)}'

@@ -95,11 +95,27 @@ class SecurityHeadersMiddleware(MiddlewareMixin):
                     response['Cross-Origin-Opener-Policy'] = 'same-origin'
                 else:
                     # Явно удаляем заголовок для ненадежных origins, чтобы избежать предупреждений
-                    # Используем pop() с default, чтобы безопасно удалить заголовок
-                    response.pop('Cross-Origin-Opener-Policy', None)
+                    # Безопасно удаляем заголовок для разных типов ответов
+                    if hasattr(response, 'pop'):
+                        response.pop('Cross-Origin-Opener-Policy', None)
+                    elif hasattr(response, '__delitem__'):
+                        try:
+                            del response['Cross-Origin-Opener-Policy']
+                        except KeyError:
+                            pass
             except Exception:
                 # Если ошибка при проверке origin, просто не добавляем заголовок
-                response.pop('Cross-Origin-Opener-Policy', None)
+                # Безопасно пытаемся удалить заголовок, если он был установлен
+                try:
+                    if hasattr(response, 'pop'):
+                        response.pop('Cross-Origin-Opener-Policy', None)
+                    elif hasattr(response, '__delitem__'):
+                        try:
+                            del response['Cross-Origin-Opener-Policy']
+                        except KeyError:
+                            pass
+                except Exception:
+                    pass
         except Exception:
             # В случае любой ошибки просто возвращаем response без изменений
             # Логируем ошибку для отладки

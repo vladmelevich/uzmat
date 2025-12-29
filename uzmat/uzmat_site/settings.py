@@ -26,6 +26,20 @@ DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 ALLOWED_HOSTS_STR = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,109.199.127.149,uzmat.uz,www.uzmat.uz')
 ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS_STR.split(',') if host.strip()]
 
+# Для работы с Cloudflare: добавляем домены без портов и с портами
+# Это помогает избежать ошибок 400 Bad Request
+if not DEBUG:
+    # В production добавляем варианты доменов для Cloudflare
+    additional_hosts = []
+    for host in ALLOWED_HOSTS:
+        if 'uzmat.uz' in host or 'www.uzmat.uz' in host:
+            # Добавляем варианты без www и с www
+            if 'www.' in host:
+                additional_hosts.append(host.replace('www.', ''))
+            else:
+                additional_hosts.append('www.' + host)
+    ALLOWED_HOSTS.extend([h for h in additional_hosts if h not in ALLOWED_HOSTS])
+
 
 # Application definition
 

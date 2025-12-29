@@ -317,7 +317,7 @@ CACHES = {
 # DEFAULT_FROM_EMAIL = 'your-email@yandex.ru'
 # DEFAULT_FROM_NAME = 'Uzmat'
 
-# Логирование для безопасности
+# Логирование для безопасности и отладки
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -350,6 +350,11 @@ LOGGING = {
             'handlers': ['security_file', 'console'],
             'level': 'WARNING',
             'propagate': True,
+        },
+        'django.request': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
         },
     },
 }

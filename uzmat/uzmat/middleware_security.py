@@ -20,31 +20,40 @@ class SecurityHeadersMiddleware(MiddlewareMixin):
         Cross-Origin-Opener-Policy работает только для надежных origins
         Согласно спецификации: https://www.w3.org/TR/powerful-features/#potentially-trustworthy-origin
         """
-        # Проверяем схему запроса напрямую
-        scheme = request.scheme.lower()
-        is_https = scheme == 'https'
-        
-        # Также проверяем заголовки прокси (для случаев, когда Django за прокси)
-        if not is_https:
-            is_https = (
-                request.is_secure() or 
-                request.META.get('HTTP_X_FORWARDED_PROTO', '').lower() == 'https' or
-                request.META.get('HTTP_X_FORWARDED_SSL', '').lower() == 'on'
+        try:
+            # Проверяем схему запроса напрямую (может не существовать в старых версиях Django)
+            scheme = getattr(request, 'scheme', '').lower()
+            is_https = scheme == 'https'
+            
+            # Также проверяем заголовки прокси (для случаев, когда Django за прокси)
+            if not is_https:
+                is_https = (
+                    request.is_secure() or 
+                    request.META.get('HTTP_X_FORWARDED_PROTO', '').lower() == 'https' or
+                    request.META.get('HTTP_X_FORWARDED_SSL', '').lower() == 'on'
+                )
+            
+            # Проверяем, является ли это localhost (для HTTP localhost тоже надежный)
+            try:
+                host = request.get_host().lower()
+            except Exception:
+                # Если не удалось получить host, считаем ненадежным
+                return False
+            
+            # Убираем порт из host для проверки
+            host_without_port = host.split(':')[0]
+            is_localhost = (
+                host_without_port == 'localhost' or 
+                host_without_port == '127.0.0.1' or 
+                host_without_port == '::1' or
+                host_without_port.startswith('localhost.')
             )
-        
-        # Проверяем, является ли это localhost (для HTTP localhost тоже надежный)
-        host = request.get_host().lower()
-        # Убираем порт из host для проверки
-        host_without_port = host.split(':')[0]
-        is_localhost = (
-            host_without_port == 'localhost' or 
-            host_without_port == '127.0.0.1' or 
-            host_without_port == '::1' or
-            host_without_port.startswith('localhost.')
-        )
-        
-        # Origin надежный, если это HTTPS или localhost
-        return is_https or is_localhost
+            
+            # Origin надежный, если это HTTPS или localhost
+            return is_https or is_localhost
+        except Exception:
+            # В случае любой ошибки считаем origin ненадежным (безопасный вариант)
+            return False
     
     def process_response(self, request, response):
         # X-Content-Type-Options: nosniff

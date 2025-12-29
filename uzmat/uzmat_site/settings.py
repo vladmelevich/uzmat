@@ -62,9 +62,8 @@ for host in ALLOWED_HOSTS.copy():
 # Добавляем все варианты, убираем дубликаты
 ALLOWED_HOSTS = list(set(ALLOWED_HOSTS + additional_hosts))
 
-# ВАЖНО: Для работы с Cloudflare добавляем обработку через middleware
-# Это позволяет принимать любой Host, содержащий uzmat.uz
-# Это временное решение для отладки, в production можно убрать
+# ВАЖНО: Для работы с Cloudflare добавляем все возможные варианты доменов
+# Если проблема сохраняется, проверь логи: docker logs uzmat_web | grep "WSGI Request Host"
 
 
 # Application definition

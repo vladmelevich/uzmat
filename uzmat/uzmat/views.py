@@ -16,6 +16,7 @@ from django.conf import settings as django_settings
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 import os
+import logging
 from .models import (
     User,
     Advertisement,
@@ -792,36 +793,76 @@ def chat_send(request, thread_id: int):
 @login_required
 def chat_poll(request, thread_id: int):
     """Получение новых сообщений (AJAX polling)"""
-    me = request.user
-    thread = get_object_or_404(ChatThread, id=thread_id)
-    if me.id not in (thread.buyer_id, thread.seller_id):
-        return JsonResponse({'ok': False, 'error': 'Нет доступа'}, status=403)
-
-    after_id = request.GET.get('after_id')
     try:
-        after_id = int(after_id) if after_id else 0
-    except (ValueError, TypeError):
-        after_id = 0
+        me = request.user
+        thread = get_object_or_404(ChatThread, id=thread_id)
+        if me.id not in (thread.buyer_id, thread.seller_id):
+            return JsonResponse({'ok': False, 'error': 'Нет доступа'}, status=403)
 
-    qs = (ChatMessage.objects
-          .filter(thread=thread, id__gt=after_id)
-          .select_related('sender')
-          .prefetch_related('images')
-          .order_by('id')[:100])
+        after_id = request.GET.get('after_id')
+        try:
+            after_id = int(after_id) if after_id else 0
+        except (ValueError, TypeError):
+            after_id = 0
 
-    data = []
-    for m in qs:
-        data.append({
-            'id': m.id,
-            'sender_id': m.sender_id,
-            'text': m.text,
-            'created_at': m.created_at.strftime('%H:%M'),
-            'images': [img.image.url for img in m.images.all()],
-            'system_action': m.system_action,
-            'system_url': m.system_url,
-        })
+        qs = (ChatMessage.objects
+              .filter(thread=thread, id__gt=after_id)
+              .select_related('sender')
+              .prefetch_related('images')
+              .order_by('id')[:100])
 
-    return JsonResponse({'ok': True, 'messages': data})
+        data = []
+        for m in qs:
+            try:
+                # Безопасное получение текста (может быть зашифрован)
+                text = ''
+                try:
+                    text = m.text if hasattr(m, 'text') else ''
+                except Exception:
+                    # Если ошибка при расшифровке, оставляем пустой текст
+                    text = ''
+                
+                # Безопасное форматирование времени
+                created_at_str = ''
+                try:
+                    if m.created_at:
+                        created_at_str = m.created_at.strftime('%H:%M')
+                    else:
+                        created_at_str = ''
+                except (AttributeError, ValueError, TypeError):
+                    created_at_str = ''
+                
+                # Безопасное получение URL изображений
+                image_urls = []
+                try:
+                    for img in m.images.all():
+                        if img.image:
+                            image_urls.append(img.image.url)
+                except Exception:
+                    # Если ошибка при получении изображений, пропускаем
+                    pass
+                
+                data.append({
+                    'id': m.id,
+                    'sender_id': m.sender_id,
+                    'text': text,
+                    'created_at': created_at_str,
+                    'images': image_urls,
+                    'system_action': m.system_action or '',
+                    'system_url': m.system_url or '',
+                })
+            except Exception as e:
+                # Логируем ошибку, но продолжаем обработку других сообщений
+                logger = logging.getLogger('django.request')
+                logger.error(f'Ошибка при обработке сообщения {m.id} в chat_poll: {str(e)}', exc_info=True)
+                continue
+
+        return JsonResponse({'ok': True, 'messages': data})
+    except Exception as e:
+        # Логируем общую ошибку
+        logger = logging.getLogger('django.request')
+        logger.error(f'Ошибка в chat_poll для thread_id={thread_id}: {str(e)}', exc_info=True)
+        return JsonResponse({'ok': False, 'error': 'Ошибка сервера'}, status=500)
 
 
 @login_required

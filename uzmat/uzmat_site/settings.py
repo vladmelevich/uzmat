@@ -175,7 +175,7 @@ DATA_UPLOAD_MAX_NUMBER_FIELDS = 1000
 # Session settings (запоминание пользователя)
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 30  # 30 дней
 SESSION_SAVE_EVERY_REQUEST = True
-SESSION_COOKIE_SECURE = True  # Cloudflare обеспечивает HTTPS
+SESSION_COOKIE_SECURE = False  # Временно для HTTP, после активации Cloudflare изменить на True
 SESSION_COOKIE_HTTPONLY = True  # Защита от XSS
 SESSION_COOKIE_SAMESITE = 'Lax'  # Защита от CSRF
 
@@ -198,7 +198,7 @@ REST_FRAMEWORK = {
 # CSRF настройки для локальной разработки
 CSRF_TRUSTED_ORIGINS_STR = os.environ.get('CSRF_TRUSTED_ORIGINS', 'http://localhost:8000,http://127.0.0.1:8000,http://109.199.127.149,https://uzmat.uz,https://www.uzmat.uz')
 CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in CSRF_TRUSTED_ORIGINS_STR.split(',') if origin.strip()]
-CSRF_COOKIE_SECURE = True  # Cloudflare обеспечивает HTTPS
+CSRF_COOKIE_SECURE = False  # Временно для HTTP, после активации Cloudflare изменить на True
 CSRF_COOKIE_HTTPONLY = True
 CSRF_COOKIE_SAMESITE = 'Lax'
 CSRF_USE_SESSIONS = False  # Используем cookies для CSRF токена

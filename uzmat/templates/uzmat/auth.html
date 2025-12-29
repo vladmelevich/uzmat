@@ -248,6 +248,22 @@
 
   <!-- Переключение между Вход и Регистрация -->
   <script>
+    // Функция для получения CSRF токена
+    function getCookie(name) {
+      let cookieValue = null;
+      if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+          const cookie = cookies[i].trim();
+          if (cookie.substring(0, name.length + 1) === (name + '=')) {
+            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+            break;
+          }
+        }
+      }
+      return cookieValue;
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
       const loginTab = document.querySelector('[data-auth-tab="login"]');
       const registerTab = document.querySelector('[data-auth-tab="register"]');
@@ -315,22 +331,75 @@
       function handleFormSubmit(form, event) {
         event.preventDefault();
         
+        if (!form || !form.action) {
+          console.error('Form or form.action is missing');
+          if (window.showToast) {
+            window.showToast('Ошибка формы. Перезагрузите страницу.', 'error');
+          }
+          return;
+        }
+        
         const formData = new FormData(form);
         const submitButton = form.querySelector('button[type="submit"]');
-        const originalText = submitButton.textContent;
+        const originalText = submitButton ? submitButton.textContent : 'Отправить';
+        
+        // Получаем URL формы
+        const formUrl = typeof form.action === 'string' ? form.action : form.getAttribute('action');
+        
+        if (!formUrl) {
+          console.error('Form action URL is missing');
+          if (window.showToast) {
+            window.showToast('Ошибка формы. Перезагрузите страницу.', 'error');
+          }
+          return;
+        }
         
         // Блокируем кнопку
-        submitButton.disabled = true;
-        submitButton.textContent = 'Обработка...';
+        if (submitButton) {
+          submitButton.disabled = true;
+          submitButton.textContent = 'Обработка...';
+        }
         
-        fetch(form.action, {
+        // Убеждаемся, что CSRF токен есть в FormData
+        const csrftoken = getCookie('csrftoken');
+        if (csrftoken) {
+          formData.append('csrfmiddlewaretoken', csrftoken);
+        }
+        
+        fetch(formUrl, {
           method: 'POST',
           body: formData,
           headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-          }
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': csrftoken || ''
+          },
+          credentials: 'same-origin'
         })
-        .then(response => response.json())
+        .then(response => {
+          const contentType = response.headers.get('content-type') || '';
+          
+          // Если сервер вернул HTML вместо JSON, это обычно означает ошибку CSRF или другую ошибку
+          if (!contentType.includes('application/json')) {
+            // Пытаемся прочитать как текст, чтобы понять ошибку
+            return response.text().then(text => {
+              console.error('Server returned HTML instead of JSON:', text.substring(0, 200));
+              throw new Error('Ошибка сервера. Возможно, проблема с CSRF токеном. Перезагрузите страницу и попробуйте снова.');
+            });
+          }
+          
+          if (!response.ok) {
+            return response.json().then(data => {
+              throw new Error(data.message || `Ошибка сервера (${response.status})`);
+            }).catch(err => {
+              if (err.message) {
+                throw err;
+              }
+              throw new Error(`Ошибка сервера (${response.status}). Попробуйте еще раз.`);
+            });
+          }
+          
+          return response.json();
+        })
         .then(data => {
           if (data.success) {
             // Успех
@@ -357,12 +426,17 @@
         })
         .catch(error => {
           console.error('Error:', error);
+          const errorMessage = error.message || 'Произошла ошибка. Попробуйте еще раз.';
           if (window.showToast) {
-            window.showToast('Произошла ошибка. Попробуйте еще раз.', 'error');
+            window.showToast(errorMessage, 'error');
+          } else {
+            alert(errorMessage);
           }
           // Разблокируем кнопку
-          submitButton.disabled = false;
-          submitButton.textContent = originalText;
+          if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.textContent = originalText;
+          }
         });
       }
 

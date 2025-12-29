@@ -58,3 +58,4 @@ docker-compose exec web python manage.py createsuperuser
 
 Все данные сохранятся автоматически!
 
+

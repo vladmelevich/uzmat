@@ -145,3 +145,4 @@ class InputSanitizationMiddleware(MiddlewareMixin):
             ip = request.META.get('REMOTE_ADDR')
         return ip
 
+

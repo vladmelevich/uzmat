@@ -23,7 +23,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-uzmat-premium-site-20
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
 # Разрешенные хосты (из переменной окружения или по умолчанию)
-ALLOWED_HOSTS_STR = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1')
+ALLOWED_HOSTS_STR = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,109.199.127.149,uzmat.uz,www.uzmat.uz')
 ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS_STR.split(',') if host.strip()]
 
 
@@ -175,7 +175,7 @@ DATA_UPLOAD_MAX_NUMBER_FIELDS = 1000
 # Session settings (запоминание пользователя)
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 30  # 30 дней
 SESSION_SAVE_EVERY_REQUEST = True
-SESSION_COOKIE_SECURE = not DEBUG  # HTTPS только в production
+SESSION_COOKIE_SECURE = True  # Cloudflare обеспечивает HTTPS
 SESSION_COOKIE_HTTPONLY = True  # Защита от XSS
 SESSION_COOKIE_SAMESITE = 'Lax'  # Защита от CSRF
 
@@ -196,9 +196,9 @@ REST_FRAMEWORK = {
 }
 
 # CSRF настройки для локальной разработки
-CSRF_TRUSTED_ORIGINS_STR = os.environ.get('CSRF_TRUSTED_ORIGINS', 'http://localhost:8000,http://127.0.0.1:8000')
+CSRF_TRUSTED_ORIGINS_STR = os.environ.get('CSRF_TRUSTED_ORIGINS', 'http://localhost:8000,http://127.0.0.1:8000,http://109.199.127.149,https://uzmat.uz,https://www.uzmat.uz')
 CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in CSRF_TRUSTED_ORIGINS_STR.split(',') if origin.strip()]
-CSRF_COOKIE_SECURE = not DEBUG  # HTTPS только в production
+CSRF_COOKIE_SECURE = True  # Cloudflare обеспечивает HTTPS
 CSRF_COOKIE_HTTPONLY = True
 CSRF_COOKIE_SAMESITE = 'Lax'
 CSRF_USE_SESSIONS = False  # Используем cookies для CSRF токена

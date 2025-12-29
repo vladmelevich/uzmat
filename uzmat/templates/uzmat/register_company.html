@@ -85,19 +85,25 @@
       {% if messages %}
         <div style="margin-bottom: 24px;">
           {% for message in messages %}
-            <div class="uz-alert" style="padding: 12px 16px; border-radius: var(--uz-radius-md); margin-bottom: 8px; 
-              {% if message.tags == 'error' %}background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: var(--uz-danger);
-              {% elif message.tags == 'success' %}background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); color: var(--uz-success);
-              {% else %}background: var(--uz-bg-hover); border: 1px solid var(--uz-border);{% endif %}">
-              {{ message }}
-            </div>
+            {% if message.tags == 'error' %}
+              <div class="uz-alert" style="padding: 12px 16px; border-radius: var(--uz-radius-md); margin-bottom: 8px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: var(--uz-danger);">
+                {{ message }}
+              </div>
+            {% elif message.tags == 'success' %}
+              <div class="uz-alert" style="padding: 12px 16px; border-radius: var(--uz-radius-md); margin-bottom: 8px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); color: var(--uz-success);">
+                {{ message }}
+              </div>
+            {% else %}
+              <div class="uz-alert" style="padding: 12px 16px; border-radius: var(--uz-radius-md); margin-bottom: 8px; background: var(--uz-bg-hover); border: 1px solid var(--uz-border);">
+                {{ message }}
+              </div>
+            {% endif %}
           {% endfor %}
         </div>
       {% endif %}
 
       <form action="{% url 'uzmat:register_company' %}" method="post">
         {% csrf_token %}
-        <input type="hidden" name="action" value="register_company">
 
         <div style="margin-bottom: 20px;">
           <label style="display: block; margin-bottom: 8px; font-size: 14px; font-weight: 500;">Название компании *</label>
@@ -218,7 +224,7 @@
     </a>
   </nav>
 
-  <!-- Переключение видимости пароля -->
+  <!-- Переключение видимости пароля и AJAX обработка -->
   <script>
     document.addEventListener('DOMContentLoaded', function() {
       // Функция переключения видимости пароля
@@ -244,6 +250,65 @@
           }
         });
       });
+
+      // AJAX обработка формы регистрации компании
+      const registerForm = document.querySelector('form[action*="register_company"]');
+      
+      if (registerForm) {
+        registerForm.addEventListener('submit', function(e) {
+          e.preventDefault();
+          
+          const formData = new FormData(registerForm);
+          const submitButton = registerForm.querySelector('button[type="submit"]');
+          const originalText = submitButton.textContent;
+          
+          // Блокируем кнопку
+          submitButton.disabled = true;
+          submitButton.textContent = 'Регистрация...';
+          
+          fetch(registerForm.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest'
+            }
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              // Успех
+              if (window.showToast) {
+                window.showToast(data.message, 'success');
+              }
+              // Редирект через небольшую задержку для плавности
+              setTimeout(() => {
+                if (data.redirect) {
+                  window.location.href = data.redirect;
+                } else {
+                  window.location.reload();
+                }
+              }, 500);
+            } else {
+              // Ошибка
+              if (window.showToast) {
+                window.showToast(data.message, 'error');
+              }
+              // Разблокируем кнопку
+              submitButton.disabled = false;
+              submitButton.textContent = originalText;
+            }
+          })
+          .catch(error => {
+            console.error('Error:', error);
+            if (window.showToast) {
+              window.showToast('Произошла ошибка. Попробуйте еще раз.', 'error');
+            }
+            // Разблокируем кнопку
+            submitButton.disabled = false;
+            submitButton.textContent = originalText;
+          });
+        });
+      }
     });
   </script>
 

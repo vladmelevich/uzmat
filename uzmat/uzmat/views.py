@@ -277,6 +277,8 @@ def auth(request):
     if request.user.is_authenticated:
         return redirect('uzmat:profile')
     
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    
     if request.method == 'POST':
         action = request.POST.get('action')
         
@@ -287,21 +289,29 @@ def auth(request):
             
             # Валидация входных данных (защита от SQL инъекций и XSS)
             if not email or not password:
+                if is_ajax:
+                    return JsonResponse({'success': False, 'message': 'Заполните все поля'}, status=400)
                 messages.error(request, 'Заполните все поля', extra_tags='auth')
                 return render(request, 'uzmat/auth.html')
             
             # Валидация email с использованием утилиты безопасности
             if not validate_email(email):
+                if is_ajax:
+                    return JsonResponse({'success': False, 'message': 'Неверный формат email'}, status=400)
                 messages.error(request, 'Неверный формат email', extra_tags='auth')
                 return render(request, 'uzmat/auth.html')
             
             # Проверка на SQL инъекции (дополнительная защита)
             if check_sql_injection_patterns(email) or check_sql_injection_patterns(password):
+                if is_ajax:
+                    return JsonResponse({'success': False, 'message': 'Обнаружены недопустимые символы'}, status=400)
                 messages.error(request, 'Обнаружены недопустимые символы', extra_tags='auth')
                 return render(request, 'uzmat/auth.html')
             
             # Проверка длины пароля
             if len(password) > 128:
+                if is_ajax:
+                    return JsonResponse({'success': False, 'message': 'Пароль слишком длинный'}, status=400)
                 messages.error(request, 'Пароль слишком длинный', extra_tags='auth')
                 return render(request, 'uzmat/auth.html')
             
@@ -316,9 +326,13 @@ def auth(request):
                     cache.delete(f'rate_limit_login_{ip_address}')
                 
                 login(request, user)
+                if is_ajax:
+                    return JsonResponse({'success': True, 'message': 'Вход выполнен успешно!', 'redirect': reverse('uzmat:profile')})
                 messages.success(request, 'Вход выполнен успешно!', extra_tags='auth')
                 return redirect('uzmat:profile')
             else:
+                if is_ajax:
+                    return JsonResponse({'success': False, 'message': 'Неверный email или пароль'}, status=400)
                 messages.error(request, 'Неверный email или пароль', extra_tags='auth')
                 return render(request, 'uzmat/auth.html')
     
@@ -330,16 +344,22 @@ def register_individual(request):
     if request.user.is_authenticated:
         return redirect('uzmat:profile')
     
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    
     if request.method == 'POST':
         name = request.POST.get('name', '').strip()
         email = request.POST.get('email', '').strip()
         password = request.POST.get('password', '').strip()
         
         if not name or not email or not password:
+            if is_ajax:
+                return JsonResponse({'success': False, 'message': 'Заполните все обязательные поля'}, status=400)
             messages.error(request, 'Заполните все обязательные поля', extra_tags='auth')
             return render(request, 'uzmat/auth.html', {'show_register': True})
         
         if User.objects.filter(email=email).exists():
+            if is_ajax:
+                return JsonResponse({'success': False, 'message': 'Пользователь с таким email уже существует'}, status=400)
             messages.error(request, 'Пользователь с таким email уже существует', extra_tags='auth')
             return render(request, 'uzmat/auth.html', {'show_register': True})
         
@@ -354,6 +374,8 @@ def register_individual(request):
         
         # Сразу логиним пользователя
         login(request, user)
+        if is_ajax:
+            return JsonResponse({'success': True, 'message': 'Регистрация успешно завершена! Добро пожаловать в Uzmat!', 'redirect': reverse('uzmat:profile')})
         messages.success(request, 'Регистрация успешно завершена! Добро пожаловать в Uzmat!', extra_tags='auth')
         return redirect('uzmat:profile')
     
@@ -365,6 +387,8 @@ def register_company(request):
     """Регистрация компании"""
     if request.user.is_authenticated:
         return redirect('uzmat:profile')
+    
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
     
     if request.method == 'POST':
         company_name = request.POST.get('company_name', '').strip()
@@ -380,10 +404,14 @@ def register_company(request):
         
         # Проверка обязательных полей
         if not all([company_name, company_inn, company_director, company_phone, company_email, email, password]):
+            if is_ajax:
+                return JsonResponse({'success': False, 'message': 'Заполните все обязательные поля'}, status=400)
             messages.error(request, 'Заполните все обязательные поля', extra_tags='auth')
             return render(request, 'uzmat/register_company.html')
         
         if User.objects.filter(email=email).exists():
+            if is_ajax:
+                return JsonResponse({'success': False, 'message': 'Пользователь с таким email уже существует'}, status=400)
             messages.error(request, 'Пользователь с таким email уже существует', extra_tags='auth')
             return render(request, 'uzmat/register_company.html')
         
@@ -406,6 +434,8 @@ def register_company(request):
         
         # Сразу логиним пользователя
         login(request, user)
+        if is_ajax:
+            return JsonResponse({'success': True, 'message': 'Регистрация успешно завершена! Добро пожаловать в Uzmat!', 'redirect': reverse('uzmat:profile')})
         messages.success(request, 'Регистрация успешно завершена! Добро пожаловать в Uzmat!', extra_tags='auth')
         return redirect('uzmat:profile')
     

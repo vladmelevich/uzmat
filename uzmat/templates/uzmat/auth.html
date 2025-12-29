@@ -306,6 +306,72 @@
           }
         });
       });
+
+      // AJAX обработка форм
+      const loginForm = document.querySelector('[data-auth-panel="login"]');
+      const registerForm = document.querySelector('[data-auth-panel="register"]');
+
+      function handleFormSubmit(form, event) {
+        event.preventDefault();
+        
+        const formData = new FormData(form);
+        const submitButton = form.querySelector('button[type="submit"]');
+        const originalText = submitButton.textContent;
+        
+        // Блокируем кнопку
+        submitButton.disabled = true;
+        submitButton.textContent = 'Обработка...';
+        
+        fetch(form.action, {
+          method: 'POST',
+          body: formData,
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            // Успех
+            if (window.showToast) {
+              window.showToast(data.message, 'success');
+            }
+            // Редирект через небольшую задержку для плавности
+            setTimeout(() => {
+              if (data.redirect) {
+                window.location.href = data.redirect;
+              } else {
+                window.location.reload();
+              }
+            }, 500);
+          } else {
+            // Ошибка
+            if (window.showToast) {
+              window.showToast(data.message, 'error');
+            }
+            // Разблокируем кнопку
+            submitButton.disabled = false;
+            submitButton.textContent = originalText;
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          if (window.showToast) {
+            window.showToast('Произошла ошибка. Попробуйте еще раз.', 'error');
+          }
+          // Разблокируем кнопку
+          submitButton.disabled = false;
+          submitButton.textContent = originalText;
+        });
+      }
+
+      if (loginForm) {
+        loginForm.addEventListener('submit', (e) => handleFormSubmit(loginForm, e));
+      }
+
+      if (registerForm) {
+        registerForm.addEventListener('submit', (e) => handleFormSubmit(registerForm, e));
+      }
     });
   </script>
 

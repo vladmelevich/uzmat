@@ -254,31 +254,35 @@
       const loginForm = document.querySelector('[data-auth-panel="login"]');
       const registerForm = document.querySelector('[data-auth-panel="register"]');
 
-      if (loginTab && registerTab && loginForm && registerForm) {
-        // Функция переключения на вкладку входа
-        function showLogin() {
-          loginTab.classList.add('active');
-          registerTab.classList.remove('active');
-          loginForm.style.display = 'block';
-          registerForm.style.display = 'none';
-        }
+      // Функция переключения на вкладку входа
+      function showLogin() {
+        if (loginTab) loginTab.classList.add('active');
+        if (registerTab) registerTab.classList.remove('active');
+        if (loginForm) loginForm.style.display = 'block';
+        if (registerForm) registerForm.style.display = 'none';
+      }
 
-        // Функция переключения на вкладку регистрации
-        function showRegister() {
-          registerTab.classList.add('active');
-          loginTab.classList.remove('active');
-          registerForm.style.display = 'block';
-          loginForm.style.display = 'none';
-        }
+      // Функция переключения на вкладку регистрации
+      function showRegister() {
+        if (registerTab) registerTab.classList.add('active');
+        if (loginTab) loginTab.classList.remove('active');
+        if (registerForm) registerForm.style.display = 'block';
+        if (loginForm) loginForm.style.display = 'none';
+      }
 
-        // Обработчики кликов
+      // Обработчики кликов для вкладок
+      if (loginTab) {
         loginTab.addEventListener('click', function(e) {
           e.preventDefault();
+          e.stopPropagation();
           showLogin();
         });
+      }
 
+      if (registerTab) {
         registerTab.addEventListener('click', function(e) {
           e.preventDefault();
+          e.stopPropagation();
           showRegister();
         });
       }
@@ -308,9 +312,6 @@
       });
 
       // AJAX обработка форм
-      const loginForm = document.querySelector('[data-auth-panel="login"]');
-      const registerForm = document.querySelector('[data-auth-panel="register"]');
-
       function handleFormSubmit(form, event) {
         event.preventDefault();
         

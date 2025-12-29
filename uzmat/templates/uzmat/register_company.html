@@ -273,7 +273,16 @@
               'X-Requested-With': 'XMLHttpRequest'
             }
           })
-          .then(response => response.json())
+          .then(response => {
+            if (!response.ok) {
+              return response.json().then(data => {
+                throw new Error(data.message || 'Произошла ошибка');
+              }).catch(() => {
+                throw new Error('Произошла ошибка. Попробуйте еще раз.');
+              });
+            }
+            return response.json();
+          })
           .then(data => {
             if (data.success) {
               // Успех
@@ -293,6 +302,8 @@
               if (window.showToast) {
                 window.showToast(data.message, 'error');
               }
+              // Очищаем все поля формы
+              registerForm.reset();
               // Разблокируем кнопку
               submitButton.disabled = false;
               submitButton.textContent = originalText;
@@ -300,9 +311,12 @@
           })
           .catch(error => {
             console.error('Error:', error);
+            const errorMessage = error.message || 'Произошла ошибка. Попробуйте еще раз.';
             if (window.showToast) {
-              window.showToast('Произошла ошибка. Попробуйте еще раз.', 'error');
+              window.showToast(errorMessage, 'error');
             }
+            // Очищаем все поля формы
+            registerForm.reset();
             // Разблокируем кнопку
             submitButton.disabled = false;
             submitButton.textContent = originalText;

@@ -409,10 +409,29 @@ def register_company(request):
             messages.error(request, 'Заполните все обязательные поля', extra_tags='auth')
             return render(request, 'uzmat/register_company.html')
         
+        # Проверка на дубликаты
         if User.objects.filter(email=email).exists():
             if is_ajax:
                 return JsonResponse({'success': False, 'message': 'Пользователь с таким email уже существует'}, status=400)
             messages.error(request, 'Пользователь с таким email уже существует', extra_tags='auth')
+            return render(request, 'uzmat/register_company.html')
+        
+        if User.objects.filter(company_inn=company_inn).exists():
+            if is_ajax:
+                return JsonResponse({'success': False, 'message': 'Компания с таким ИНН уже зарегистрирована'}, status=400)
+            messages.error(request, 'Компания с таким ИНН уже зарегистрирована', extra_tags='auth')
+            return render(request, 'uzmat/register_company.html')
+        
+        if User.objects.filter(company_phone=company_phone).exists():
+            if is_ajax:
+                return JsonResponse({'success': False, 'message': 'Компания с таким телефоном уже зарегистрирована'}, status=400)
+            messages.error(request, 'Компания с таким телефоном уже зарегистрирована', extra_tags='auth')
+            return render(request, 'uzmat/register_company.html')
+        
+        if User.objects.filter(company_email=company_email).exists():
+            if is_ajax:
+                return JsonResponse({'success': False, 'message': 'Компания с таким email уже зарегистрирована'}, status=400)
+            messages.error(request, 'Компания с таким email уже зарегистрирована', extra_tags='auth')
             return render(request, 'uzmat/register_company.html')
         
         # Создаем пользователя для компании и сразу логиним

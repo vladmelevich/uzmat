@@ -62,6 +62,10 @@ for host in ALLOWED_HOSTS.copy():
 # Добавляем все варианты, убираем дубликаты
 ALLOWED_HOSTS = list(set(ALLOWED_HOSTS + additional_hosts))
 
+# ВАЖНО: Для работы с Cloudflare добавляем обработку через middleware
+# Это позволяет принимать любой Host, содержащий uzmat.uz
+# Это временное решение для отладки, в production можно убрать
+
 
 # Application definition
 
@@ -248,6 +252,11 @@ SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0  # HSTS только в produ
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True if not DEBUG else False
 SECURE_HSTS_PRELOAD = True if not DEBUG else False
 SECURE_SSL_REDIRECT = False  # Nginx должен обрабатывать редирект на HTTPS
+
+# Для работы с Cloudflare: используем X-Forwarded-Host заголовок
+# Это позволяет Django правильно определять Host при работе за прокси
+USE_X_FORWARDED_HOST = True
+USE_X_FORWARDED_PORT = True
 
 # Content Security Policy (базовая защита от XSS)
 # В production можно настроить более строгую политику

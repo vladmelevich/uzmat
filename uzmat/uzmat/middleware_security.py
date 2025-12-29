@@ -6,14 +6,28 @@ from django.core.cache import cache
 from django.http import JsonResponse, HttpResponse
 from django.utils.deprecation import MiddlewareMixin
 from django.contrib import messages
+from django.conf import settings
 import time
 import logging
+
+logger = logging.getLogger('django.request')
 
 
 class SecurityHeadersMiddleware(MiddlewareMixin):
     """
     Middleware для добавления безопасных HTTP заголовков
     """
+    
+    def process_request(self, request):
+        """
+        Логируем Host заголовок для отладки проблем с ALLOWED_HOSTS
+        """
+        try:
+            host = request.get_host()
+            logger.info(f'Request Host: {host}, ALLOWED_HOSTS: {settings.ALLOWED_HOSTS}')
+        except Exception:
+            pass
+        return None
     
     def _is_trustworthy_origin(self, request):
         """

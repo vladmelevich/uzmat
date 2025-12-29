@@ -196,7 +196,8 @@ REST_FRAMEWORK = {
 }
 
 # CSRF настройки для локальной разработки
-CSRF_TRUSTED_ORIGINS_STR = os.environ.get('CSRF_TRUSTED_ORIGINS', 'http://localhost:8000,http://127.0.0.1:8000,http://109.199.127.149,https://uzmat.uz,https://www.uzmat.uz')
+# Включаем HTTP для uzmat.uz (SSL еще не настроен)
+CSRF_TRUSTED_ORIGINS_STR = os.environ.get('CSRF_TRUSTED_ORIGINS', 'http://localhost:8000,http://127.0.0.1:8000,http://109.199.127.149,http://uzmat.uz,http://www.uzmat.uz,https://uzmat.uz,https://www.uzmat.uz')
 CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in CSRF_TRUSTED_ORIGINS_STR.split(',') if origin.strip()]
 CSRF_COOKIE_SECURE = False  # Временно для HTTP, после активации Cloudflare изменить на True
 CSRF_COOKIE_HTTPONLY = True

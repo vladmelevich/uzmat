@@ -1475,6 +1475,24 @@ select.uz-input {
 
   .uz-ad-detail-gallery-main {
     height: 400px !important;
+    max-width: 100% !important;
+  }
+
+  .uz-ad-detail-gallery {
+    max-width: 100% !important;
+    overflow: hidden !important;
+  }
+
+  .uz-gallery-thumbnails {
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .uz-gallery-thumbnails img {
+    max-width: 100px !important;
+    max-height: 100px !important;
   }
 
   .uz-ad-detail-specs {
@@ -1509,6 +1527,22 @@ select.uz-input {
 
   .uz-ad-detail-gallery-main {
     height: 300px !important;
+    max-width: 100% !important;
+  }
+
+  .uz-gallery-thumbnails {
+    padding: 12px !important;
+  }
+
+  .uz-gallery-thumbnails button {
+    width: 80px !important;
+    height: 80px !important;
+    min-width: 80px !important;
+  }
+
+  .uz-gallery-thumbnails img {
+    max-width: 80px !important;
+    max-height: 80px !important;
   }
 
   .uz-ad-detail-header-inner {

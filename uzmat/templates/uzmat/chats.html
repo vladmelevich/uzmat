@@ -628,13 +628,20 @@
             return;
           }
           try {
+            const csrftoken = getCookie('csrftoken');
+            const params = new URLSearchParams({ text });
+            if (csrftoken) {
+              params.append('csrfmiddlewaretoken', csrftoken);
+            }
             const res = await fetch(`/chats/api/message/${editingId}/edit/`, {
               method: 'POST',
               headers: {
-                'X-CSRFToken': getCookie('csrftoken') || '',
+                'X-CSRFToken': csrftoken || '',
+                'X-Requested-With': 'XMLHttpRequest',
                 'Content-Type': 'application/x-www-form-urlencoded'
               },
-              body: new URLSearchParams({ text })
+              body: params,
+              credentials: 'same-origin'
             });
             const data = await res.json();
             if (!data.ok) {
@@ -658,22 +665,50 @@
         const fd = new FormData();
         fd.append('text', text);
         if (file) fd.append('image', file);
+        
+        // Добавляем CSRF токен в FormData
+        const csrftoken = getCookie('csrftoken');
+        if (csrftoken) {
+          fd.append('csrfmiddlewaretoken', csrftoken);
+        }
 
         try {
           const res = await fetch(`/chats/api/${threadId}/send/`, {
             method: 'POST',
-            headers: { 'X-CSRFToken': getCookie('csrftoken') || '' },
-            body: fd
+            headers: { 
+              'X-CSRFToken': csrftoken || '',
+              'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: fd,
+            credentials: 'same-origin'
           });
           
           // Проверяем статус ответа
-          if (res.status === 413 || res.status === 400) {
-            // Пытаемся получить JSON ответ
-            let errorMessage = 'Размер фотографии слишком большой. Максимальный размер: 2 МБ. Выберите файл меньшего размера.';
+          if (res.status === 403) {
+            // Ошибка доступа или CSRF
+            let errorMessage = 'Ошибка доступа. Перезагрузите страницу и попробуйте снова.';
             try {
               const data = await res.json();
               if (data.error) {
                 errorMessage = data.error;
+              }
+            } catch (e) {
+              // Если не удалось распарсить JSON
+            }
+            alert(errorMessage);
+            return;
+          }
+          
+          if (res.status === 413 || res.status === 400) {
+            // Пытаемся получить JSON ответ
+            let errorMessage = 'Размер фотографии слишком большой. Максимальный размер: 2 МБ. Выберите файл меньшего размера.';
+            try {
+              const contentType = res.headers.get('content-type') || '';
+              if (contentType.includes('application/json')) {
+                const data = await res.json();
+                if (data.error) {
+                  errorMessage = data.error;
+                }
               }
             } catch (e) {
               // Если не удалось распарсить JSON, используем стандартное сообщение
@@ -682,6 +717,13 @@
             if (imgEl) imgEl.value = '';
             if (preview) preview.style.display = 'none';
             if (previewUrl) { URL.revokeObjectURL(previewUrl); previewUrl = null; }
+            return;
+          }
+          
+          // Проверяем, что ответ JSON
+          const contentType = res.headers.get('content-type') || '';
+          if (!contentType.includes('application/json')) {
+            alert('Ошибка сервера. Перезагрузите страницу и попробуйте снова.');
             return;
           }
           
@@ -782,9 +824,19 @@
 
       async function deleteMessage(id) {
         try {
+          const csrftoken = getCookie('csrftoken');
+          const formData = new FormData();
+          if (csrftoken) {
+            formData.append('csrfmiddlewaretoken', csrftoken);
+          }
           const res = await fetch(`/chats/api/message/${id}/delete/`, {
             method: 'POST',
-            headers: { 'X-CSRFToken': getCookie('csrftoken') || '' }
+            headers: { 
+              'X-CSRFToken': csrftoken || '',
+              'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData,
+            credentials: 'same-origin'
           });
           const data = await res.json();
           if (!data.ok) {

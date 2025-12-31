@@ -49,13 +49,17 @@ docker-compose exec -T web python manage.py migrate --noinput
 
 # 8. Собираем статику
 echo -e "${YELLOW}📦 Собираем статические файлы...${NC}"
-docker-compose exec -T web python manage.py collectstatic --noinput
+docker-compose exec -T web python manage.py collectstatic --noinput --clear
 
-# 9. Создаем суперпользователя (если еще не существует)
+# 9. Перезапускаем nginx для применения изменений
+echo -e "${YELLOW}🔄 Перезапускаем nginx...${NC}"
+docker-compose restart nginx || echo "Nginx не запущен, пропускаем"
+
+# 10. Создаем суперпользователя (если еще не существует)
 echo -e "${YELLOW}👤 Создаем суперпользователя...${NC}"
 docker-compose exec -T web python manage.py create_default_superuser
 
-# 10. Проверяем статус
+# 11. Проверяем статус
 echo -e "${YELLOW}🔍 Проверяем статус контейнеров...${NC}"
 docker-compose ps
 

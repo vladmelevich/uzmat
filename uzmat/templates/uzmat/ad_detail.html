@@ -72,78 +72,48 @@
   <style>
     /* Исправление адаптивности для страницы объявления */
     html, body {
-      max-width: 100vw !important;
-      overflow-x: hidden !important;
+      overflow-x: hidden;
     }
     
     .uz-ad-detail-gallery,
     .uz-ad-detail-gallery-main,
     .uz-gallery-thumbnails {
-      max-width: 100% !important;
       box-sizing: border-box;
     }
     
     .uz-ad-detail-gallery img,
     .uz-gallery-thumbnails img {
-      max-width: 100% !important;
+      max-width: 100%;
       height: auto;
-    }
-    
-    .uz-ad-detail-grid {
-      max-width: 100% !important;
-      overflow-x: hidden !important;
     }
     
     @media (max-width: 768px) {
       html, body {
-        max-width: 100vw !important;
-        overflow-x: hidden !important;
+        overflow-x: hidden;
       }
       
       .uz-ad-detail-gallery-main {
         height: 400px !important;
-        max-width: 100% !important;
-        width: 100% !important;
       }
       
       .uz-gallery-thumbnails {
-        max-width: 100% !important;
-        width: 100% !important;
-        overflow-x: auto !important;
-        overflow-y: hidden !important;
+        overflow-x: auto;
+        overflow-y: hidden;
         -webkit-overflow-scrolling: touch;
       }
       
-      .uz-ad-detail-grid {
-        max-width: 100% !important;
-        width: 100% !important;
-        padding: 0 !important;
-      }
-      
-      .uz-container {
-        padding-left: var(--uz-gap-md) !important;
-        padding-right: var(--uz-gap-md) !important;
-        max-width: 100% !important;
-        width: 100% !important;
-        overflow-x: hidden !important;
-        box-sizing: border-box !important;
-      }
-      
       .uz-ad-detail-gallery {
-        width: 100% !important;
-        max-width: 100% !important;
+        width: 100%;
       }
     }
     
     @media (max-width: 480px) {
       .uz-ad-detail-gallery-main {
         height: 300px !important;
-        max-width: 100% !important;
       }
       
       .uz-gallery-thumbnails {
         padding: 12px !important;
-        max-width: 100% !important;
       }
       
       .uz-gallery-thumbnails button {
@@ -195,7 +165,7 @@
     </div>
   </header>
 
-  <main class="uz-container" style="max-width: 100%; overflow-x: hidden;">
+  <main class="uz-container">
 
     <!-- Breadcrumbs -->
     <nav class="uz-breadcrumbs" itemscope itemtype="https://schema.org/BreadcrumbList">
@@ -219,14 +189,14 @@
       </span>
     </nav>
 
-    <div class="uz-grid uz-ad-detail-grid" style="grid-template-columns: 1fr 360px; align-items: start; max-width: 100%; overflow-x: hidden;">
+    <div class="uz-grid uz-ad-detail-grid" style="grid-template-columns: 1fr 360px; align-items: start; gap: 24px;">
 
       <!-- Main Content -->
-      <div class="uz-flex-col" style="gap: 32px; min-width: 0; max-width: 100%; overflow-x: hidden;">
+      <div class="uz-flex-col" style="gap: 32px; min-width: 0;">
 
         <!-- Gallery -->
-        <div class="uz-card uz-ad-detail-gallery" style="padding: 0; overflow: hidden; max-width: 100%;">
-          <div class="uz-ad-detail-gallery-main" id="gallery-main" style="height: 600px; background: var(--uz-bg-hover); width: 100%; max-width: 100%; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden;">
+        <div class="uz-card uz-ad-detail-gallery" style="padding: 0; overflow: hidden;">
+          <div class="uz-ad-detail-gallery-main" id="gallery-main" style="height: 600px; background: var(--uz-bg-hover); width: 100%; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden;">
             {% if ad.image %}
               <img id="main-gallery-image" src="{{ ad.image.url }}" alt="{{ ad.title }}" style="width: 100%; height: 100%; max-width: 100%; object-fit: cover; object-position: center; cursor: pointer; display: block;">
             {% elif ad.images.exists %}
@@ -257,7 +227,7 @@
             {% endif %}
           </div>
           {% if ad.image and ad.images.count > 0 or ad.images.count > 1 %}
-          <div class="uz-gallery-thumbnails" style="display: flex; gap: 8px; padding: 16px; overflow-x: auto; overflow-y: hidden; background: var(--uz-bg-card); max-width: 100%; -webkit-overflow-scrolling: touch;">
+          <div class="uz-gallery-thumbnails" style="display: flex; gap: 8px; padding: 16px; overflow-x: auto; overflow-y: hidden; background: var(--uz-bg-card); -webkit-overflow-scrolling: touch;">
             {% if ad.image %}
             <button type="button" class="gallery-thumbnail active" data-image-index="0" data-image-url="{{ ad.image.url }}" style="flex-shrink: 0; width: 100px; height: 100px; min-width: 100px; border: 2px solid var(--uz-primary); border-radius: 8px; overflow: hidden; cursor: pointer; padding: 0; background: none; transition: all 0.2s; opacity: 1;">
               <img src="{{ ad.image.url }}" alt="Основное фото" style="width: 100%; height: 100%; max-width: 100px; max-height: 100px; object-fit: cover; object-position: center; display: block;">

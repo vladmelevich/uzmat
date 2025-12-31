@@ -1,4 +1,5 @@
 {% load static %}
+{% load static_version %}
 <!DOCTYPE html>
 <html lang="ru" id="html-lang">
 
@@ -8,8 +9,8 @@
   {% include 'uzmat/seo_meta.html' with title="Аренда и продажа спецтехники в Центральной Азии" description="Uzmat — единая платформа для поиска надежных подрядчиков и управления парком техники. Аренда и продажа спецтехники: экскаваторы, погрузчики, краны, бульдозеры, самосвалы. Запчасти и услуги. Казахстан, Узбекистан, Россия." keywords="аренда спецтехники, продажа спецтехники, экскаватор, погрузчик, кран, бульдозер, самосвал, аренда техники Казахстан, аренда техники Узбекистан, запчасти для спецтехники, услуги спецтехники" %}
   <link rel="icon" type="image/svg+xml" href="{% static 'uzmat/logo-uzmat.svg' %}">
   {% include 'uzmat/theme-init.html' %}
-  <link rel="stylesheet" href="{% static 'uzmat/styles.css' %}">
-  <script defer src="{% static 'uzmat/app.js' %}"></script>
+  <link rel="stylesheet" href="{% static_version 'uzmat/styles.css' %}">
+  <script defer src="{% static_version 'uzmat/app.js' %}"></script>
   
   <!-- Structured Data (Schema.org) -->
   <script type="application/ld+json">

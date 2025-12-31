@@ -7,7 +7,7 @@
   <title>{% if profile_user.account_type == 'company' %}{{ profile_user.company_name }}{% else %}{{ profile_user.first_name|default:profile_user.username }}{% endif %} — Uzmat</title>
   <link rel="icon" type="image/svg+xml" href="{% static 'uzmat/logo-uzmat.svg' %}">
   {% include 'uzmat/theme-init.html' %}
-  <link rel="stylesheet" href="{% static 'uzmat/styles.css' %}">
+  <link rel="stylesheet" href="{% static_version 'uzmat/styles.css' %}">
   <script defer src="{% static 'uzmat/app.js' %}"></script>
   {% include 'uzmat/toast-container.html' %}
 </head>

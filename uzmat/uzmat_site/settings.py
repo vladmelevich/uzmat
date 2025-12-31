@@ -318,6 +318,10 @@ CACHES = {
 # DEFAULT_FROM_EMAIL = 'your-email@yandex.ru'
 # DEFAULT_FROM_NAME = 'Uzmat'
 
+# Версия статических файлов (меняйте при обновлении CSS/JS для сброса кэша)
+# При изменении CSS/JS увеличьте версию, чтобы браузеры загрузили новые файлы
+STATIC_VERSION = os.environ.get('STATIC_VERSION', '2.0.0')
+
 # Логирование для безопасности и отладки
 LOGGING = {
     'version': 1,

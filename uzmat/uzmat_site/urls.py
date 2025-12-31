@@ -3,6 +3,7 @@ URL configuration for uzmat_site project.
 """
 from django.contrib import admin
 from django.contrib.sitemaps.views import sitemap
+from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
@@ -49,8 +50,11 @@ urlpatterns = [
     path('.well-known/<path:path>', well_known_handler, name='well-known'),
 ]
 
-# Для разработки - обслуживание медиа файлов
+# Для разработки - обслуживание статики и медиа файлов
 if settings.DEBUG:
+    # Статика автоматически обслуживается из STATICFILES_DIRS через staticfiles_urlpatterns
+    urlpatterns += staticfiles_urlpatterns()
+    # Медиа файлы обслуживаются явно
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 

@@ -151,6 +151,7 @@ class Advertisement(models.Model):
     
     # Цена
     price = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True, verbose_name="Цена")
+    price_usd = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True, verbose_name="Цена в USD")
     currency = models.CharField(max_length=10, choices=CURRENCY_CHOICES, default='kzt', verbose_name="Валюта")
     price_type = models.CharField(max_length=20, choices=PRICE_TYPE_CHOICES, blank=True, null=True, verbose_name="Тип цены")
     
@@ -243,6 +244,21 @@ class Advertisement(models.Model):
             elif self.price_type == 'per-month':
                 return f"{self.price:,.0f} {symbol}/месяц".replace(',', ' ')
         return f"{self.price:,.0f} {symbol}".replace(',', ' ')
+    
+    def get_price_usd_display(self):
+        """Форматированное отображение цены в долларах"""
+        if not self.price_usd:
+            return None
+        
+        # Для аренды показываем тариф, для остальных типов — без суффиксов
+        if self.ad_type == 'rent':
+            if self.price_type == 'per-hour':
+                return f"${self.price_usd:,.2f}/час".replace(',', ' ')
+            elif self.price_type == 'per-day':
+                return f"${self.price_usd:,.2f}/день".replace(',', ' ')
+            elif self.price_type == 'per-month':
+                return f"${self.price_usd:,.2f}/месяц".replace(',', ' ')
+        return f"${self.price_usd:,.2f}".replace(',', ' ')
     
     def get_country_display(self):
         """Отображение названия страны"""

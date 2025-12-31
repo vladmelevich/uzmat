@@ -1,0 +1,78 @@
+{% load static %}
+{% comment %}
+SEO Meta Tags Template
+Использование:
+{% include 'uzmat/seo_meta.html' with title="Заголовок" description="Описание" keywords="ключевые, слова" og_image="/path/to/image.jpg" %}
+{% endcomment %}
+
+{% if title %}
+<title>{{ title }} — Uzmat</title>
+<meta name="title" content="{{ title }} — Uzmat">
+{% else %}
+<title>Uzmat — Аренда и продажа спецтехники в Центральной Азии</title>
+<meta name="title" content="Uzmat — Аренда и продажа спецтехники в Центральной Азии">
+{% endif %}
+
+{% if description %}
+<meta name="description" content="{{ description }}">
+{% else %}
+<meta name="description" content="Uzmat — единая платформа для поиска надежных подрядчиков и управления парком техники в Центральной Азии. Аренда и продажа спецтехники, запчасти, услуги.">
+{% endif %}
+
+{% if keywords %}
+<meta name="keywords" content="{{ keywords }}">
+{% else %}
+<meta name="keywords" content="аренда спецтехники, продажа спецтехники, экскаватор, погрузчик, кран, бульдозер, самосвал, Казахстан, Узбекистан, Россия, запчасти для спецтехники, услуги спецтехники">
+{% endif %}
+
+<meta name="author" content="Uzmat">
+<meta name="robots" content="index, follow">
+<meta name="language" content="Russian">
+<meta name="revisit-after" content="7 days">
+
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="{{ request.scheme }}://{{ request.get_host }}{{ request.path }}">
+{% if title %}
+<meta property="og:title" content="{{ title }} — Uzmat">
+{% else %}
+<meta property="og:title" content="Uzmat — Аренда и продажа спецтехники в Центральной Азии">
+{% endif %}
+{% if description %}
+<meta property="og:description" content="{{ description }}">
+{% else %}
+<meta property="og:description" content="Uzmat — единая платформа для поиска надежных подрядчиков и управления парком техники в Центральной Азии.">
+{% endif %}
+{% if og_image %}
+<meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{{ og_image }}">
+{% else %}
+<meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{% static 'uzmat/logo-uzmat.svg' %}">
+{% endif %}
+<meta property="og:site_name" content="Uzmat">
+<meta property="og:locale" content="ru_RU">
+
+<!-- Twitter -->
+<meta property="twitter:card" content="summary_large_image">
+<meta property="twitter:url" content="{{ request.scheme }}://{{ request.get_host }}{{ request.path }}">
+{% if title %}
+<meta property="twitter:title" content="{{ title }} — Uzmat">
+{% else %}
+<meta property="twitter:title" content="Uzmat — Аренда и продажа спецтехники в Центральной Азии">
+{% endif %}
+{% if description %}
+<meta property="twitter:description" content="{{ description }}">
+{% else %}
+<meta property="twitter:description" content="Uzmat — единая платформа для поиска надежных подрядчиков и управления парком техники в Центральной Азии.">
+{% endif %}
+{% if og_image %}
+<meta property="twitter:image" content="{{ request.scheme }}://{{ request.get_host }}{{ og_image }}">
+{% else %}
+<meta property="twitter:image" content="{{ request.scheme }}://{{ request.get_host }}{% static 'uzmat/logo-uzmat.svg' %}">
+{% endif %}
+
+<!-- Canonical URL -->
+<link rel="canonical" href="{{ request.scheme }}://{{ request.get_host }}{{ request.path }}">
+
+<!-- Alternate languages (если будут другие языки) -->
+<link rel="alternate" hreflang="ru" href="{{ request.scheme }}://{{ request.get_host }}{{ request.path }}">
+

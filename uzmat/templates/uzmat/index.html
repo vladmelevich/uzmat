@@ -5,11 +5,49 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Uzmat — Premium Marketplace</title>
+  {% include 'uzmat/seo_meta.html' with title="Аренда и продажа спецтехники в Центральной Азии" description="Uzmat — единая платформа для поиска надежных подрядчиков и управления парком техники. Аренда и продажа спецтехники: экскаваторы, погрузчики, краны, бульдозеры, самосвалы. Запчасти и услуги. Казахстан, Узбекистан, Россия." keywords="аренда спецтехники, продажа спецтехники, экскаватор, погрузчик, кран, бульдозер, самосвал, аренда техники Казахстан, аренда техники Узбекистан, запчасти для спецтехники, услуги спецтехники" %}
   <link rel="icon" type="image/svg+xml" href="{% static 'uzmat/logo-uzmat.svg' %}">
   {% include 'uzmat/theme-init.html' %}
   <link rel="stylesheet" href="{% static 'uzmat/styles.css' %}">
   <script defer src="{% static 'uzmat/app.js' %}"></script>
+  
+  <!-- Structured Data (Schema.org) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "Uzmat",
+    "description": "Единая платформа для поиска надежных подрядчиков и управления парком техники в Центральной Азии",
+    "url": "{{ request.scheme }}://{{ request.get_host }}",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": "{{ request.scheme }}://{{ request.get_host }}{% url 'uzmat:catalog' %}?search={search_term_string}",
+      "query-input": "required name=search_term_string"
+    }
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "Uzmat",
+    "url": "{{ request.scheme }}://{{ request.get_host }}",
+    "logo": "{{ request.scheme }}://{{ request.get_host }}{% static 'uzmat/logo-uzmat.svg' %}",
+    "description": "Единая платформа для аренды и продажи спецтехники в Центральной Азии",
+    "contactPoint": {
+      "@type": "ContactPoint",
+      "telephone": "+998200059890",
+      "contactType": "customer service",
+      "areaServed": ["KZ", "UZ", "RU"],
+      "availableLanguage": ["Russian"]
+    },
+    "address": {
+      "@type": "PostalAddress",
+      "addressRegion": "Andijan Region",
+      "addressLocality": "Shkhrixan"
+    }
+  }
+  </script>
 </head>
 
 <body class="uz-body">
@@ -55,8 +93,9 @@
       <h1 class="uz-hero-title">
         <span data-translate="Аренда спецтехники бизнес-класса">Аренда спецтехники<br>бизнес-класса</span>
       </h1>
+      <!-- SEO: Основной заголовок страницы с ключевыми словами -->
       <p class="uz-hero-subtitle">
-        Единая платформа для поиска надежных подрядчиков и управления парком техники.
+        Единая платформа для поиска надежных подрядчиков и управления парком техники. Аренда и продажа спецтехники: экскаваторы, погрузчики, краны, бульдозеры, самосвалы в Казахстане, Узбекистане и России.
       </p>
 
       <div class="uz-search-container">
@@ -82,8 +121,19 @@
       </div>
     </section>
 
+    <!-- Banner Advertisement Section -->
+    <section class="uz-banner-ad uz-animate-in" style="animation-delay: 0.12s; margin-top: 40px;">
+      <div class="uz-banner-ad-container">
+        <div class="uz-banner-ad-placeholder" id="banner-ad-placeholder">
+          <!-- Здесь будет размещен баннер рекламы -->
+          <!-- Можно использовать тег <img> или <iframe> для рекламного баннера -->
+          <!-- Пример: <img src="/path/to/banner.jpg" alt="Реклама" style="width: 100%; height: 100%; object-fit: cover;"> -->
+        </div>
+      </div>
+    </section>
+
     <!-- Hot Offers Section -->
-    <section class="uz-hot-offers uz-animate-in" style="animation-delay: 0.15s; margin-top: 60px;">
+    <section class="uz-hot-offers uz-animate-in" style="animation-delay: 0.15s; margin-top: 40px;">
       <div class="uz-hot-offers-header">
         <h2 class="uz-hot-offers-title">
           Горячие предложения
@@ -139,28 +189,28 @@
       <div class="uz-categories-grid">
         <!-- Category 1: Продажа спецтехники -->
         <a href="{% url 'uzmat:catalog' %}?ad_type=sale" class="uz-category-card uz-category-card-large">
-          <span class="uz-category-text">Продажа спецтехники</span>
           <div class="uz-category-icon">
             <img src="{% static 'uzmat/telegram-cloud-document-2-5289604459586945170-removebg-preview.png' %}" alt="Экскаватор">
           </div>
+          <span class="uz-category-text">Продажа спецтехники</span>
         </a>
 
         <!-- Category 2: Аренда спецтехники -->
         <a href="{% url 'uzmat:catalog' %}?ad_type=rent" class="uz-category-card uz-category-card-large">
-          <span class="uz-category-text">Аренда спецтехники</span>
           <div class="uz-category-icon">
             <img src="{% static 'uzmat/telegram-cloud-document-2-5289604459586945172-removebg-preview.png' %}" alt="Аренда спецтехники">
           </div>
+          <span class="uz-category-text">Аренда спецтехники</span>
         </a>
 
         <!-- Category 3: Заявки -->
         <a href="{% url 'uzmat:chats' %}" class="uz-category-card uz-category-card-medium" style="position: relative;">
-          <span class="uz-category-text">Заявки</span>
           <div class="uz-category-icon">
             <img src="{% static 'uzmat/telegram-cloud-document-2-5289604459586945282-removebg-preview.png' %}" alt="Заявки">
           </div>
+          <span class="uz-category-text">Заявки</span>
           {% if user.is_authenticated and unread_messages_count > 0 %}
-          <span class="uz-badge" style="position: absolute; top: 8px; right: 8px; background: var(--uz-danger); color: white; min-width: 20px; height: 20px; padding: 0 6px; font-size: 11px; font-weight: 700; border-radius: 10px; display: flex; align-items: center; justify-content: center;">{{ unread_messages_count }}</span>
+          <span class="uz-badge" style="position: absolute; top: 6px; right: 6px; background: var(--uz-danger); color: white; min-width: 18px; height: 18px; padding: 0 5px; font-size: 10px; font-weight: 700; border-radius: 9px; display: flex; align-items: center; justify-content: center;">{{ unread_messages_count }}</span>
           {% endif %}
         </a>
 
@@ -292,7 +342,12 @@
             </div>
             <div class="uz-ad-content">
               <div class="uz-ad-content-header">
-                <div class="uz-ad-price">{{ ad.get_price_display }}</div>
+                <div style="display:flex; flex-direction: column; gap: 2px;">
+                  <div class="uz-ad-price">{{ ad.get_price_display }}</div>
+                  {% if ad.price_usd %}
+                  <div style="font-size: 13px; color: var(--uz-text-dim);">{{ ad.get_price_usd_display }}</div>
+                  {% endif %}
+                </div>
                 {% if user.is_authenticated %}
                 <button class="uz-ad-favorite" type="button" aria-label="Добавить в избранное" data-ad-id="{{ ad.id }}" onclick="toggleFavorite(event, {{ ad.id }})">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

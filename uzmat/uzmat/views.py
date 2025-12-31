@@ -33,6 +33,7 @@ from .utils.currency import (
     get_promotion_price_for_country,
     get_verification_price_for_country,
     get_currency_for_country,
+    convert_currency,
 )
 from .utils.click_payment import verify_click_signature, generate_click_payment_url
 from .utils.security import (
@@ -1358,6 +1359,27 @@ def create_ad(request):
             ad.currency = request.POST.get('currency', 'kzt')
             ad.price_type = request.POST.get('price_type', '').strip() or None
             
+            # Конвертация цены в доллары
+            if ad.price:
+                try:
+                    currency_code = ad.currency.upper()
+                    if currency_code == 'KZT':
+                        currency_code = 'KZT'
+                    elif currency_code == 'UZS':
+                        currency_code = 'UZS'
+                    elif currency_code == 'RUB':
+                        currency_code = 'RUB'
+                    else:
+                        currency_code = 'KZT'  # По умолчанию
+                    
+                    ad.price_usd = convert_currency(ad.price, currency_code, 'USD')
+                except Exception as e:
+                    # В случае ошибки конвертации оставляем price_usd пустым
+                    logging.error(f"Ошибка конвертации валюты: {e}")
+                    ad.price_usd = None
+            else:
+                ad.price_usd = None
+            
             # Создаем slug вручную, если его нет
             if not ad.slug or ad.slug.strip() == '':
                 ad.slug = slugify(ad.title)
@@ -1636,6 +1658,27 @@ def edit_ad(request, slug):
             
             ad.currency = request.POST.get('currency', 'kzt')
             ad.price_type = request.POST.get('price_type', '').strip() or None
+            
+            # Конвертация цены в доллары
+            if ad.price:
+                try:
+                    currency_code = ad.currency.upper()
+                    if currency_code == 'KZT':
+                        currency_code = 'KZT'
+                    elif currency_code == 'UZS':
+                        currency_code = 'UZS'
+                    elif currency_code == 'RUB':
+                        currency_code = 'RUB'
+                    else:
+                        currency_code = 'KZT'  # По умолчанию
+                    
+                    ad.price_usd = convert_currency(ad.price, currency_code, 'USD')
+                except Exception as e:
+                    # В случае ошибки конвертации оставляем price_usd пустым
+                    logging.error(f"Ошибка конвертации валюты: {e}")
+                    ad.price_usd = None
+            else:
+                ad.price_usd = None
             
             # Обновляем slug, если изменился заголовок
             new_slug = slugify(ad.title)

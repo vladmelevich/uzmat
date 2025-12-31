@@ -1,15 +1,73 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" itemscope itemtype="https://schema.org/WebPage">
 
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Фронтальные погрузчики, LiuGong 835H — Uzmat</title>
+  {% with ad_title=ad.title|truncatewords:10 ad_description=ad.description|truncatewords:25 %}
+    {% if ad.equipment_type and ad.brand %}
+      {% with keywords=ad.equipment_type|add:", "|add:ad.brand|add:", "|add:ad.city|add:", "|add:ad.get_country_display %}
+        {% if ad.image %}
+          {% include 'uzmat/seo_meta.html' with title=ad_title description=ad_description|default:"Объявление спецтехники на Uzmat" keywords=keywords og_image=ad.image.url %}
+        {% elif ad.images.exists %}
+          {% with main_image=ad.images.first %}
+            {% include 'uzmat/seo_meta.html' with title=ad_title description=ad_description|default:"Объявление спецтехники на Uzmat" keywords=keywords og_image=main_image.image.url %}
+          {% endwith %}
+        {% else %}
+          {% include 'uzmat/seo_meta.html' with title=ad_title description=ad_description|default:"Объявление спецтехники на Uzmat" keywords=keywords %}
+        {% endif %}
+      {% endwith %}
+    {% else %}
+      {% with keywords=ad.city|add:", "|add:ad.get_country_display|add:", спецтехника" %}
+        {% if ad.image %}
+          {% include 'uzmat/seo_meta.html' with title=ad_title description=ad_description|default:"Объявление спецтехники на Uzmat" keywords=keywords og_image=ad.image.url %}
+        {% elif ad.images.exists %}
+          {% with main_image=ad.images.first %}
+            {% include 'uzmat/seo_meta.html' with title=ad_title description=ad_description|default:"Объявление спецтехники на Uzmat" keywords=keywords og_image=main_image.image.url %}
+          {% endwith %}
+        {% else %}
+          {% include 'uzmat/seo_meta.html' with title=ad_title description=ad_description|default:"Объявление спецтехники на Uzmat" keywords=keywords %}
+        {% endif %}
+      {% endwith %}
+    {% endif %}
+  {% endwith %}
   <link rel="icon" type="image/svg+xml" href="{% static 'uzmat/logo-uzmat.svg' %}">
   {% include 'uzmat/theme-init.html' %}
   <link rel="stylesheet" href="{% static 'uzmat/styles.css' %}">
   <script defer src="{% static 'uzmat/app.js' %}"></script>
+  
+  <!-- Structured Data (Schema.org) for Product/Service -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "{% if ad.ad_type == 'sale' %}Product{% elif ad.ad_type == 'rent' %}Service{% else %}Product{% endif %}",
+    "name": "{{ ad.title|escapejs }}",
+    "description": "{{ ad.description|truncatewords:50|escapejs }}",
+    {% if ad.image %}
+    "image": "{{ request.scheme }}://{{ request.get_host }}{{ ad.image.url }}",
+    {% elif ad.images.exists %}
+    "image": "{{ request.scheme }}://{{ request.get_host }}{{ ad.images.first.image.url }}",
+    {% endif %}
+    {% if ad.price %}
+    "offers": {
+      "@type": "Offer",
+      "price": "{{ ad.price }}",
+      "priceCurrency": "{% if ad.currency == 'kzt' %}KZT{% elif ad.currency == 'uzs' %}UZS{% elif ad.currency == 'rub' %}RUB{% else %}USD{% endif %}",
+      "availability": "{% if ad.is_active %}https://schema.org/InStock{% else %}https://schema.org/OutOfStock{% endif %}",
+      "url": "{{ request.scheme }}://{{ request.get_host }}{% url 'uzmat:ad_detail' slug=ad.slug %}"
+    },
+    {% endif %}
+    "seller": {
+      "@type": "{% if ad.user.account_type == 'company' %}Organization{% else %}Person{% endif %}",
+      "name": "{% if ad.user.account_type == 'company' and ad.user.company_name %}{{ ad.user.company_name|escapejs }}{% else %}{{ ad.user.get_full_name|default:ad.user.username|escapejs }}{% endif %}"
+    },
+    "areaServed": {
+      "@type": "Country",
+      "name": "{{ ad.get_country_display }}"
+    }
+  }
+  </script>
   <style>
     /* Исправление адаптивности для страницы объявления */
     html, body {
@@ -139,12 +197,25 @@
   <main class="uz-container" style="max-width: 100%; overflow-x: hidden;">
 
     <!-- Breadcrumbs -->
-    <nav class="uz-breadcrumbs">
-      <a href="{% url 'uzmat:index' %}">Главная</a>
+    <nav class="uz-breadcrumbs" itemscope itemtype="https://schema.org/BreadcrumbList">
+      <span itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a href="{% url 'uzmat:index' %}" itemprop="item">
+          <span itemprop="name">Главная</span>
+        </a>
+        <meta itemprop="position" content="1" />
+      </span>
       <span>/</span>
-      <a href="{% url 'uzmat:catalog' %}">Каталог объявлений</a>
+      <span itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a href="{% url 'uzmat:catalog' %}" itemprop="item">
+          <span itemprop="name">Каталог объявлений</span>
+        </a>
+        <meta itemprop="position" content="2" />
+      </span>
       <span>/</span>
-      <span class="uz-breadcrumb-current">{{ ad.title }}</span>
+      <span itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <span class="uz-breadcrumb-current" itemprop="name">{{ ad.title }}</span>
+        <meta itemprop="position" content="3" />
+      </span>
     </nav>
 
     <div class="uz-grid uz-ad-detail-grid" style="grid-template-columns: 1fr 360px; align-items: start; max-width: 100%; overflow-x: hidden;">
@@ -214,6 +285,9 @@
             </div>
             <div class="uz-ad-detail-price" style="text-align: right;">
               <div style="font-size: 24px; font-weight: 700; color: var(--uz-primary);">{{ ad.get_price_display }}</div>
+              {% if ad.price_usd %}
+              <div style="margin-top: 4px; font-size: 16px; font-weight: 500; color: var(--uz-text-dim);">{{ ad.get_price_usd_display }}</div>
+              {% endif %}
               {% if ad.min_order %}
               <div style="margin-top: 6px; display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: var(--uz-radius-sm); background: rgba(59, 130, 246, 0.14); color: rgb(59, 130, 246); border: 1px solid rgba(59, 130, 246, 0.35); font-size: 13px; font-weight: 600;">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">

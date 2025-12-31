@@ -1,15 +1,36 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" itemscope itemtype="https://schema.org/WebPage">
 
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{% if request.GET.ad_type == 'sale' %}Продажа{% elif request.GET.ad_type == 'rent' %}Аренда{% elif request.GET.ad_type == 'service' %}Услуги{% elif request.GET.ad_type == 'parts' %}Запчасти{% else %}Каталог объявлений{% endif %} — Uzmat</title>
+  {% if request.GET.ad_type == 'sale' %}
+    {% include 'uzmat/seo_meta.html' with title="Продажа спецтехники" description="Купить спецтехнику: экскаваторы, погрузчики, краны, бульдозеры, самосвалы. Большой выбор техники в Казахстане, Узбекистане и России. Проверенные продавцы, выгодные цены." keywords="купить спецтехнику, продажа экскаваторов, продажа погрузчиков, продажа кранов, продажа бульдозеров, продажа самосвалов, спецтехника б/у, новая спецтехника" %}
+  {% elif request.GET.ad_type == 'rent' %}
+    {% include 'uzmat/seo_meta.html' with title="Аренда спецтехники" description="Аренда спецтехники: экскаваторы, погрузчики, краны, бульдозеры, самосвалы. Почасовая, дневная и месячная аренда. С оператором и без. Казахстан, Узбекистан, Россия." keywords="аренда спецтехники, аренда экскаватора, аренда погрузчика, аренда крана, аренда бульдозера, аренда самосвала, аренда техники с оператором" %}
+  {% elif request.GET.ad_type == 'service' %}
+    {% include 'uzmat/seo_meta.html' with title="Услуги спецтехники" description="Услуги спецтехники: ремонт, обслуживание, аренда с оператором. Профессиональные услуги для спецтехники в Центральной Азии." keywords="услуги спецтехники, ремонт спецтехники, обслуживание спецтехники, услуги экскаватора, услуги погрузчика" %}
+  {% elif request.GET.ad_type == 'parts' %}
+    {% include 'uzmat/seo_meta.html' with title="Запчасти для спецтехники" description="Запчасти для спецтехники: экскаваторов, погрузчиков, кранов, бульдозеров. Оригинальные и аналоговые запчасти. Доставка по Казахстану, Узбекистану и России." keywords="запчасти для спецтехники, запчасти для экскаватора, запчасти для погрузчика, запчасти для крана, запчасти для бульдозера, оригинальные запчасти" %}
+  {% else %}
+    {% include 'uzmat/seo_meta.html' with title="Каталог объявлений спецтехники" description="Каталог объявлений спецтехники: аренда, продажа, запчасти, услуги. Экскаваторы, погрузчики, краны, бульдозеры, самосвалы. Казахстан, Узбекистан, Россия." keywords="каталог спецтехники, объявления спецтехники, спецтехника, экскаватор, погрузчик, кран, бульдозер, самосвал" %}
+  {% endif %}
   <link rel="icon" type="image/svg+xml" href="{% static 'uzmat/logo-uzmat.svg' %}">
   {% include 'uzmat/theme-init.html' %}
   <link rel="stylesheet" href="{% static 'uzmat/styles.css' %}">
   <script defer src="{% static 'uzmat/app.js' %}"></script>
+  
+  <!-- Structured Data (Schema.org) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    "name": "{% if request.GET.ad_type == 'sale' %}Продажа спецтехники{% elif request.GET.ad_type == 'rent' %}Аренда спецтехники{% elif request.GET.ad_type == 'service' %}Услуги спецтехники{% elif request.GET.ad_type == 'parts' %}Запчасти для спецтехники{% else %}Каталог объявлений спецтехники{% endif %}",
+    "description": "{% if request.GET.ad_type == 'sale' %}Купить спецтехнику: экскаваторы, погрузчики, краны, бульдозеры, самосвалы{% elif request.GET.ad_type == 'rent' %}Аренда спецтехники: экскаваторы, погрузчики, краны, бульдозеры, самосвалы{% elif request.GET.ad_type == 'service' %}Услуги спецтехники: ремонт, обслуживание{% elif request.GET.ad_type == 'parts' %}Запчасти для спецтехники: экскаваторов, погрузчиков, кранов{% else %}Каталог объявлений спецтехники{% endif %}",
+    "url": "{{ request.scheme }}://{{ request.get_host }}{{ request.path }}"
+  }
+  </script>
 </head>
 
 <body class="uz-body">
@@ -208,8 +229,11 @@
             </div>
             <div class="uz-ad-content">
             <div class="uz-ad-content-header" style="align-items: center;">
-              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; flex-direction: column; align-items: flex-start;">
                 <div class="uz-ad-price">{{ ad.get_price_display }}</div>
+                {% if ad.price_usd %}
+                <div style="font-size: 13px; color: var(--uz-text-dim); margin-top: 2px;">{{ ad.get_price_usd_display }}</div>
+                {% endif %}
               </div>
               {% if user.is_authenticated %}
               <button class="uz-ad-favorite" type="button" aria-label="Добавить в избранное" data-ad-id="{{ ad.id }}" onclick="toggleFavorite(event, {{ ad.id }})">

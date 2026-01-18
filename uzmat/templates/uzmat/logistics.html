@@ -5,7 +5,7 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Ремонт — Uzmat</title>
   <link rel="icon" type="image/svg+xml" href="{% static 'uzmat/logo-uzmat.svg' %}">
   {% include 'uzmat/theme-init.html' %}
@@ -18,6 +18,7 @@
   <!-- Floating Header -->
   <header class="uz-header">
     <div class="uz-header-inner">
+      {% include 'uzmat/burger-menu-btn.html' %}
       <a href="{% url 'uzmat:index' %}" class="uz-logo">
         <img src="{% static 'uzmat/logo-uzmat.svg' %}" alt="Uzmat" class="uz-logo-mark">
         <span>Uzmat</span>
@@ -163,6 +164,8 @@
     <div class="uz-bento-grid">
       {% for ad in ads %}
       <article class="uz-ad-card">
+        <!-- Цена в правом верхнем углу карточки -->
+        <div class="uz-ad-price-top">{{ ad.get_price_display }}</div>
         <a href="{% url 'uzmat:ad_detail' slug=ad.slug %}" class="uz-ad-card-link">
             <div class="uz-ad-image">
               {% if ad.images.exists %}
@@ -177,42 +180,40 @@
                 <path d="M419.792 403.646V309.58C419.792 296.943 417.973 284.565 414.334 272.445L371.354 96.875M129.167 290.625V96.875M96.875 96.875H419.792M581.25 306.771V258.333C581.25 241.205 588.054 224.778 600.166 212.666C612.278 200.554 628.705 193.75 645.833 193.75M226.042 290.625V96.875" stroke="currentColor" stroke-width="48.4375" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
               {% endif %}
-            </div>
-            <div class="uz-ad-content">
-            <div class="uz-ad-content-header">
-              <div class="uz-ad-price">{{ ad.get_price_display }}</div>
+              <!-- Избранное в правом нижнем углу изображения -->
               {% if user.is_authenticated %}
-              <button class="uz-ad-favorite" type="button" aria-label="Добавить в избранное" data-ad-id="{{ ad.id }}" onclick="toggleFavorite(event, {{ ad.id }})">
+              <button class="uz-ad-favorite-image" type="button" aria-label="Добавить в избранное" data-ad-id="{{ ad.id }}" onclick="toggleFavorite(event, {{ ad.id }})">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
                 </svg>
               </button>
               {% endif %}
             </div>
-            <div>
-              <h3 class="uz-ad-title">{{ ad.title }}</h3>
-              <p class="uz-ad-subtitle">{{ ad.get_ad_type_display }}</p>
-              <p class="uz-ad-description">{{ ad.description|truncatewords:15 }}</p>
-            </div>
-            <div class="uz-ad-meta">
-              <div class="uz-ad-meta-left">
-                <svg class="uz-ad-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                  <circle cx="12" cy="10" r="3"></circle>
-                </svg>
-                <span>{{ ad.city }}</span>
-                <span>•</span>
-                <span>{{ ad.created_at|date:"d M" }}</span>
+            <div class="uz-ad-content">
+              <div>
+                <h3 class="uz-ad-title">{{ ad.title }}</h3>
+                <p class="uz-ad-subtitle">{{ ad.get_ad_type_display }}</p>
+                <p class="uz-ad-description">{{ ad.description|truncatewords:15 }}</p>
               </div>
-              <div class="uz-ad-meta-right">
-                <svg class="uz-ad-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                  <circle cx="12" cy="12" r="3"></circle>
-                </svg>
-                <span>{{ ad.views_count }}</span>
+              <div class="uz-ad-meta">
+                <div class="uz-ad-meta-left">
+                  <svg class="uz-ad-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                    <circle cx="12" cy="10" r="3"></circle>
+                  </svg>
+                  <span>{{ ad.city }}</span>
+                  <span>•</span>
+                  <span>{{ ad.created_at|date:"d M" }}</span>
+                </div>
+                <div class="uz-ad-meta-right">
+                  <svg class="uz-ad-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                  <span>{{ ad.views_count }}</span>
+                </div>
               </div>
             </div>
-          </div>
         </a>
       </article>
       {% empty %}
@@ -270,6 +271,63 @@
   </main>
 
   {% include 'uzmat/footer.html' %}
+
+  <!-- Mobile Navigation -->
+  <nav class="uz-bottom-nav uz-show-mobile">
+    <a href="{% url 'uzmat:index' %}" class="uz-bottom-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+      </svg>
+      <span>Главная</span>
+    </a>
+    <a href="{% url 'uzmat:chats' %}" class="uz-bottom-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+      </svg>
+      <span>Чаты</span>
+    </a>
+    <a href="{% url 'uzmat:create_ad' %}" class="uz-bottom-item" style="color: var(--uz-primary);">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="16"></line>
+        <line x1="8" y1="12" x2="16" y2="12"></line>
+      </svg>
+      <span>Создать</span>
+    </a>
+    {% if user.is_authenticated %}
+    <a href="{% url 'uzmat:profile' %}" class="uz-bottom-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+        <circle cx="12" cy="7" r="4"></circle>
+      </svg>
+      <span>Профиль</span>
+    </a>
+    {% else %}
+    <a href="{% url 'uzmat:onboarding' %}" class="uz-bottom-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+        <circle cx="12" cy="7" r="4"></circle>
+      </svg>
+      <span>Профиль</span>
+    </a>
+    {% endif %}
+    <a href="{% url 'uzmat:settings' %}" class="uz-bottom-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"></circle>
+        <path
+          d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+        </path>
+      </svg>
+      <span>Меню</span>
+    </a>
+  </nav>
 
   <script>
     function getCookie(name) {
@@ -845,28 +903,7 @@
     
     if (catalogSearchInput && filterForm) {
       let searchTimeout;
-      let viewportMeta = document.querySelector('meta[name="viewport"]');
-      let originalViewport = viewportMeta ? viewportMeta.getAttribute('content') : 'width=device-width, initial-scale=1.0';
-      let isZoomed = false;
-
-      // Функция для увеличения масштаба
-      function zoomIn() {
-        if (!isZoomed && viewportMeta) {
-          viewportMeta.setAttribute('content', 'width=device-width, initial-scale=1.5, maximum-scale=1.5, user-scalable=no');
-          isZoomed = true;
-        }
-      }
-
-      // Функция для возврата масштаба
-      function zoomOut() {
-        if (isZoomed && viewportMeta) {
-          viewportMeta.setAttribute('content', originalViewport);
-          isZoomed = false;
-        }
-      }
-
-      // При фокусе - увеличиваем масштаб
-      catalogSearchInput.addEventListener('focus', zoomIn);
+      let shouldScrollToResults = false; // Флаг для прокрутки после нажатия Enter
       
       catalogSearchInput.addEventListener('input', function(e) {
         const query = e.target.value.trim();
@@ -874,14 +911,9 @@
         // Убеждаемся, что значение обновлено
         catalogSearchInput.value = query;
         
-        if (!isZoomed) {
-          zoomIn();
-        }
-        
         clearTimeout(searchTimeout);
         // Поиск работает при вводе хотя бы одной буквы
         searchTimeout = setTimeout(() => {
-          zoomOut(); // Возвращаем масштаб перед отправкой
           // Отправляем форму через AJAX
           const formData = new FormData(filterForm);
           const params = new URLSearchParams();
@@ -929,6 +961,21 @@
               const newAdsContainer = doc.querySelector('.uz-bento-grid');
               if (newAdsContainer) {
                 adsContainer.innerHTML = newAdsContainer.innerHTML;
+                
+                // Прокручиваем к первому найденному объявлению (если был установлен флаг)
+                if (shouldScrollToResults) {
+                  shouldScrollToResults = false; // Сбрасываем флаг
+                  setTimeout(() => {
+                    const firstAd = adsContainer.querySelector('.uz-ad-card');
+                    if (firstAd) {
+                      const offsetTop = firstAd.getBoundingClientRect().top + window.pageYOffset - 100; // 100px отступ сверху
+                      window.scrollTo({
+                        top: offsetTop,
+                        behavior: 'smooth'
+                      });
+                    }
+                  }, 300);
+                }
               }
             }
             
@@ -946,23 +993,19 @@
         }, 300);
       });
 
-      // При нажатии Enter - возвращаем масштаб и отправляем
+      // При нажатии Enter - отправляем через AJAX и устанавливаем флаг для прокрутки
       catalogSearchInput.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
           e.preventDefault();
-          zoomOut();
-          filterForm.submit();
+          const query = e.target.value.trim();
+          if (query && query.length > 0) {
+            shouldScrollToResults = true; // Устанавливаем флаг для прокрутки
+          }
+          // Триггерим событие input для запуска AJAX запроса
+          catalogSearchInput.dispatchEvent(new Event('input', { bubbles: true }));
         }
       });
 
-      // При потере фокуса без отправки - возвращаем масштаб через небольшую задержку
-      catalogSearchInput.addEventListener('blur', function() {
-        setTimeout(() => {
-          if (isZoomed && !catalogSearchInput.value.trim()) {
-            zoomOut();
-          }
-        }, 200);
-      });
     }
   </script>
 

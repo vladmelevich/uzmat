@@ -34,10 +34,10 @@ class CategoryAdmin(admin.ModelAdmin):
 
 @admin.register(Advertisement)
 class AdvertisementAdmin(admin.ModelAdmin):
-    list_display = ('title', 'user', 'ad_type', 'city', 'price', 'is_active', 'created_at', 'views_count')
-    list_filter = ('ad_type', 'is_active', 'country', 'city', 'created_at')
+    list_display = ('title', 'user', 'ad_type', 'city', 'price', 'is_active', 'sent_to_telegram', 'created_at', 'views_count')
+    list_filter = ('ad_type', 'is_active', 'country', 'city', 'sent_to_telegram', 'created_at')
     search_fields = ('title', 'description', 'city', 'brand', 'equipment_type')
-    readonly_fields = ('created_at', 'updated_at', 'views_count')
+    readonly_fields = ('created_at', 'updated_at', 'views_count', 'telegram_message_id')
     date_hierarchy = 'created_at'
     fieldsets = (
         ('Основная информация', {
@@ -60,6 +60,10 @@ class AdvertisementAdmin(admin.ModelAdmin):
         }),
         ('Цена', {
             'fields': ('price', 'currency', 'price_type', 'with_operator', 'min_order')
+        }),
+        ('Telegram', {
+            'fields': ('sent_to_telegram', 'telegram_message_id'),
+            'classes': ('collapse',)
         }),
         ('Статистика', {
             'fields': ('views_count', 'created_at', 'updated_at'),

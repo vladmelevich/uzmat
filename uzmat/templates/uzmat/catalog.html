@@ -4,7 +4,7 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   {% if request.GET.ad_type == 'sale' %}
     {% include 'uzmat/seo_meta.html' with title="Продажа спецтехники" description="Купить спецтехнику: экскаваторы, погрузчики, краны, бульдозеры, самосвалы. Большой выбор техники в Казахстане, Узбекистане и России. Проверенные продавцы, выгодные цены." keywords="купить спецтехнику, продажа экскаваторов, продажа погрузчиков, продажа кранов, продажа бульдозеров, продажа самосвалов, спецтехника б/у, новая спецтехника" %}
   {% elif request.GET.ad_type == 'rent' %}
@@ -40,6 +40,7 @@
   <!-- Floating Header -->
   <header class="uz-header">
     <div class="uz-header-inner">
+      {% include 'uzmat/burger-menu-btn.html' %}
       <a href="{% url 'uzmat:index' %}" class="uz-logo">
         <img src="{% static 'uzmat/logo-uzmat.svg' %}" alt="Uzmat" class="uz-logo-mark">
         <span>Uzmat</span>
@@ -213,6 +214,8 @@
     <div class="uz-bento-grid">
       {% for ad in ads %}
       <article class="uz-ad-card">
+        <!-- Цена в правом верхнем углу карточки -->
+        <div class="uz-ad-price-top">{{ ad.get_price_display }}</div>
         <a href="{% url 'uzmat:ad_detail' slug=ad.slug %}" class="uz-ad-card-link">
             <div class="uz-ad-image">
               {% if ad.images.exists %}
@@ -227,47 +230,40 @@
                 <path d="M419.792 403.646V309.58C419.792 296.943 417.973 284.565 414.334 272.445L371.354 96.875M129.167 290.625V96.875M96.875 96.875H419.792M581.25 306.771V258.333C581.25 241.205 588.054 224.778 600.166 212.666C612.278 200.554 628.705 193.75 645.833 193.75M226.042 290.625V96.875" stroke="currentColor" stroke-width="48.4375" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
               {% endif %}
-            </div>
-            <div class="uz-ad-content">
-            <div class="uz-ad-content-header" style="align-items: center;">
-              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; flex-direction: column; align-items: flex-start;">
-                <div class="uz-ad-price">{{ ad.get_price_display }}</div>
-                {% if ad.price_usd %}
-                <div style="font-size: 13px; color: var(--uz-text-dim); margin-top: 2px;">{{ ad.get_price_usd_display }}</div>
-                {% endif %}
-              </div>
+              <!-- Избранное в правом нижнем углу изображения -->
               {% if user.is_authenticated %}
-              <button class="uz-ad-favorite" type="button" aria-label="Добавить в избранное" data-ad-id="{{ ad.id }}" onclick="toggleFavorite(event, {{ ad.id }})">
+              <button class="uz-ad-favorite-image" type="button" aria-label="Добавить в избранное" data-ad-id="{{ ad.id }}" onclick="toggleFavorite(event, {{ ad.id }})">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
                 </svg>
               </button>
               {% endif %}
             </div>
-            <div>
-              <h3 class="uz-ad-title">{{ ad.title }}</h3>
-              <p class="uz-ad-subtitle">{{ ad.get_ad_type_display }}</p>
-              <p class="uz-ad-description">{{ ad.description|truncatewords:15 }}</p>
-            </div>
-            <div class="uz-ad-meta">
-              <div class="uz-ad-meta-left">
-                <svg class="uz-ad-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                  <circle cx="12" cy="10" r="3"></circle>
-                </svg>
-                <span>{{ ad.city }}</span>
-                <span>•</span>
-                <span>{{ ad.created_at|date:"d M" }}</span>
+            <div class="uz-ad-content">
+              <div>
+                <h3 class="uz-ad-title">{{ ad.title }}</h3>
+                <p class="uz-ad-subtitle">{{ ad.get_ad_type_display }}</p>
+                <p class="uz-ad-description">{{ ad.description|truncatewords:15 }}</p>
               </div>
-              <div class="uz-ad-meta-right">
-                <svg class="uz-ad-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                  <circle cx="12" cy="12" r="3"></circle>
-                </svg>
-                <span>{{ ad.views_count }}</span>
+              <div class="uz-ad-meta">
+                <div class="uz-ad-meta-left">
+                  <svg class="uz-ad-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                    <circle cx="12" cy="10" r="3"></circle>
+                  </svg>
+                  <span>{{ ad.city }}</span>
+                  <span>•</span>
+                  <span>{{ ad.created_at|date:"d M" }}</span>
+                </div>
+                <div class="uz-ad-meta-right">
+                  <svg class="uz-ad-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                  <span>{{ ad.views_count }}</span>
+                </div>
               </div>
             </div>
-          </div>
         </a>
       </article>
       {% empty %}
@@ -443,16 +439,20 @@
       const filterForm = document.getElementById('filters-form');
       if (!filterForm) return;
       
+      // Флаг для прокрутки после загрузки результатов
+      let shouldScrollToResults = false;
+      
       // Функция для отправки формы через AJAX (делаем глобальной для доступа из country-selector)
       window.submitFormAjax = function submitFormAjaxImpl() {
         const formData = new FormData(filterForm);
         const params = new URLSearchParams();
         
         // Собираем все параметры формы
-        // ВАЖНО: ad_type, country и city должны передаваться ВСЕГДА, если они есть
+        // ВАЖНО: ad_type, country, city и search должны передаваться ВСЕГДА, если они есть
         const adTypeValue = formData.get('ad_type') || '';
         const countryValue = formData.get('country') || '';
         const cityValue = formData.get('city') || '';
+        const searchValue = formData.get('search') || '';
         
         // Принудительно добавляем ad_type в параметры (если есть)
         if (adTypeValue && adTypeValue.trim() !== '') {
@@ -467,9 +467,14 @@
           params.append('city', cityValue.trim());
         }
         
+        // Принудительно добавляем search в параметры (если есть)
+        if (searchValue && searchValue.trim() !== '') {
+          params.append('search', searchValue.trim());
+        }
+        
         // Остальные параметры добавляем только если они не пустые
         for (const [key, value] of formData.entries()) {
-          if (key !== 'country' && key !== 'city' && key !== 'ad_type') {
+          if (key !== 'country' && key !== 'city' && key !== 'ad_type' && key !== 'search') {
             if (value && value.trim() !== '') {
               params.append(key, value.trim());
             }
@@ -571,6 +576,21 @@
             const newAdsContainer = doc.querySelector('.uz-bento-grid');
             if (newAdsContainer) {
               adsContainer.innerHTML = newAdsContainer.innerHTML;
+              
+              // Прокручиваем к первому найденному объявлению (если был установлен флаг)
+              if (shouldScrollToResults) {
+                shouldScrollToResults = false; // Сбрасываем флаг
+                setTimeout(() => {
+                  const firstAd = adsContainer.querySelector('.uz-ad-card');
+                  if (firstAd) {
+                    const offsetTop = firstAd.getBoundingClientRect().top + window.pageYOffset - 100; // 100px отступ сверху
+                    window.scrollTo({
+                      top: offsetTop,
+                      behavior: 'smooth'
+                    });
+                  }
+                }, 300);
+              }
             }
           }
           
@@ -712,7 +732,9 @@
       // Предотвращаем стандартную отправку формы
       filterForm.addEventListener('submit', function(e) {
         e.preventDefault();
-        submitFormAjax();
+        if (window.submitFormAjax) {
+          window.submitFormAjax();
+        }
         return false;
       });
       
@@ -824,7 +846,7 @@
         const currentCity = cityHiddenInput ? cityHiddenInput.value : '';
         
         // Если выбрана страна, проверяем, относится ли текущий город к этой стране
-        if (country && country !== 'all' && citiesByCountry[country]) {
+        if (country && country !== 'all' && country !== '' && citiesByCountry[country]) {
           const cities = citiesByCountry[country];
           // Если текущий город не относится к выбранной стране, сбрасываем его
           if (currentCity && currentCity !== 'all' && !cities.includes(currentCity)) {
@@ -835,8 +857,8 @@
               cityDisplay.textContent = 'Все города';
             }
           }
-        } else if (country === 'all' || !country) {
-          // Если выбраны "Все страны", сбрасываем город
+        } else if (country === 'all' || !country || country === '') {
+          // Если выбраны "Все страны" или пустая строка, сбрасываем город
           if (cityHiddenInput) {
             cityHiddenInput.value = '';
           }
@@ -853,9 +875,33 @@
         cityList.innerHTML = allCitiesHtml;
         
         // Если выбрана страна, добавляем города этой страны
-        if (country && country !== 'all' && citiesByCountry[country]) {
+        if (country && country !== 'all' && country !== '' && citiesByCountry[country]) {
           const cities = citiesByCountry[country];
           cities.forEach(city => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'uz-filter-option';
+            if (currentCity === city) {
+              button.classList.add('active');
+            }
+            button.setAttribute('data-filter-value', city);
+            button.setAttribute('data-filter-name', 'city');
+            button.textContent = city;
+            cityList.appendChild(button);
+          });
+        } else if (!country || country === '' || country === 'all') {
+          // Если страна не выбрана (пустая строка или 'all'), показываем все города из всех стран
+          // Собираем все города из всех стран
+          const allCities = [];
+          Object.values(citiesByCountry).forEach(cities => {
+            allCities.push(...cities);
+          });
+          
+          // Сортируем города по алфавиту
+          allCities.sort();
+          
+          // Добавляем все города в список
+          allCities.forEach(city => {
             const button = document.createElement('button');
             button.type = 'button';
             button.className = 'uz-filter-option';
@@ -894,7 +940,9 @@
               // Закрываем дропдаун
               citySelector.removeAttribute('data-open');
               // Отправляем форму через AJAX
-              submitFormAjax();
+              if (window.submitFormAjax) {
+                window.submitFormAjax();
+              }
             }
           });
         });
@@ -962,7 +1010,9 @@
             countrySelector.removeAttribute('data-open');
             
             // Отправляем форму через AJAX для обновления объявлений
-            submitFormAjax();
+            if (window.submitFormAjax) {
+              window.submitFormAjax();
+            }
           }
         });
       });
@@ -997,7 +1047,9 @@
               // Закрываем дропдаун
               citySelector.removeAttribute('data-open');
               // Отправляем форму через AJAX
-              submitFormAjax();
+              if (window.submitFormAjax) {
+                window.submitFormAjax();
+              }
             }
           });
         }
@@ -1010,10 +1062,60 @@
         const urlCountry = urlParams.get('country');
         const urlCity = urlParams.get('city');
         
-        // Если в URL нет фильтров, восстанавливаем из localStorage
+        // Если в URL нет фильтров, устанавливаем "Все страны" и "Все города" по умолчанию
         if (!urlCountry && !urlCity) {
-          const savedCountry = localStorage.getItem('filter_country') || '';
-          const savedCity = localStorage.getItem('filter_city') || '';
+          // Очищаем скрытые поля
+          const countryInput = filterForm.querySelector('input[name="country"]');
+          const cityInput = filterForm.querySelector('input[name="city"]');
+          
+          if (countryInput) {
+            countryInput.value = '';
+          }
+          if (cityInput) {
+            cityInput.value = '';
+          }
+          
+          // Обновляем UI - устанавливаем "Все страны" и "Все города"
+          const countryOptions = filterForm.querySelectorAll('[data-filter-name="country"]');
+          countryOptions.forEach(opt => {
+            opt.classList.remove('active');
+            if (opt.getAttribute('data-filter-value') === 'all') {
+              opt.classList.add('active');
+            }
+          });
+          
+          const countryDisplay = countrySelector.querySelector('[data-filter-country-display]');
+          if (countryDisplay) {
+            countryDisplay.textContent = 'Все страны';
+          }
+          
+          const cityDisplay = citySelector.querySelector('[data-filter-city-display]');
+          if (cityDisplay) {
+            cityDisplay.textContent = 'Все города';
+          }
+          
+          const cityOptions = filterForm.querySelectorAll('[data-filter-name="city"]');
+          cityOptions.forEach(opt => {
+            opt.classList.remove('active');
+            if (opt.getAttribute('data-filter-value') === 'all') {
+              opt.classList.add('active');
+            }
+          });
+          
+          // Обновляем список городов (показываем все города)
+          updateCityList('');
+          
+          // Очищаем localStorage для фильтров (чтобы при следующей загрузке тоже были "Все")
+          localStorage.removeItem('filter_country');
+          localStorage.removeItem('filter_city');
+          
+          return; // Не отправляем AJAX запрос, так как фильтры уже установлены в HTML
+        }
+        
+        // Если в URL есть фильтры, восстанавливаем их из URL
+        if (urlCountry || urlCity) {
+          const savedCountry = urlCountry || '';
+          const savedCity = urlCity || '';
           
           if (savedCountry || savedCity) {
             // Восстанавливаем страну
@@ -1108,7 +1210,9 @@
             
             // Отправляем форму для применения фильтров
             setTimeout(() => {
-              submitFormAjax();
+              if (window.submitFormAjax) {
+                window.submitFormAjax();
+              }
             }, 200);
           }
         }
@@ -1137,61 +1241,47 @@
         input.addEventListener('input', () => {
           clearTimeout(liveTimeout);
           liveTimeout = setTimeout(() => {
-            submitFormAjax();
+            if (window.submitFormAjax) {
+              window.submitFormAjax();
+            }
           }, 300);
         });
         // На всякий случай — если пользователь вставил/изменил и ушёл с поля
-        input.addEventListener('change', () => submitFormAjax());
+        input.addEventListener('change', () => {
+          if (window.submitFormAjax) {
+            window.submitFormAjax();
+          }
+        });
       });
 
       // Поиск в реальном времени для каталога (внутри DOMContentLoaded, чтобы submitFormAjax был доступен)
       const catalogSearchInput = document.getElementById('catalog-search-input');
       if (catalogSearchInput) {
         let searchTimeout;
-        let viewportMeta = document.querySelector('meta[name="viewport"]');
-        let originalViewport = viewportMeta ? viewportMeta.getAttribute('content') : 'width=device-width, initial-scale=1.0';
-        let isZoomed = false;
-
-        // Функция для увеличения масштаба
-        function zoomIn() {
-          if (!isZoomed && viewportMeta) {
-            viewportMeta.setAttribute('content', 'width=device-width, initial-scale=1.5, maximum-scale=1.5, user-scalable=no');
-            isZoomed = true;
-          }
-        }
-
-        // Функция для возврата масштаба
-        function zoomOut() {
-          if (isZoomed && viewportMeta) {
-            viewportMeta.setAttribute('content', originalViewport);
-            isZoomed = false;
-          }
-        }
-
-        // При фокусе - увеличиваем масштаб
-        catalogSearchInput.addEventListener('focus', zoomIn);
 
         catalogSearchInput.addEventListener('input', function(e) {
           const query = e.target.value.trim();
           catalogSearchInput.value = query;
           
-          if (!isZoomed) {
-            zoomIn();
-          }
-          
           clearTimeout(searchTimeout);
           searchTimeout = setTimeout(() => {
-            zoomOut(); // Возвращаем масштаб перед отправкой
-            submitFormAjax();
+            if (window.submitFormAjax) {
+              window.submitFormAjax();
+            }
           }, 300);
         });
 
-        // При нажатии Enter - возвращаем масштаб и отправляем
+        // При нажатии Enter - отправляем форму и устанавливаем флаг для прокрутки
         catalogSearchInput.addEventListener('keypress', function(e) {
           if (e.key === 'Enter') {
             e.preventDefault();
-            zoomOut();
-            submitFormAjax();
+            const query = e.target.value.trim();
+            if (query && query.length > 0) {
+              shouldScrollToResults = true; // Устанавливаем флаг для прокрутки
+            }
+            if (window.submitFormAjax) {
+              window.submitFormAjax();
+            }
           }
         });
 
@@ -1200,18 +1290,12 @@
           if ((e.key === 'Backspace' || e.key === 'Delete') && this.value.length === 1) {
             clearTimeout(searchTimeout);
             this.value = '';
-            zoomOut();
-            searchTimeout = setTimeout(() => submitFormAjax(), 100);
+            searchTimeout = setTimeout(() => {
+              if (window.submitFormAjax) {
+                window.submitFormAjax();
+              }
+            }, 100);
           }
-        });
-
-        // При потере фокуса без отправки - возвращаем масштаб через небольшую задержку
-        catalogSearchInput.addEventListener('blur', function() {
-          setTimeout(() => {
-            if (isZoomed && !catalogSearchInput.value.trim()) {
-              zoomOut();
-            }
-          }, 200);
         });
       }
     });

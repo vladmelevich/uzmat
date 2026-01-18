@@ -18,6 +18,7 @@
   <!-- Floating Header -->
   <header class="uz-header">
     <div class="uz-header-inner">
+      {% include 'uzmat/burger-menu-btn.html' %}
       <a href="{% url 'uzmat:index' %}" class="uz-logo">
         <img src="{% static 'uzmat/logo-uzmat.svg' %}" alt="Uzmat" class="uz-logo-mark">
         <span>Uzmat</span>
@@ -142,7 +143,7 @@
             <div style="font-weight: 600; margin-bottom: 4px;">Аккаунт</div>
             <div style="font-size: 13px; color: var(--uz-text-dim);">Управление сессией</div>
           </div>
-          <form method="post" action="{% url 'uzmat:logout' %}">
+          <form method="post" action="{% url 'uzmat:logout' %}" id="logout-form-settings">
             {% csrf_token %}
             <button class="uz-btn uz-btn-outline"
               style="color: var(--uz-danger); border-color: rgba(239, 68, 68, 0.2);">Выйти</button>
@@ -247,6 +248,22 @@
             }
           });
         }
+      }
+    });
+  </script>
+
+  <!-- Мгновенное уведомление при выходе -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const logoutForm = document.getElementById('logout-form-settings');
+      if (logoutForm) {
+        logoutForm.addEventListener('submit', function(e) {
+          // Показываем уведомление МГНОВЕННО при отправке формы
+          if (window.showToast) {
+            window.showToast('Вы успешно вышли из аккаунта', 'success', 3000);
+          }
+          // Форма продолжит отправку, уведомление уже показано
+        });
       }
     });
   </script>

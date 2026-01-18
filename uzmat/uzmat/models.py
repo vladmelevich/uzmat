@@ -187,6 +187,10 @@ class Advertisement(models.Model):
     )
     last_bumped_at = models.DateTimeField(blank=True, null=True, verbose_name="Последнее поднятие")
     
+    # Telegram
+    sent_to_telegram = models.BooleanField(default=False, verbose_name="Отправлено в Telegram")
+    telegram_message_id = models.CharField(max_length=50, blank=True, null=True, verbose_name="ID сообщения в Telegram")
+    
     # Даты
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата обновления")

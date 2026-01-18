@@ -571,9 +571,9 @@ textarea {
 }
 
 .uz-hero-subtitle {
-  font-size: 18px;
+  font-size: 15px;
   color: var(--uz-text-dim);
-  margin-bottom: 40px;
+  margin-bottom: 30px;
   max-width: 600px;
   margin-left: auto;
   margin-right: auto;
@@ -627,7 +627,7 @@ textarea {
 }
 
 .uz-search-quick-label {
-  font-size: 13px;
+  font-size: 11px;
   color: var(--uz-text-muted);
   font-weight: 500;
 }
@@ -947,14 +947,14 @@ textarea {
 
 /* --- CATEGORIES SECTION --- */
 .uz-categories {
-  padding: 40px 20px;
+  padding: 30px 20px;
 }
 
 .uz-categories-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   grid-template-rows: auto auto auto;
-  gap: 16px;
+  gap: 12px;
   max-width: 1200px;
   margin: 0 auto;
 }
@@ -963,12 +963,12 @@ textarea {
   background: var(--uz-bg-card);
   border: 1px solid var(--uz-border);
   border-radius: var(--uz-radius-md);
-  padding: 20px;
+  padding: 12px;
   display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
   cursor: pointer;
   transition: all var(--uz-duration) var(--uz-ease);
   text-decoration: none;
@@ -979,13 +979,13 @@ textarea {
 
 .uz-category-card-large {
   grid-column: span 2;
-  min-height: 240px;
+  min-height: 160px;
 }
 
 .uz-category-card-medium {
   grid-column: 3 / 5;
   grid-row: 2;
-  min-height: 200px;
+  min-height: 140px;
   flex-direction: column;
   align-items: center;
   justify-content: center;
@@ -994,7 +994,7 @@ textarea {
 
 .uz-category-card-medium .uz-category-text {
   text-align: center;
-  margin-top: 12px;
+  margin-top: 8px;
 }
 
 .uz-category-card-small {
@@ -1002,10 +1002,10 @@ textarea {
   justify-content: flex-start;
   align-items: center;
   text-align: center;
-  min-height: 200px;
-  gap: 12px;
-  padding-top: 16px;
-  padding-bottom: 16px;
+  min-height: 140px;
+  gap: 8px;
+  padding-top: 12px;
+  padding-bottom: 12px;
 }
 
 .uz-category-card::before {
@@ -1031,13 +1031,13 @@ textarea {
 }
 
 .uz-category-text {
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 500;
   text-align: left;
   color: var(--uz-text);
   position: relative;
   z-index: 1;
-  line-height: 1.4;
+  line-height: 1.3;
   transition: color var(--uz-duration) var(--uz-ease);
   flex: 1;
   min-width: 0;
@@ -1045,8 +1045,8 @@ textarea {
 
 .uz-category-card-small .uz-category-text {
   text-align: center;
-  font-size: 14px;
-  margin-top: 8px;
+  font-size: 12px;
+  margin-top: 6px;
 }
 
 .uz-category-icon {
@@ -1061,26 +1061,26 @@ textarea {
 }
 
 .uz-category-card-large .uz-category-icon {
-  width: 280px;
-  height: 220px;
-  min-width: 280px;
-  max-width: 280px;
+  width: 200px;
+  height: 140px;
+  min-width: 200px;
+  max-width: 200px;
 }
 
 .uz-category-card-medium .uz-category-icon {
-  width: 180px;
-  height: 180px;
-  min-width: 180px;
-  max-width: 180px;
+  width: 120px;
+  height: 120px;
+  min-width: 120px;
+  max-width: 120px;
   margin: 0 auto;
 }
 
 .uz-category-card-small .uz-category-icon {
   width: 100%;
-  height: 160px;
+  height: 100px;
   flex: 1;
-  min-height: 160px;
-  max-height: 160px;
+  min-height: 100px;
+  max-height: 100px;
 }
 
 .uz-category-icon svg {
@@ -1159,17 +1159,17 @@ textarea {
 
 @media (max-width: 768px) {
   .uz-categories {
-    padding: 24px 16px;
+    padding: 20px 16px;
   }
 
   .uz-categories-grid {
     grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
+    gap: 8px;
   }
 
   .uz-category-card {
-    padding: 14px;
-    gap: 10px;
+    padding: 10px;
+    gap: 8px;
     flex-direction: column;
     align-items: center;
     justify-content: flex-start;
@@ -1178,88 +1178,88 @@ textarea {
 
   .uz-category-card-large {
     grid-column: span 1;
-    min-height: 160px;
+    min-height: 120px;
   }
 
   .uz-category-card-medium {
     grid-column: span 1;
-    min-height: 160px;
+    min-height: 120px;
   }
 
   .uz-category-card-small {
-    min-height: 160px;
+    min-height: 120px;
   }
 
   .uz-category-card-large .uz-category-icon,
   .uz-category-card-medium .uz-category-icon {
     width: 100%;
-    height: 110px;
+    height: 80px;
     min-width: 100%;
     max-width: 100%;
-    min-height: 110px;
-    max-height: 110px;
+    min-height: 80px;
+    max-height: 80px;
   }
 
   .uz-category-card-small .uz-category-icon {
-    height: 110px;
-    min-height: 110px;
-    max-height: 110px;
+    height: 80px;
+    min-height: 80px;
+    max-height: 80px;
   }
 
   .uz-category-text {
-    font-size: 13px;
+    font-size: 11px;
     text-align: center;
   }
 }
 
 @media (max-width: 480px) {
   .uz-categories {
-    padding: 20px 12px;
+    padding: 16px 12px;
   }
 
   .uz-categories-grid {
     grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
+    gap: 6px;
   }
 
   .uz-category-card {
-    padding: 12px;
-    gap: 8px;
+    padding: 8px;
+    gap: 6px;
     flex-direction: column;
     align-items: center;
     justify-content: flex-start;
     text-align: center;
-    min-height: 140px;
+    min-height: 110px;
   }
 
   .uz-category-card-large {
     grid-column: span 1;
-    min-height: 140px;
+    min-height: 110px;
   }
 
   .uz-category-card-large .uz-category-text {
     text-align: center;
-    font-size: 13px;
+    font-size: 11px;
     margin-top: 4px;
   }
 
   .uz-category-card-medium {
     grid-column: span 1;
-    min-height: 140px;
+    min-height: 110px;
   }
 
   .uz-category-card-medium .uz-category-text {
     text-align: center;
-    font-size: 13px;
+    font-size: 11px;
     margin-top: 4px;
   }
 
   .uz-category-card-small {
-    min-height: 140px;
+    min-height: 110px;
   }
 
   .uz-category-card-small .uz-category-text {
-    font-size: 13px;
+    font-size: 11px;
     margin-top: 4px;
   }
 
@@ -1291,16 +1291,61 @@ textarea {
 .uz-bento-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 16px;
-  padding: 20px;
+  gap: 0; /* Убираем gap, используем margin-bottom на карточках */
+  padding: 0 20px 20px 20px; /* Убираем padding-top */
+}
+
+/* Отступы между карточками через margin-bottom */
+.uz-bento-grid > .uz-ad-card {
+  margin-bottom: 16px; /* Уменьшенный отступ */
+}
+
+/* Отступ сверху для первой карточки */
+.uz-bento-grid > .uz-ad-card:first-child {
+  margin-top: 20px; /* Отступ сверху для первой карточки */
+}
+
+.uz-bento-grid > .uz-ad-card:last-child {
+  margin-bottom: 0;
 }
 
 @media (max-width: 768px) {
   .uz-bento-grid {
     grid-template-columns: 1fr;
-    gap: 16px;
-    padding: 0;
+    gap: 0;
+    padding: 0 12px 20px 12px;
     margin-top: 40px; /* Увеличенный отступ сверху для разделения с фильтром */
+  }
+  
+  .uz-bento-grid > .uz-ad-card {
+    margin-bottom: 14px; /* Уменьшенный отступ */
+  }
+  
+  .uz-bento-grid > .uz-ad-card:first-child {
+    margin-top: 0; /* На мобильных margin-top сетки уже есть */
+  }
+  
+  .uz-bento-grid > .uz-ad-card:last-child {
+    margin-bottom: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .uz-bento-grid {
+    gap: 0;
+    padding: 0 8px 18px 8px;
+  }
+  
+  .uz-bento-grid > .uz-ad-card {
+    margin-bottom: 12px; /* Уменьшенный отступ */
+  }
+  
+  .uz-bento-grid > .uz-ad-card:first-child {
+    margin-top: 0; /* На мобильных margin-top сетки уже есть */
+  }
+  
+  .uz-bento-grid > .uz-ad-card:last-child {
+    margin-bottom: 0;
   }
 }
 
@@ -1677,6 +1722,26 @@ select.uz-input {
   cursor: pointer;
   align-items: stretch;
   position: relative;
+  /* margin-bottom управляется через .uz-bento-grid > .uz-ad-card */
+}
+
+/* Цена в правом верхнем углу карточки */
+.uz-ad-price-top {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--uz-text);
+  background: rgba(255, 255, 255, 0.95);
+  padding: 4px 8px;
+  border-radius: 4px;
+  z-index: 10;
+  pointer-events: none;
+}
+
+[data-theme="dark"] .uz-ad-price-top {
+  background: rgba(31, 41, 55, 0.95);
 }
 
 .uz-ad-card:hover {
@@ -1698,8 +1763,8 @@ select.uz-input {
 .uz-ad-image {
   width: 200px;
   min-width: 200px;
-  height: 100%;
-  min-height: 180px;
+  height: 200px;
+  min-height: 200px;
   background: #E5E7EB;
   background-size: cover;
   position: relative;
@@ -1707,36 +1772,125 @@ select.uz-input {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  align-self: stretch;
   box-sizing: border-box;
 }
 
 @media (max-width: 768px) {
   .uz-ad-card {
-    flex-direction: column;
+    /* Сохраняем горизонтальный макет на мобильных */
+    flex-direction: row;
+    /* margin-bottom управляется через .uz-bento-grid > .uz-ad-card */
   }
 
   .uz-ad-card-link {
-    flex-direction: column;
+    /* Сохраняем горизонтальный макет на мобильных */
+    flex-direction: row;
   }
 
   .uz-ad-image {
-    width: 100%;
-    height: 200px;
-    min-height: 200px;
-    align-self: auto;
+    width: 120px;
+    min-width: 120px;
+    height: 120px;
+    min-height: 120px;
+  }
+  
+  .uz-ad-content {
+    padding: 12px;
+  }
+  
+  .uz-ad-title {
+    font-size: 16px;
+    margin-bottom: 4px;
+  }
+  
+  .uz-ad-subtitle {
+    font-size: 13px;
+    margin-bottom: 6px;
+  }
+  
+  .uz-ad-description {
+    font-size: 13px;
+    margin-bottom: 8px;
+    line-height: 1.4;
+  }
+  
+  .uz-ad-meta {
+    font-size: 12px;
+  }
+  
+  .uz-ad-price-top {
+    top: 8px;
+    right: 8px;
+    font-size: 14px;
+    padding: 3px 6px;
+  }
+  
+  .uz-ad-favorite-image {
+    width: 28px;
+    height: 28px;
+    bottom: 6px;
+    right: 6px;
+  }
+  
+  .uz-ad-favorite-image svg {
+    width: 16px;
+    height: 16px;
   }
 }
 
 @media (max-width: 480px) {
+  .uz-ad-card {
+    /* margin-bottom управляется через .uz-bento-grid > .uz-ad-card */
+  }
+  
   .uz-ad-image {
-    height: 150px;
-    min-height: 150px;
+    width: 100px;
+    min-width: 100px;
+    height: 100px;
+    min-height: 100px;
+  }
+  
+  .uz-ad-content {
+    padding: 10px;
+  }
+  
+  .uz-ad-title {
+    font-size: 15px;
+  }
+  
+  .uz-ad-subtitle {
+    font-size: 12px;
+  }
+  
+  .uz-ad-description {
+    font-size: 12px;
+    margin-bottom: 6px;
+  }
+  
+  .uz-ad-meta {
+    font-size: 11px;
   }
 
   .uz-ad-image-icon {
-    width: 70px;
-    height: 70px;
+    width: 50px;
+    height: 50px;
+  }
+  
+  .uz-ad-price-top {
+    font-size: 13px;
+    padding: 2px 5px;
+  }
+  
+  .uz-ad-favorite-image {
+    width: 24px;
+    height: 24px;
+    bottom: 4px;
+    right: 4px;
+  }
+  
+  .uz-ad-favorite-image svg {
+    width: 14px;
+    height: 14px;
   }
 }
 
@@ -1782,39 +1936,52 @@ select.uz-input {
   display: none;
 }
 
-/* Иконка избранного в правом верхнем углу карточки */
-.uz-ad-favorite {
-  width: 24px;
-  height: 24px;
+/* Иконка избранного в правом нижнем углу изображения */
+.uz-ad-favorite-image {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.9);
   border: none;
+  border-radius: 50%;
   padding: 0;
-  flex-shrink: 0;
+  z-index: 5;
 }
 
-.uz-ad-favorite:hover {
-  transform: scale(1.15);
+.uz-ad-favorite-image:hover {
+  transform: scale(1.1);
+  background: rgba(255, 255, 255, 1);
 }
 
-.uz-ad-favorite svg {
-  width: 20px;
-  height: 20px;
+.uz-ad-favorite-image svg {
+  width: 18px;
+  height: 18px;
   color: var(--uz-text-muted);
   transition: all 0.2s;
 }
 
-.uz-ad-favorite:hover svg {
+.uz-ad-favorite-image:hover svg {
   color: var(--uz-danger);
 }
 
-.uz-ad-favorite.active svg {
+.uz-ad-favorite-image.active svg {
   fill: var(--uz-danger);
   color: var(--uz-danger);
+}
+
+[data-theme="dark"] .uz-ad-favorite-image {
+  background: rgba(31, 41, 55, 0.9);
+}
+
+[data-theme="dark"] .uz-ad-favorite-image:hover {
+  background: rgba(31, 41, 55, 1);
 }
 
 .uz-ad-content {
@@ -1824,6 +1991,15 @@ select.uz-input {
   flex-direction: column;
   justify-content: space-between;
   position: relative;
+  min-height: 0; /* Позволяет контенту правильно сжиматься */
+  overflow: hidden; /* Предотвращаем переполнение */
+}
+
+.uz-ad-content > div:first-child {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .uz-ad-content-header {
@@ -1869,6 +2045,7 @@ select.uz-input {
   margin-top: auto;
   padding-top: 12px;
   border-top: 1px solid var(--uz-border);
+  flex-shrink: 0; /* Предотвращаем сжатие мета-информации */
 }
 
 .uz-ad-meta-left {
@@ -3353,4 +3530,193 @@ select.uz-input {
     min-width: auto;
     max-width: none;
   }
+}
+
+/* --- BURGER MENU --- */
+.uz-burger-menu-btn {
+  display: none;
+  width: 40px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--uz-text);
+  padding: 0;
+  margin-right: 12px;
+  border-radius: var(--uz-radius-md);
+  transition: all var(--uz-duration) var(--uz-ease);
+  flex-shrink: 0;
+}
+
+.uz-burger-menu-btn:hover {
+  background: var(--uz-bg-hover);
+}
+
+.uz-burger-menu-btn svg {
+  width: 24px;
+  height: 24px;
+}
+
+.uz-hidden-desktop {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .uz-burger-menu-btn {
+    display: flex;
+  }
+  
+  .uz-hidden-desktop {
+    display: block;
+  }
+  
+  .uz-hidden-desktop.uz-flex,
+  .uz-hidden-desktop.uz-burger-menu-btn {
+    display: flex;
+  }
+}
+
+.uz-burger-menu-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 998;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s var(--uz-ease);
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .uz-burger-menu-overlay {
+    display: block;
+  }
+}
+
+.uz-burger-menu-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.uz-burger-menu {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 320px;
+  max-width: 85vw;
+  height: 100vh;
+  background: var(--uz-bg-card);
+  border-right: 1px solid var(--uz-border);
+  z-index: 999;
+  transform: translateX(-100%);
+  transition: transform 0.3s var(--uz-ease);
+  display: none;
+  flex-direction: column;
+  overflow-y: auto;
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3);
+  visibility: hidden;
+}
+
+@media (max-width: 768px) {
+  .uz-burger-menu {
+    display: flex;
+  }
+}
+
+.uz-burger-menu.active {
+  transform: translateX(0);
+  visibility: visible;
+}
+
+.uz-burger-menu-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px;
+  border-bottom: 1px solid var(--uz-border);
+  flex-shrink: 0;
+}
+
+.uz-burger-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: var(--uz-text);
+  flex: 1;
+  font-weight: 700;
+  font-size: 18px;
+}
+
+.uz-burger-close {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--uz-text-dim);
+  padding: 0;
+  border-radius: var(--uz-radius-md);
+  transition: all var(--uz-duration) var(--uz-ease);
+}
+
+.uz-burger-close:hover {
+  background: var(--uz-bg-hover);
+  color: var(--uz-text);
+}
+
+.uz-burger-close svg {
+  width: 20px;
+  height: 20px;
+}
+
+.uz-burger-menu-content {
+  flex: 1;
+  padding: 12px 0;
+  overflow-y: auto;
+}
+
+.uz-burger-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  color: var(--uz-text-dim);
+  text-decoration: none;
+  font-size: 15px;
+  font-weight: 500;
+  transition: all var(--uz-duration) var(--uz-ease);
+  border-left: 3px solid transparent;
+}
+
+.uz-burger-menu-item:hover {
+  background: var(--uz-bg-hover);
+  color: var(--uz-text);
+}
+
+.uz-burger-menu-item.active {
+  color: var(--uz-primary);
+  background: var(--uz-primary-alpha);
+  border-left-color: var(--uz-primary);
+}
+
+.uz-burger-menu-item svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+[data-theme="light"] .uz-burger-menu {
+  background: #FFFFFF;
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.1);
 }

@@ -144,6 +144,13 @@
         <span>Uzmat</span>
       </a>
 
+      <button class="uz-burger-menu-btn" id="burger-menu-btn" aria-label="Открыть меню">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="3" y1="12" x2="21" y2="12"></line>
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+      </button>
       <nav class="uz-nav uz-hidden-mobile">
         <a href="{% url 'uzmat:index' %}" class="uz-nav-item">Объявления</a>
         <a href="{% url 'uzmat:parts_repair' %}" class="uz-nav-item">Запчасти</a>
@@ -253,6 +260,8 @@
       <span>Меню</span>
     </a>
   </nav>
+
+  {% include 'uzmat/burger-menu.html' %}
 
 </body>
 

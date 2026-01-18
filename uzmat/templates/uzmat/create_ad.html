@@ -354,6 +354,21 @@
               console.error('⚠️ Input файла не находится внутри формы!');
               form.appendChild(photoInput);
             }
+            
+            // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Принудительно обновляем input перед отправкой
+            // Это необходимо, так как updateFileInput() в app.js может не синхронизироваться с формой
+            try {
+              // Проверяем, что файлы действительно в input
+              if (photoInput.files.length === 0 && window.selectedFiles && window.selectedFiles.length > 0) {
+                console.warn('⚠️ Файлы в selectedFiles, но не в input. Восстанавливаем...');
+                const dt = new DataTransfer();
+                window.selectedFiles.forEach(file => dt.items.add(file));
+                photoInput.files = dt.files;
+                console.log('✓ Файлы восстановлены в input:', photoInput.files.length);
+              }
+            } catch (err) {
+              console.error('Ошибка при восстановлении файлов:', err);
+            }
           } else {
             console.log('⚠️ Файл не выбран - объявление будет создано без фотографии');
           }
@@ -525,34 +540,6 @@
         console.log('Город:', cityInput ? cityInput.value : 'не найдено');
         console.log('Тип объявления:', adType);
         
-        // Проверяем FormData перед отправкой
-        const formData = new FormData(form);
-        console.log('FormData keys:', Array.from(formData.keys()));
-        if (photoUpload && photoUpload.files && photoUpload.files.length > 0) {
-          console.log('✓ Файл в FormData:', formData.has('photo'), 'имя:', photoUpload.files[0].name);
-        } else {
-          console.log('⚠️ Файл НЕ в FormData - input пустой');
-        }
-
-        // ФИНАЛЬНАЯ ПРОВЕРКА ФАЙЛА ПЕРЕД ОТПРАВКОЙ
-        const finalPhotoCheck = document.getElementById('photo-upload');
-        if (finalPhotoCheck) {
-          if (finalPhotoCheck.files && finalPhotoCheck.files.length > 0) {
-            console.log('✅ ФИНАЛЬНАЯ ПРОВЕРКА: Файл выбран и готов к отправке:', finalPhotoCheck.files[0].name);
-            // Убеждаемся, что файл действительно в форме
-            const finalFormData = new FormData(form);
-            console.log('✅ ФИНАЛЬНАЯ ПРОВЕРКА: FormData содержит photo:', finalFormData.has('photo'));
-            if (!finalFormData.has('photo')) {
-              console.error('❌ КРИТИЧЕСКАЯ ОШИБКА: Файл выбран, но НЕ в FormData!');
-              // Пытаемся принудительно добавить файл
-              finalFormData.append('photo', finalPhotoCheck.files[0]);
-              console.log('Попытка принудительно добавить файл в FormData');
-            }
-          } else {
-            console.log('⚠️ ФИНАЛЬНАЯ ПРОВЕРКА: Файл НЕ выбран');
-          }
-        }
-        
         // Показываем ошибки
         if (hasErrors && errors.length > 0) {
           e.preventDefault();
@@ -578,6 +565,134 @@
             }
           }
         }
+        
+        // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Проверяем и исправляем проблему с файлами перед отправкой
+        if (!hasErrors) {
+          const photoInput = document.getElementById('photo-upload');
+          if (photoInput && photoInput.files && photoInput.files.length > 0) {
+            // Проверяем FormData
+            const testFormData = new FormData(form);
+            const hasPhotos = testFormData.has('photos');
+            
+            if (!hasPhotos) {
+              console.warn('⚠️ Файлы выбраны, но не в FormData. Перехватываем отправку и добавляем файлы...');
+              e.preventDefault();
+              
+              // Создаем новый FormData с файлами
+              const correctFormData = new FormData(form);
+              // Добавляем все файлы
+              for (let i = 0; i < photoInput.files.length; i++) {
+                correctFormData.append('photos', photoInput.files[i]);
+              }
+              
+              console.log('✓ Файлы добавлены в FormData:', photoInput.files.length);
+              console.log('FormData keys после исправления:', Array.from(correctFormData.keys()));
+              
+              // Получаем название объявления для уведомления
+              const titleInput = form.querySelector('[name="title"]');
+              const adTitle = titleInput ? titleInput.value : 'объявление';
+              const notificationMessage = `Объявление "${adTitle}" успешно создано!`;
+              
+              // Сохраняем уведомление в sessionStorage ПЕРЕД отправкой
+              sessionStorage.setItem('ad_created_notification', JSON.stringify({
+                message: notificationMessage,
+                type: 'success'
+              }));
+              
+              // Отправляем форму через fetch
+              fetch(form.action || window.location.pathname, {
+                method: 'POST',
+                body: correctFormData,
+                headers: {
+                  'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                redirect: 'manual' // Не следуем редиректу автоматически
+              })
+              .then(response => {
+                if (response.ok || response.status === 302 || response.status === 200) {
+                  // Показываем уведомление СРАЗУ после успешного ответа
+                  // Используем requestAnimationFrame для гарантированного показа
+                  requestAnimationFrame(() => {
+                    if (window.showToast && document.getElementById('uz-toast-container')) {
+                      window.showToast(notificationMessage, 'success', 5000);
+                    } else {
+                      // Если showToast еще не загружен, ждем немного
+                      setTimeout(() => {
+                        if (window.showToast) {
+                          window.showToast(notificationMessage, 'success', 5000);
+                        }
+                      }, 100);
+                    }
+                  });
+                  
+                  // Получаем URL редиректа из заголовков
+                  const redirectUrl = response.headers.get('Location') || response.url;
+                  
+                  // Небольшая задержка перед редиректом, чтобы пользователь увидел уведомление
+                  setTimeout(() => {
+                    if (redirectUrl && redirectUrl !== window.location.href) {
+                      window.location.href = redirectUrl;
+                    } else if (response.redirected) {
+                      window.location.href = response.url;
+                    } else {
+                      // Если нет редиректа, пробуем получить из ответа
+                      return response.text().then(html => {
+                        // Парсим HTML для поиска редиректа
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(html, 'text/html');
+                        const metaRefresh = doc.querySelector('meta[http-equiv="refresh"]');
+                        if (metaRefresh) {
+                          const content = metaRefresh.getAttribute('content');
+                          const urlMatch = content.match(/url=(.+)/);
+                          if (urlMatch) {
+                            window.location.href = urlMatch[1];
+                          } else {
+                            window.location.reload();
+                          }
+                        } else {
+                          window.location.reload();
+                        }
+                      });
+                    }
+                  }, 800); // Увеличиваем задержку до 800мс, чтобы пользователь точно увидел уведомление
+                } else {
+                  // Ошибка при отправке - удаляем сохраненное уведомление
+                  sessionStorage.removeItem('ad_created_notification');
+                  
+                  return response.text().then(html => {
+                    // Парсим HTML для поиска сообщений об ошибках
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    const errorMessages = doc.querySelectorAll('.error, .alert-danger, [class*="error"]');
+                    let errorText = 'Произошла ошибка при отправке формы.';
+                    if (errorMessages.length > 0) {
+                      errorText = errorMessages[0].textContent.trim();
+                    }
+                    
+                    if (window.showToast) {
+                      window.showToast(errorText, 'error');
+                    } else {
+                      alert(errorText);
+                    }
+                  });
+                }
+              })
+              .catch(error => {
+                console.error('Ошибка при отправке формы:', error);
+                // Удаляем сохраненное уведомление при ошибке
+                sessionStorage.removeItem('ad_created_notification');
+                
+                if (window.showToast) {
+                  window.showToast('Произошла ошибка при отправке формы. Попробуйте еще раз.', 'error');
+                } else {
+                  alert('Произошла ошибка при отправке формы. Попробуйте еще раз.');
+                }
+              });
+              
+              return false;
+            }
+          }
+        }
       });
     });
   </script>
@@ -588,6 +703,7 @@
   <!-- Floating Header -->
   <header class="uz-header">
     <div class="uz-header-inner">
+      {% include 'uzmat/burger-menu-btn.html' %}
       <a href="{% url 'uzmat:index' %}" class="uz-logo">
         <img src="{% static 'uzmat/logo-uzmat.svg' %}" alt="Uzmat" class="uz-logo-mark">
         <span>Uzmat</span>
@@ -994,6 +1110,33 @@
       <span>Меню</span>
     </a>
   </nav>
+
+  <!-- Django Messages to Toast -->
+  {% if messages %}
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      {% for message in messages %}
+        {% if message.tags == 'error' %}
+          window.showToast('{{ message|escapejs }}', 'error');
+        {% elif message.tags == 'success' %}
+          window.showToast('{{ message|escapejs }}', 'success');
+        {% elif message.tags == 'warning' %}
+          window.showToast('{{ message|escapejs }}', 'warning');
+        {% else %}
+          window.showToast('{{ message|escapejs }}', 'info');
+        {% endif %}
+      {% endfor %}
+    });
+  </script>
+  {% endif %}
+
+  <!-- Очищаем уведомление из sessionStorage только если пользователь вернулся на страницу создания БЕЗ создания нового объявления -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // НЕ удаляем уведомление здесь, так как оно должно показываться на любой странице
+      // Уведомление будет удалено автоматически после показа в app.js
+    });
+  </script>
 
 </body>
 

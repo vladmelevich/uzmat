@@ -4,6 +4,9 @@ from django.apps import AppConfig
 class UzmatConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'uzmat'
+    
+    def ready(self):
+        import uzmat.signals  # Подключаем signals
 
 
 

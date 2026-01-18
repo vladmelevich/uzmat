@@ -6,6 +6,8 @@
   if (!photoUpload || !photoPreview) return;
 
   let selectedFiles = [];
+  // Делаем selectedFiles доступным глобально для исправления проблемы с FormData
+  window.selectedFiles = selectedFiles;
 
   // Обработчик выбора файлов - множественный выбор
   photoUpload.addEventListener('change', (e) => {
@@ -42,6 +44,7 @@
       
       // Добавляем валидные файлы
       selectedFiles = selectedFiles.concat(validFiles);
+      window.selectedFiles = selectedFiles; // Обновляем глобальную переменную
       
       // Обновляем input для сохранения всех выбранных файлов
       updateFileInput();
@@ -91,6 +94,7 @@
         removeBtn.addEventListener('click', (e) => {
           e.stopPropagation();
           selectedFiles.splice(index, 1);
+          window.selectedFiles = selectedFiles; // Обновляем глобальную переменную
           updateFileInput();
           renderPhotoPreview();
         });
@@ -155,6 +159,7 @@
         // Добавляем только валидные файлы
         if (validFiles.length > 0) {
           selectedFiles = selectedFiles.concat(validFiles);
+          window.selectedFiles = selectedFiles; // Обновляем глобальную переменную
           updateFileInput();
           renderPhotoPreview();
           console.log('Файлы добавлены через drag-and-drop:', validFiles.length);
@@ -342,6 +347,45 @@
   }
 })();
 
+// Универсальная обработка уведомлений из sessionStorage (работает на всех страницах)
+(function() {
+  function showNotificationFromStorage() {
+    const savedNotification = sessionStorage.getItem('ad_created_notification');
+    if (savedNotification) {
+      try {
+        const notification = JSON.parse(savedNotification);
+        // Ждем, пока showToast и контейнер будут доступны
+        const checkInterval = setInterval(function() {
+          if (window.showToast && document.getElementById('uz-toast-container')) {
+            clearInterval(checkInterval);
+            // Показываем уведомление с длительностью 5 секунд
+            window.showToast(notification.message, notification.type || 'success', 5000);
+            // Удаляем уведомление из sessionStorage после показа
+            sessionStorage.removeItem('ad_created_notification');
+          }
+        }, 50); // Проверяем каждые 50мс
+        
+        // Таймаут на случай, если showToast не загрузится за 5 секунд
+        setTimeout(function() {
+          clearInterval(checkInterval);
+          sessionStorage.removeItem('ad_created_notification');
+        }, 5000);
+      } catch (e) {
+        console.error('Ошибка при обработке уведомления из sessionStorage:', e);
+        sessionStorage.removeItem('ad_created_notification');
+      }
+    }
+  }
+  
+  // Пытаемся показать уведомление как можно раньше
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', showNotificationFromStorage);
+  } else {
+    // DOM уже загружен, но showToast может еще не быть доступен
+    showNotificationFromStorage();
+  }
+})();
+
 // Price filter helper: "!" tooltip + require country before enabling price_from/price_to (global, all pages)
 (function() {
   function closeAllTooltips(root = document) {
@@ -410,5 +454,60 @@
   } else {
     init();
   }
+})();
+
+// Burger Menu
+(() => {
+  const burgerBtn = document.getElementById('burger-menu-btn');
+  const burgerMenu = document.getElementById('burger-menu');
+  const burgerOverlay = document.getElementById('burger-menu-overlay');
+  const burgerClose = document.getElementById('burger-menu-close');
+
+  if (!burgerBtn || !burgerMenu || !burgerOverlay || !burgerClose) return;
+
+  function openMenu() {
+    burgerMenu.classList.add('active');
+    burgerOverlay.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeMenu() {
+    burgerMenu.classList.remove('active');
+    burgerOverlay.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+
+  burgerBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    openMenu();
+  });
+
+  burgerClose.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    closeMenu();
+  });
+
+  burgerOverlay.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    closeMenu();
+  });
+
+  // Закрытие по Escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && burgerMenu.classList.contains('active')) {
+      closeMenu();
+    }
+  });
+
+  // Закрытие при клике на ссылку в меню
+  const menuLinks = burgerMenu.querySelectorAll('a');
+  menuLinks.forEach(link => {
+    link.addEventListener('click', () => {
+      closeMenu();
+    });
+  });
 })();
 

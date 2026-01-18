@@ -45,3 +45,4 @@ class AdvertisementSitemap(Sitemap):
     def lastmod(self, item):
         return item.updated_at or item.created_at
 
+

@@ -5,7 +5,7 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   {% include 'uzmat/seo_meta.html' with title="Аренда и продажа спецтехники в Центральной Азии" description="Uzmat — единая платформа для поиска надежных подрядчиков и управления парком техники. Аренда и продажа спецтехники: экскаваторы, погрузчики, краны, бульдозеры, самосвалы. Запчасти и услуги. Казахстан, Узбекистан, Россия." keywords="аренда спецтехники, продажа спецтехники, экскаватор, погрузчик, кран, бульдозер, самосвал, аренда техники Казахстан, аренда техники Узбекистан, запчасти для спецтехники, услуги спецтехники" %}
   <link rel="icon" type="image/svg+xml" href="{% static 'uzmat/logo-uzmat.svg' %}">
   {% include 'uzmat/theme-init.html' %}
@@ -57,6 +57,7 @@
   <!-- Floating Header -->
   <header class="uz-header">
     <div class="uz-header-inner">
+      {% include 'uzmat/burger-menu-btn.html' %}
       <a href="{% url 'uzmat:index' %}" class="uz-logo">
         <img src="{% static 'uzmat/logo-uzmat.svg' %}" alt="Uzmat" class="uz-logo-mark">
         <span>Uzmat</span>
@@ -95,9 +96,6 @@
         <span data-translate="Аренда спецтехники бизнес-класса">Аренда спецтехники<br>бизнес-класса</span>
       </h1>
       <!-- SEO: Основной заголовок страницы с ключевыми словами -->
-      <p class="uz-hero-subtitle">
-        Единая платформа для поиска надежных подрядчиков и управления парком техники. Аренда и продажа спецтехники: экскаваторы, погрузчики, краны, бульдозеры, самосвалы в Казахстане, Узбекистане и России.
-      </p>
 
       <div class="uz-search-container">
         <input type="text" class="uz-search-input" id="hero-search-input" placeholder="Найти экскаватор, кран или погрузчик...">
@@ -106,19 +104,6 @@
           <circle cx="11" cy="11" r="8"></circle>
           <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
         </svg>
-      </div>
-
-      <!-- Быстрые кнопки поиска -->
-      <div class="uz-search-quick-buttons">
-        <span class="uz-search-quick-label">Популярные запросы:</span>
-        <div class="uz-search-quick-list">
-          <button type="button" class="uz-search-quick-btn" data-search-query="Экскаватор">Экскаватор</button>
-          <button type="button" class="uz-search-quick-btn" data-search-query="Погрузчик">Погрузчик</button>
-          <button type="button" class="uz-search-quick-btn" data-search-query="Кран">Кран</button>
-          <button type="button" class="uz-search-quick-btn" data-search-query="Бульдозер">Бульдозер</button>
-          <button type="button" class="uz-search-quick-btn" data-search-query="Самосвал">Самосвал</button>
-          <button type="button" class="uz-search-quick-btn" data-search-query="Манипулятор">Манипулятор</button>
-        </div>
       </div>
     </section>
 
@@ -133,60 +118,8 @@
       </div>
     </section>
 
-    <!-- Hot Offers Section -->
-    <section class="uz-hot-offers uz-animate-in" style="animation-delay: 0.15s; margin-top: 40px;">
-      <div class="uz-hot-offers-header">
-        <h2 class="uz-hot-offers-title">
-          Горячие предложения
-        </h2>
-      </div>
-
-      <div class="uz-hot-offers-grid-wrapper">
-        <div class="uz-hot-offers-grid" id="hot-offers-grid">
-          {% for ad in hot_offers %}
-          {% if ad.slug %}
-          <a href="{% url 'uzmat:ad_detail' slug=ad.slug %}" class="uz-hot-offer-item">
-            <div class="uz-hot-offer-image">
-              {% if ad.images.exists %}
-                <img src="{{ ad.images.first.image.url }}" alt="{{ ad.title }}" style="width: 100%; height: 100%; object-fit: cover; object-position: center;">
-              {% elif ad.image %}
-                <img src="{{ ad.image.url }}" alt="{{ ad.title }}" style="width: 100%; height: 100%; object-fit: cover; object-position: center;">
-              {% else %}
-                <svg class="uz-hot-offer-icon" viewBox="0 0 775 775" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M209.896 678.125C290.15 678.125 355.208 613.066 355.208 532.812C355.208 452.559 290.15 387.5 209.896 387.5C129.642 387.5 64.5833 452.559 64.5833 532.812C64.5833 613.066 129.642 678.125 209.896 678.125Z" stroke="currentColor" stroke-width="48.4375" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M613.542 678.125C667.044 678.125 710.417 634.753 710.417 581.25C710.417 527.747 667.044 484.375 613.542 484.375C560.039 484.375 516.667 527.747 516.667 581.25C516.667 634.753 560.039 678.125 613.542 678.125Z" stroke="currentColor" stroke-width="48.4375" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M64.5833 339.059C101.195 311.596 144.839 295.068 190.459 291.392C236.079 287.716 281.807 297.042 322.344 318.288C362.881 339.535 396.568 371.834 419.501 411.441C442.434 451.048 453.675 496.343 451.922 542.077C451.179 561.581 450.824 571.366 455.571 576.306C460.318 581.247 469.133 581.247 486.732 581.247H516.667M419.792 290.622L520.089 309.416C595.652 323.624 633.466 330.696 655.779 357.595C678.125 384.494 678.125 423.147 678.125 500.518M645.833 387.497H613.542" stroke="currentColor" stroke-width="48.4375" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M419.792 403.646V309.58C419.792 296.943 417.973 284.565 414.334 272.445L371.354 96.875M129.167 290.625V96.875M96.875 96.875H419.792M581.25 306.771V258.333C581.25 241.205 588.054 224.778 600.166 212.666C612.278 200.554 628.705 193.75 645.833 193.75M226.042 290.625V96.875" stroke="currentColor" stroke-width="48.4375" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              {% endif %}
-            </div>
-            <div style="padding: 8px 10px 10px; font-size: 13px; font-weight: 600; color: var(--uz-text); line-height: 1.4;">
-              {{ ad.title }}
-            </div>
-          </a>
-          {% endif %}
-          {% endfor %}
-          {% if not hot_offers %}
-          {% for i in "1234567"|make_list %}
-          <a href="{% url 'uzmat:catalog' %}" class="uz-hot-offer-item">
-            <div class="uz-hot-offer-image">
-              <svg class="uz-hot-offer-icon" viewBox="0 0 775 775" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M209.896 678.125C290.15 678.125 355.208 613.066 355.208 532.812C355.208 452.559 290.15 387.5 209.896 387.5C129.642 387.5 64.5833 452.559 64.5833 532.812C64.5833 613.066 129.642 678.125 209.896 678.125Z" stroke="currentColor" stroke-width="48.4375" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M613.542 678.125C667.044 678.125 710.417 634.753 710.417 581.25C710.417 527.747 667.044 484.375 613.542 484.375C560.039 484.375 516.667 527.747 516.667 581.25C516.667 634.753 560.039 678.125 613.542 678.125Z" stroke="currentColor" stroke-width="48.4375" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M64.5833 339.059C101.195 311.596 144.839 295.068 190.459 291.392C236.079 287.716 281.807 297.042 322.344 318.288C362.881 339.535 396.568 371.834 419.501 411.441C442.434 451.048 453.675 496.343 451.922 542.077C451.179 561.581 450.824 571.366 455.571 576.306C460.318 581.247 469.133 581.247 486.732 581.247H516.667M419.792 290.622L520.089 309.416C595.652 323.624 633.466 330.696 655.779 357.595C678.125 384.494 678.125 423.147 678.125 500.518M645.833 387.497H613.542" stroke="currentColor" stroke-width="48.4375" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M419.792 403.646V309.58C419.792 296.943 417.973 284.565 414.334 272.445L371.354 96.875M129.167 290.625V96.875M96.875 96.875H419.792M581.25 306.771V258.333C581.25 241.205 588.054 224.778 600.166 212.666C612.278 200.554 628.705 193.75 645.833 193.75M226.042 290.625V96.875" stroke="currentColor" stroke-width="48.4375" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </div>
-          </a>
-          {% endfor %}
-          {% endif %}
-        </div>
-
-      </div>
-    </section>
-
     <!-- Categories Section -->
-    <section class="uz-categories uz-animate-in" style="animation-delay: 0.2s; margin-top: 60px;">
+    <section class="uz-categories uz-animate-in" style="animation-delay: 0.2s; margin-top: 40px;">
       <div class="uz-categories-grid">
         <!-- Category 1: Продажа спецтехники -->
         <a href="{% url 'uzmat:catalog' %}?ad_type=sale" class="uz-category-card uz-category-card-large">
@@ -230,6 +163,58 @@
           </div>
           <span class="uz-category-text">Ремонт</span>
         </a>
+
+      </div>
+    </section>
+
+    <!-- Hot Offers Section -->
+    <section class="uz-hot-offers uz-animate-in" style="animation-delay: 0.15s; margin-top: 40px;">
+      <div class="uz-hot-offers-header">
+        <h2 class="uz-hot-offers-title">
+          Горячие предложения
+        </h2>
+      </div>
+
+      <div class="uz-hot-offers-grid-wrapper">
+        <div class="uz-hot-offers-grid" id="hot-offers-grid">
+          {% for ad in hot_offers %}
+          {% if ad.slug %}
+          <a href="{% url 'uzmat:ad_detail' slug=ad.slug %}" class="uz-hot-offer-item">
+            <div class="uz-hot-offer-image">
+              {% if ad.images.exists %}
+                <img src="{{ ad.images.first.image.url }}" alt="{{ ad.title }}" style="width: 100%; height: 100%; object-fit: cover; object-position: center;">
+              {% elif ad.image %}
+                <img src="{{ ad.image.url }}" alt="{{ ad.title }}" style="width: 100%; height: 100%; object-fit: cover; object-position: center;">
+              {% else %}
+                <svg class="uz-hot-offer-icon" viewBox="0 0 775 775" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M209.896 678.125C290.15 678.125 355.208 613.066 355.208 532.812C355.208 452.559 290.15 387.5 209.896 387.5C129.642 387.5 64.5833 452.559 64.5833 532.812C64.5833 613.066 129.642 678.125 209.896 678.125Z" stroke="currentColor" stroke-width="48.4375" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M613.542 678.125C667.044 678.125 710.417 634.753 710.417 581.25C710.417 527.747 667.044 484.375 613.542 484.375C560.039 484.375 516.667 527.747 516.667 581.25C516.667 634.753 560.039 678.125 613.542 678.125Z" stroke="currentColor" stroke-width="48.4375" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M64.5833 339.059C101.195 311.596 144.839 295.068 190.459 291.392C236.079 287.716 281.807 297.042 322.344 318.288C362.881 339.535 396.568 371.834 419.501 411.441C442.434 451.048 453.675 496.343 451.922 542.077C451.179 561.581 450.824 571.366 455.571 576.306C460.318 581.247 469.133 581.247 486.732 581.247H516.667M419.792 290.622L520.089 309.416C595.652 323.624 633.466 330.696 655.779 357.595C678.125 384.494 678.125 423.147 678.125 500.518M645.833 387.497H613.542" stroke="currentColor" stroke-width="48.4375" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M419.792 403.646V309.58C419.792 296.943 417.973 284.565 414.334 272.445L371.354 96.875M129.167 290.625V96.875M96.875 96.875H419.792M581.25 306.771V258.333C581.25 241.205 588.054 224.778 600.166 212.666C612.278 200.554 628.705 193.75 645.833 193.75M226.042 290.625V96.875" stroke="currentColor" stroke-width="48.4375" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              {% endif %}
+            </div>
+            <div style="padding: 8px 10px 10px; font-size: 13px; font-weight: 600; color: var(--uz-text); line-height: 1.4;" data-search-text="{{ ad.title|lower }}">
+              {{ ad.title }}
+            </div>
+          </a>
+          {% endif %}
+          {% endfor %}
+          {% if not hot_offers %}
+          {% for i in "1234567"|make_list %}
+          <a href="{% url 'uzmat:catalog' %}" class="uz-hot-offer-item">
+            <div class="uz-hot-offer-image">
+              <svg class="uz-hot-offer-icon" viewBox="0 0 775 775" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M209.896 678.125C290.15 678.125 355.208 613.066 355.208 532.812C355.208 452.559 290.15 387.5 209.896 387.5C129.642 387.5 64.5833 452.559 64.5833 532.812C64.5833 613.066 129.642 678.125 209.896 678.125Z" stroke="currentColor" stroke-width="48.4375" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M613.542 678.125C667.044 678.125 710.417 634.753 710.417 581.25C710.417 527.747 667.044 484.375 613.542 484.375C560.039 484.375 516.667 527.747 516.667 581.25C516.667 634.753 560.039 678.125 613.542 678.125Z" stroke="currentColor" stroke-width="48.4375" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M64.5833 339.059C101.195 311.596 144.839 295.068 190.459 291.392C236.079 287.716 281.807 297.042 322.344 318.288C362.881 339.535 396.568 371.834 419.501 411.441C442.434 451.048 453.675 496.343 451.922 542.077C451.179 561.581 450.824 571.366 455.571 576.306C460.318 581.247 469.133 581.247 486.732 581.247H516.667M419.792 290.622L520.089 309.416C595.652 323.624 633.466 330.696 655.779 357.595C678.125 384.494 678.125 423.147 678.125 500.518M645.833 387.497H613.542" stroke="currentColor" stroke-width="48.4375" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M419.792 403.646V309.58C419.792 296.943 417.973 284.565 414.334 272.445L371.354 96.875M129.167 290.625V96.875M96.875 96.875H419.792M581.25 306.771V258.333C581.25 241.205 588.054 224.778 600.166 212.666C612.278 200.554 628.705 193.75 645.833 193.75M226.042 290.625V96.875" stroke="currentColor" stroke-width="48.4375" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+          </a>
+          {% endfor %}
+          {% endif %}
+        </div>
 
       </div>
     </section>
@@ -326,6 +311,8 @@
         {% for ad in popular_ads %}
         {% if ad.slug %}
         <article class="uz-ad-card">
+          <!-- Цена в правом верхнем углу карточки -->
+          <div class="uz-ad-price-top">{{ ad.get_price_display }}</div>
           <a href="{% url 'uzmat:ad_detail' slug=ad.slug %}" class="uz-ad-card-link">
             <div class="uz-ad-image">
               {% if ad.images.exists %}
@@ -340,25 +327,18 @@
                   <path d="M419.792 403.646V309.58C419.792 296.943 417.973 284.565 414.334 272.445L371.354 96.875M129.167 290.625V96.875M96.875 96.875H419.792M581.25 306.771V258.333C581.25 241.205 588.054 224.778 600.166 212.666C612.278 200.554 628.705 193.75 645.833 193.75M226.042 290.625V96.875" stroke="currentColor" stroke-width="48.4375" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
               {% endif %}
+              <!-- Избранное в правом нижнем углу изображения -->
+              {% if user.is_authenticated %}
+              <button class="uz-ad-favorite-image" type="button" aria-label="Добавить в избранное" data-ad-id="{{ ad.id }}" onclick="toggleFavorite(event, {{ ad.id }})">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                </svg>
+              </button>
+              {% endif %}
             </div>
             <div class="uz-ad-content">
-              <div class="uz-ad-content-header">
-                <div style="display:flex; flex-direction: column; gap: 2px;">
-                  <div class="uz-ad-price">{{ ad.get_price_display }}</div>
-                  {% if ad.price_usd %}
-                  <div style="font-size: 13px; color: var(--uz-text-dim);">{{ ad.get_price_usd_display }}</div>
-                  {% endif %}
-                </div>
-                {% if user.is_authenticated %}
-                <button class="uz-ad-favorite" type="button" aria-label="Добавить в избранное" data-ad-id="{{ ad.id }}" onclick="toggleFavorite(event, {{ ad.id }})">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-                  </svg>
-                </button>
-                {% endif %}
-              </div>
               <div>
-                <h3 class="uz-ad-title">{{ ad.title }}</h3>
+                <h3 class="uz-ad-title" data-search-text="{{ ad.title|lower }}">{{ ad.title }}</h3>
                 <div class="uz-ad-subtitle">{{ ad.get_ad_type_display }}{% if ad.with_operator %} • С оператором{% endif %}</div>
                 <div class="uz-ad-description">{{ ad.description|truncatewords:12 }}</div>
               </div>
@@ -871,68 +851,180 @@
     });
 
     // Поиск на главной странице
-    const heroSearchInput = document.getElementById('hero-search-input');
-    if (heroSearchInput) {
-      let searchTimeout;
-      let viewportMeta = document.querySelector('meta[name="viewport"]');
-      let originalViewport = viewportMeta ? viewportMeta.getAttribute('content') : 'width=device-width, initial-scale=1.0';
-      let isZoomed = false;
-
-      // Функция для увеличения масштаба
-      function zoomIn() {
-        if (!isZoomed && viewportMeta) {
-          viewportMeta.setAttribute('content', 'width=device-width, initial-scale=1.5, maximum-scale=1.5, user-scalable=no');
-          isZoomed = true;
+    document.addEventListener('DOMContentLoaded', function() {
+      // Небольшая задержка для гарантии, что все элементы загружены
+      setTimeout(function() {
+        const heroSearchInput = document.getElementById('hero-search-input');
+        const hotOffersGrid = document.getElementById('hot-offers-grid');
+        const popularAdsGrid = document.querySelector('.uz-bento-grid');
+        
+        // При загрузке страницы убеждаемся, что все объявления видны
+        // Убираем все inline стили display при загрузке
+        if (hotOffersGrid) {
+          hotOffersGrid.querySelectorAll('.uz-hot-offer-item').forEach(item => {
+            item.style.removeProperty('display');
+            item.style.removeProperty('visibility');
+          });
         }
-      }
-
-      // Функция для возврата масштаба
-      function zoomOut() {
-        if (isZoomed && viewportMeta) {
-          viewportMeta.setAttribute('content', originalViewport);
-          isZoomed = false;
+        if (popularAdsGrid) {
+          popularAdsGrid.querySelectorAll('.uz-ad-card').forEach(card => {
+            card.style.removeProperty('display');
+            card.style.removeProperty('visibility');
+          });
         }
-      }
-
-      // При фокусе - увеличиваем масштаб
-      heroSearchInput.addEventListener('focus', zoomIn);
+        
+        if (heroSearchInput) {
+          let searchTimeout;
+          
+          // Функция для фильтрации горячих предложений
+          function filterHotOffers(query) {
+            if (!hotOffersGrid) return;
+            
+            const queryLower = query.toLowerCase().trim();
+            if (queryLower === '') {
+              // Если запрос пустой, показываем все
+              hotOffersGrid.querySelectorAll('.uz-hot-offer-item').forEach(item => {
+                item.style.removeProperty('display');
+                item.style.removeProperty('visibility');
+              });
+              return;
+            }
+            
+            const offerItems = hotOffersGrid.querySelectorAll('.uz-hot-offer-item');
+            
+            offerItems.forEach(item => {
+              const searchTextElement = item.querySelector('[data-search-text]');
+              if (searchTextElement) {
+                const searchText = searchTextElement.getAttribute('data-search-text') || '';
+                
+                if (searchText.includes(queryLower)) {
+                  item.style.removeProperty('display');
+                  item.style.removeProperty('visibility');
+                } else {
+                  item.style.display = 'none';
+                }
+              } else {
+                // Если нет data-атрибута, показываем элемент
+                item.style.removeProperty('display');
+                item.style.removeProperty('visibility');
+              }
+            });
+          }
+          
+          // Функция для фильтрации популярных предложений
+          function filterPopularAds(query) {
+            if (!popularAdsGrid) return;
+            
+            const queryLower = query.toLowerCase().trim();
+            if (queryLower === '') {
+              // Если запрос пустой, показываем все
+              popularAdsGrid.querySelectorAll('.uz-ad-card').forEach(card => {
+                card.style.removeProperty('display');
+                card.style.removeProperty('visibility');
+              });
+              return;
+            }
+            
+            const adCards = popularAdsGrid.querySelectorAll('.uz-ad-card');
+            
+            adCards.forEach(card => {
+              const searchTextElement = card.querySelector('[data-search-text]');
+              if (searchTextElement) {
+                const searchText = searchTextElement.getAttribute('data-search-text') || '';
+                
+                if (searchText.includes(queryLower)) {
+                  card.style.removeProperty('display');
+                  card.style.removeProperty('visibility');
+                } else {
+                  card.style.display = 'none';
+                }
+              } else {
+                // Если нет data-атрибута, показываем элемент
+                card.style.removeProperty('display');
+                card.style.removeProperty('visibility');
+              }
+            });
+          }
       
-      // При начале ввода - увеличиваем масштаб (на случай если фокус уже был)
+      // При вводе текста - фильтруем предложения
       heroSearchInput.addEventListener('input', function(e) {
         const query = e.target.value.trim();
         
-        if (!isZoomed) {
-          zoomIn();
-        }
-        
         clearTimeout(searchTimeout);
         searchTimeout = setTimeout(() => {
-          // Перенаправляем на каталог при вводе хотя бы одной буквы
-          if (query.length >= 1) {
-            zoomOut(); // Возвращаем масштаб перед переходом
-            window.location.href = "{% url 'uzmat:catalog' %}?search=" + encodeURIComponent(query);
+          if (query === '') {
+            // Если поле пустое, показываем все объявления
+            if (hotOffersGrid) {
+              hotOffersGrid.querySelectorAll('.uz-hot-offer-item').forEach(item => {
+                item.style.removeProperty('display');
+              });
+            }
+            if (popularAdsGrid) {
+              popularAdsGrid.querySelectorAll('.uz-ad-card').forEach(card => {
+                card.style.removeProperty('display');
+              });
+            }
+          } else {
+            filterHotOffers(query);
+            filterPopularAds(query);
           }
-        }, 200); // Уменьшенная задержка для более быстрого поиска
+        }, 150); // Небольшая задержка для оптимизации
       });
 
+      // Функция для плавной прокрутки к первому найденному объявлению
+      function scrollToFirstResult() {
+        setTimeout(() => {
+          // Сначала проверяем горячие предложения
+          let firstResult = null;
+          if (hotOffersGrid) {
+            const firstHotOffer = hotOffersGrid.querySelector('.uz-hot-offer-item:not([style*="display: none"])');
+            if (firstHotOffer) {
+              firstResult = firstHotOffer;
+            }
+          }
+          
+          // Если не нашли в горячих, проверяем популярные
+          if (!firstResult && popularAdsGrid) {
+            const firstPopularAd = popularAdsGrid.querySelector('.uz-ad-card:not([style*="display: none"])');
+            if (firstPopularAd) {
+              firstResult = firstPopularAd;
+            }
+          }
+          
+          // Прокручиваем к первому найденному результату
+          if (firstResult) {
+            const offsetTop = firstResult.getBoundingClientRect().top + window.pageYOffset - 100; // 100px отступ сверху
+            window.scrollTo({
+              top: offsetTop,
+              behavior: 'smooth'
+            });
+          }
+        }, 200);
+      }
+
+      // При нажатии Enter - фильтруем предложения и прокручиваем к результатам
       heroSearchInput.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
           e.preventDefault();
           const query = e.target.value.trim();
-          if (query.length >= 1) {
-            zoomOut(); // Возвращаем масштаб перед переходом
-            window.location.href = "{% url 'uzmat:catalog' %}?search=" + encodeURIComponent(query);
+          if (query === '') {
+            // Если поле пустое, показываем все объявления
+            if (hotOffersGrid) {
+              hotOffersGrid.querySelectorAll('.uz-hot-offer-item').forEach(item => {
+                item.style.removeProperty('display');
+              });
+            }
+            if (popularAdsGrid) {
+              popularAdsGrid.querySelectorAll('.uz-ad-card').forEach(card => {
+                card.style.removeProperty('display');
+              });
+            }
+          } else {
+            filterHotOffers(query);
+            filterPopularAds(query);
+            scrollToFirstResult();
           }
         }
-      });
-
-      // При потере фокуса без отправки - возвращаем масштаб
-      heroSearchInput.addEventListener('blur', function() {
-        setTimeout(() => {
-          if (isZoomed && !heroSearchInput.value.trim()) {
-            zoomOut();
-          }
-        }, 200);
       });
     }
 

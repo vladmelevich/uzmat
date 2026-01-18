@@ -3,3 +3,4 @@
   <a href="{% url 'uzmat:parts_repair' %}" class="uz-nav-item{% if request.resolver_match.url_name == 'parts_repair' %} active{% endif %}">Запчасти</a>
   <a href="{% url 'uzmat:logistics' %}" class="uz-nav-item{% if request.resolver_match.url_name == 'logistics' %} active{% endif %}">Ремонт</a>
 </nav>
+{% include 'uzmat/burger-menu.html' %}

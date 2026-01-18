@@ -322,6 +322,14 @@ CACHES = {
 # При изменении CSS/JS увеличьте версию, чтобы браузеры загрузили новые файлы
 STATIC_VERSION = os.environ.get('STATIC_VERSION', '2.0.0')
 
+# Telegram Bot Settings
+TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN', '8294717234:AAGpeaIppFMSqnmZOjte-YbIOK3a9ZC-QF0')
+TELEGRAM_CHANNEL_ID = os.environ.get('TELEGRAM_CHANNEL_ID', '@uzmathop')
+TELEGRAM_ENABLED = os.environ.get('TELEGRAM_ENABLED', 'True') == 'True'
+
+# Site URL для формирования ссылок в Telegram сообщениях
+SITE_URL = os.environ.get('SITE_URL', 'https://uzmat.uz')
+
 # Логирование для безопасности и отладки
 LOGGING = {
     'version': 1,

@@ -1413,27 +1413,27 @@ def create_ad(request):
                         ad.save(update_fields=['slug'])
                     
                     # Обработка загрузки фотографий (до 10 фотографий)
+                    # Оптимизировано: быстрая валидация и bulk_create для производительности
                     photos = request.FILES.getlist('photos')
                     if photos:
-                        if len(photos) > 10:
+                        # Ограничиваем количество сразу
+                        photos = photos[:10]
+                        if len(request.FILES.getlist('photos')) > 10:
                             messages.warning(request, 'Загружено больше 10 фотографий. Сохранены первые 10.')
                         
                         MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10 МБ на фото
                         valid_photos = []
                         
-                        for photo in photos[:10]:
-                            # Проверяем, что файл был загружен (может быть None, если nginx отклонил запрос)
-                            if not hasattr(photo, 'size') or photo.size is None:
-                                messages.error(request, f'Файл "{getattr(photo, "name", "неизвестный")}" не был загружен. Размер файла слишком большой. Максимальный размер: 10 МБ.')
+                        # Быстрая валидация всех фото за один проход
+                        for photo in photos:
+                            # Быстрая проверка размера (самая важная)
+                            if not hasattr(photo, 'size') or photo.size is None or photo.size > MAX_IMAGE_SIZE:
+                                if photo.size and photo.size > MAX_IMAGE_SIZE:
+                                    size_mb = photo.size / (1024 * 1024)
+                                    messages.error(request, f'Фото "{photo.name}" слишком большое ({size_mb:.2f} МБ). Максимальный размер: 10 МБ.')
                                 continue
                             
-                            # Проверяем размер фото
-                            if photo.size > MAX_IMAGE_SIZE:
-                                size_mb = (photo.size / (1024 * 1024)).toFixed(2)
-                                messages.error(request, f'Фото "{photo.name}" слишком большое ({size_mb} МБ). Максимальный размер: 10 МБ. Выберите файл меньшего размера.')
-                                continue
-                            
-                            # Проверяем тип файла
+                            # Быстрая проверка типа файла
                             content_type = getattr(photo, 'content_type', '') or ''
                             if not content_type.startswith('image/'):
                                 messages.warning(request, f'Файл "{photo.name}" не является изображением. Пропущен.')
@@ -1441,14 +1441,33 @@ def create_ad(request):
                             
                             valid_photos.append(photo)
                         
-                        # Сохраняем валидные фото
-                        for index, photo in enumerate(valid_photos):
-                            AdvertisementImage.objects.create(
-                                advertisement=ad,
-                                image=photo,
-                                is_main=(index == 0),  # Первая фотография - главная
-                                order=index
-                            )
+                        # Сохраняем валидные фото (оптимизировано через bulk_create)
+                        # Это быстрее, чем создавать каждое фото отдельно
+                        if valid_photos:
+                            image_objects = []
+                            for index, photo in enumerate(valid_photos):
+                                image_objects.append(
+                                    AdvertisementImage(
+                                        advertisement=ad,
+                                        image=photo,
+                                        is_main=(index == 0),  # Первая фотография - главная
+                                        order=index
+                                    )
+                                )
+                            
+                            # Один запрос к БД вместо N запросов
+                            AdvertisementImage.objects.bulk_create(image_objects)
+                            logging.info(f"Сохранено {len(image_objects)} фото для объявления {ad.id}")
+                    
+                    # ВАЖНО: Отправляем в Telegram АСИНХРОННО в фоновом потоке
+                    # Это не блокирует ответ пользователю и значительно ускоряет создание объявления
+                    if django_settings.TELEGRAM_ENABLED:
+                        from uzmat.utils.background_tasks import run_in_background, send_ad_to_telegram_async
+                        
+                        # Запускаем отправку в фоновом потоке (не блокирует ответ)
+                        # Пользователь получит ответ сразу, а отправка в Telegram произойдет в фоне
+                        run_in_background(send_ad_to_telegram_async, ad.id)
+                        logging.info(f"Запущена асинхронная отправка объявления {ad.id} в Telegram")
                     
                     messages.success(request, f'Объявление "{ad.title}" успешно создано!')
                     return redirect('uzmat:ad_detail', slug=ad.slug)

@@ -97,3 +97,47 @@ def send_notification_async(user_id, message, thread_id=None):
         logger = logging.getLogger(__name__)
         logger.error(f"Ошибка при отправке уведомления: {e}")
 
+
+def send_ad_to_telegram_async(ad_id):
+    """
+    Асинхронная отправка объявления в Telegram канал
+    Выполняется в фоновом потоке, не блокирует основной запрос
+    """
+    try:
+        # Импортируем здесь, чтобы избежать циклических импортов
+        from ..models import Advertisement
+        from .telegram_service import send_ad_to_telegram
+        import logging
+        
+        logger = logging.getLogger(__name__)
+        logger.info(f"🔄 [ASYNC] Начинаем асинхронную отправку объявления {ad_id} в Telegram")
+        
+        # Получаем объявление из БД
+        try:
+            ad = Advertisement.objects.get(id=ad_id)
+        except Advertisement.DoesNotExist:
+            logger.error(f"❌ [ASYNC] Объявление {ad_id} не найдено в БД")
+            return
+        
+        # Обновляем объект, чтобы получить актуальные изображения
+        ad.refresh_from_db()
+        logger.info(f"📸 [ASYNC] Объявление {ad_id}: images.exists()={ad.images.exists()}, image={bool(ad.image)}")
+        
+        # Отправляем в Telegram
+        success, message_id, error = send_ad_to_telegram(ad)
+        
+        if success:
+            # Обновляем объявление
+            ad.sent_to_telegram = True
+            if message_id:
+                ad.telegram_message_id = message_id
+            ad.save(update_fields=['sent_to_telegram', 'telegram_message_id'])
+            logger.info(f"✅ [ASYNC] Объявление {ad_id} успешно отправлено в Telegram. Message ID: {message_id}")
+        else:
+            logger.error(f"❌ [ASYNC] Ошибка при отправке объявления {ad_id} в Telegram: {error}")
+            
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"❌ [ASYNC] Исключение при отправке объявления {ad_id} в Telegram: {str(e)}", exc_info=True)
+

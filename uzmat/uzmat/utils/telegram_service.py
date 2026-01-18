@@ -20,8 +20,13 @@ def send_ad_to_telegram(advertisement):
     Returns:
         tuple: (success: bool, message_id: str or None, error: str or None)
     """
+    logger.info(f"=== НАЧАЛО ОТПРАВКИ ОБЪЯВЛЕНИЯ {advertisement.id} В TELEGRAM ===")
+    logger.info(f"TELEGRAM_ENABLED={settings.TELEGRAM_ENABLED}")
+    logger.info(f"TELEGRAM_BOT_TOKEN={'установлен' if settings.TELEGRAM_BOT_TOKEN else 'НЕ установлен'}")
+    logger.info(f"TELEGRAM_CHANNEL_ID={settings.TELEGRAM_CHANNEL_ID}")
+    
     if not settings.TELEGRAM_ENABLED:
-        logger.info("Telegram отправка отключена в настройках")
+        logger.warning("Telegram отправка отключена в настройках")
         return False, None, "Telegram отправка отключена"
     
     if not settings.TELEGRAM_BOT_TOKEN:
@@ -229,31 +234,53 @@ def send_photo_message(advertisement, message_text):
     
     logger.info(f"Найдено изображение для отправки: {image_file.name}")
     
-    # Пробуем отправить файл напрямую (наиболее надежный метод)
+    # ВАЖНО: Сначала пробуем отправить файл напрямую (наиболее надежный метод)
+    # Это работает только если файл доступен локально
     file_result = send_photo_as_file(advertisement, message_text, image_file)
     if file_result[0]:  # Если успешно
+        logger.info(f"Фото успешно отправлено как файл для объявления {advertisement.id}")
         return file_result
     
     # Если не получилось отправить файл, пробуем по URL
-    logger.info(f"Отправка файла не удалась, пробуем отправить по URL. Ошибка: {file_result[2]}")
+    logger.warning(f"Отправка файла не удалась для объявления {advertisement.id}, пробуем отправить по URL. Ошибка: {file_result[2]}")
     
     try:
         # Получаем URL изображения
         image_url = image_file.url
+        logger.info(f"Исходный URL изображения: {image_url}")
         
         # Если URL относительный, формируем полный URL
         if not image_url.startswith('http'):
             # Получаем базовый URL сайта
             base_url = getattr(settings, 'SITE_URL', 'https://uzmat.uz')
-            if not base_url.startswith('http'):
+            
+            # Для локальной разработки используем localhost
+            if settings.DEBUG:
+                base_url = 'http://127.0.0.1:8000'
+                logger.info(f"Используется локальный URL для разработки: {base_url}")
+            elif not base_url.startswith('http'):
                 base_url = f"https://{base_url}"
             
-            # Убираем начальный слэш из image_url, если он есть
-            if image_url.startswith('/'):
-                image_url = image_url[1:]
+            logger.info(f"Базовый URL для изображения: {base_url}")
             
-            # Формируем полный URL
-            image_url = f"{base_url}/{image_url}"
+            # Получаем MEDIA_URL из настроек
+            media_url = getattr(settings, 'MEDIA_URL', '/media/')
+            
+            # Если image_url уже содержит /media/, используем его как есть
+            # Если нет, добавляем MEDIA_URL
+            if image_url.startswith('/media/'):
+                # URL уже правильный, просто добавляем базовый URL
+                image_url = f"{base_url}{image_url}"
+            elif image_url.startswith('media/'):
+                # URL без начального слэша
+                image_url = f"{base_url}/{image_url}"
+            else:
+                # Формируем полный путь с MEDIA_URL
+                if not media_url.startswith('/'):
+                    media_url = '/' + media_url
+                if image_url.startswith('/'):
+                    image_url = image_url[1:]
+                image_url = f"{base_url}{media_url}{image_url}"
         
         logger.info(f"Пытаемся отправить фото по URL: {image_url}")
         
@@ -275,7 +302,9 @@ def send_photo_message(advertisement, message_text):
             'parse_mode': 'HTML',
         }
         
-        response = requests.post(url, json=data, timeout=30)
+        # ВАЖНО: Telegram API требует отправку через form-data, а не JSON для sendPhoto с URL
+        # Используем data вместо json
+        response = requests.post(url, data=data, timeout=30)
         response.raise_for_status()
         
         result = response.json()
@@ -286,6 +315,7 @@ def send_photo_message(advertisement, message_text):
         else:
             error = result.get('description', 'Unknown error')
             logger.error(f"Ошибка при отправке фото в Telegram по URL: {error}")
+            logger.error(f"Полный ответ от Telegram API: {result}")
             # Если не получилось, возвращаем ошибку
             return False, None, error
                 
@@ -329,25 +359,32 @@ def send_photo_as_file(advertisement, message_text, image_file):
     try:
         url = f"https://api.telegram.org/bot{bot_token}/sendPhoto"
         
+        logger.info(f"Открываем файл для отправки: {image_path}")
+        logger.info(f"Размер файла: {os.path.getsize(image_path) / 1024:.2f} KB")
+        
         with open(image_path, 'rb') as photo:
-            files = {'photo': photo}
+            files = {'photo': ('image.jpg', photo, 'image/jpeg')}
             data = {
                 'chat_id': channel_id,
                 'caption': message_text,
                 'parse_mode': 'HTML',
             }
             
-            response = requests.post(url, files=files, data=data, timeout=30)
+            logger.info(f"Отправляем фото в Telegram канал {channel_id}")
+            response = requests.post(url, files=files, data=data, timeout=60)
             response.raise_for_status()
             
             result = response.json()
+            logger.info(f"Ответ от Telegram API: {result}")
+            
             if result.get('ok'):
                 message_id = str(result['result']['message_id'])
-                logger.info(f"Сообщение с фото успешно отправлено в Telegram (как файл). Message ID: {message_id}")
+                logger.info(f"✅ Сообщение с фото успешно отправлено в Telegram (как файл). Message ID: {message_id}")
                 return True, message_id, None
             else:
                 error = result.get('description', 'Unknown error')
-                logger.error(f"Ошибка при отправке фото в Telegram: {error}")
+                logger.error(f"❌ Ошибка при отправке фото в Telegram: {error}")
+                logger.error(f"Полный ответ: {result}")
                 return False, None, error
                 
     except requests.exceptions.RequestException as e:

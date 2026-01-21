@@ -201,12 +201,18 @@ def index(request):
             from .utils.background_tasks import run_in_background, update_unread_count_cache_async
             run_in_background(update_unread_count_cache_async, me.id, unread_count)
     
+    # Получаем список ID избранных объявлений для текущего пользователя
+    favorited_ad_ids = []
+    if request.user.is_authenticated:
+        favorited_ad_ids = list(Favorite.objects.filter(user=request.user).values_list('advertisement_id', flat=True))
+    
     context = {
         'user': request.user,
         'ads': ads,
         'hot_offers': hot_offers,
         'popular_ads': popular_ads,
         'unread_messages_count': unread_count,
+        'favorited_ad_ids': favorited_ad_ids,
     }
     return render(request, 'uzmat/index.html', context)
 
@@ -1108,12 +1114,18 @@ def parts_repair(request):
             ad_type='parts'
         ).values_list('city', flat=True).distinct().order_by('city')
     
+    # Получаем список ID избранных объявлений для текущего пользователя
+    favorited_ad_ids = []
+    if request.user.is_authenticated:
+        favorited_ad_ids = list(Favorite.objects.filter(user=request.user).values_list('advertisement_id', flat=True))
+    
     context = {
         'user': request.user,
         'ads': page_obj,
         'page_obj': page_obj,
         'cities': cities,
         'total_count': total_count,
+        'favorited_ad_ids': favorited_ad_ids,
     }
     return render(request, 'uzmat/parts_repair.html', context)
 
@@ -1195,12 +1207,18 @@ def catalog(request):
     
     cities = cities_query.values_list('city', flat=True).distinct().order_by('city')
     
+    # Получаем список ID избранных объявлений для текущего пользователя
+    favorited_ad_ids = []
+    if request.user.is_authenticated:
+        favorited_ad_ids = list(Favorite.objects.filter(user=request.user).values_list('advertisement_id', flat=True))
+    
     context = {
         'user': request.user,
         'ads': page_obj,
         'page_obj': page_obj,
         'cities': cities,
         'total_count': total_count,
+        'favorited_ad_ids': favorited_ad_ids,
     }
     return render(request, 'uzmat/catalog.html', context)
 
@@ -2286,6 +2304,11 @@ def logistics(request):
             ad_type='service'
         ).values_list('city', flat=True).distinct().order_by('city')
     
+    # Получаем список ID избранных объявлений для текущего пользователя
+    favorited_ad_ids = []
+    if request.user.is_authenticated:
+        favorited_ad_ids = list(Favorite.objects.filter(user=request.user).values_list('advertisement_id', flat=True))
+    
     context = {
         'active_tab': 'services',
         'user': request.user,
@@ -2293,6 +2316,7 @@ def logistics(request):
         'page_obj': page_obj,
         'cities': cities,
         'total_count': total_count,
+        'favorited_ad_ids': favorited_ad_ids,
     }
     return render(request, 'uzmat/logistics.html', context)
 

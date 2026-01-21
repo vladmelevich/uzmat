@@ -164,36 +164,31 @@
     <div class="uz-bento-grid">
       {% for ad in ads %}
       <article class="uz-ad-card">
-        <!-- Цена в правом верхнем углу карточки -->
+        <!-- Цена в правом нижнем углу карточки -->
         <div class="uz-ad-price-top">{{ ad.get_price_display }}</div>
+        <!-- Избранное в правом верхнем углу карточки -->
+        {% if user.is_authenticated %}
+        <button class="uz-ad-favorite-top{% if ad.id in favorited_ad_ids %} active{% endif %}" type="button" aria-label="Добавить в избранное" data-ad-id="{{ ad.id }}" onclick="toggleFavorite(event, {{ ad.id }})">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"{% if ad.id in favorited_ad_ids %} fill="currentColor"{% endif %}></path>
+          </svg>
+        </button>
+        {% endif %}
         <a href="{% url 'uzmat:ad_detail' slug=ad.slug %}" class="uz-ad-card-link">
-            <div class="uz-ad-image">
-              {% if ad.images.exists %}
-                <img src="{{ ad.images.first.image.url }}" alt="{{ ad.title }}" style="width: 100%; height: 100%; object-fit: cover; object-position: center;">
-              {% elif ad.image %}
-                <img src="{{ ad.image.url }}" alt="{{ ad.title }}" style="width: 100%; height: 100%; object-fit: cover; object-position: center;">
-              {% else %}
-              <svg class="uz-ad-image-icon" viewBox="0 0 775 775" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M209.896 678.125C290.15 678.125 355.208 613.066 355.208 532.812C355.208 452.559 290.15 387.5 209.896 387.5C129.642 387.5 64.5833 452.559 64.5833 532.812C64.5833 613.066 129.642 678.125 209.896 678.125Z" stroke="currentColor" stroke-width="48.4375" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M613.542 678.125C667.044 678.125 710.417 634.753 710.417 581.25C710.417 527.747 667.044 484.375 613.542 484.375C560.039 484.375 516.667 527.747 516.667 581.25C516.667 634.753 560.039 678.125 613.542 678.125Z" stroke="currentColor" stroke-width="48.4375" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M64.5833 339.059C101.195 311.596 144.839 295.068 190.459 291.392C236.079 287.716 281.807 297.042 322.344 318.288C362.881 339.535 396.568 371.834 419.501 411.441C442.434 451.048 453.675 496.343 451.922 542.077C451.179 561.581 450.824 571.366 455.571 576.306C460.318 581.247 469.133 581.247 486.732 581.247H516.667M419.792 290.622L520.089 309.416C595.652 323.624 633.466 330.696 655.779 357.595C678.125 384.494 678.125 423.147 678.125 500.518M645.833 387.497H613.542" stroke="currentColor" stroke-width="48.4375" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M419.792 403.646V309.58C419.792 296.943 417.973 284.565 414.334 272.445L371.354 96.875M129.167 290.625V96.875M96.875 96.875H419.792M581.25 306.771V258.333C581.25 241.205 588.054 224.778 600.166 212.666C612.278 200.554 628.705 193.75 645.833 193.75M226.042 290.625V96.875" stroke="currentColor" stroke-width="48.4375" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              {% endif %}
-              <!-- Избранное в правом нижнем углу изображения -->
-              {% if user.is_authenticated %}
-              <button class="uz-ad-favorite-image" type="button" aria-label="Добавить в избранное" data-ad-id="{{ ad.id }}" onclick="toggleFavorite(event, {{ ad.id }})">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-                </svg>
-              </button>
-              {% endif %}
-            </div>
-            <div class="uz-ad-content">
-              <div>
-                <h3 class="uz-ad-title">{{ ad.title }}</h3>
-                <p class="uz-ad-subtitle">{{ ad.get_ad_type_display }}</p>
-                <p class="uz-ad-description">{{ ad.description|truncatewords:15 }}</p>
+            <div class="uz-ad-image-wrapper">
+              <div class="uz-ad-image">
+                {% if ad.images.exists %}
+                  <img src="{{ ad.images.first.image.url }}" alt="{{ ad.title }}" style="width: 100%; height: 100%; object-fit: cover; object-position: center;">
+                {% elif ad.image %}
+                  <img src="{{ ad.image.url }}" alt="{{ ad.title }}" style="width: 100%; height: 100%; object-fit: cover; object-position: center;">
+                {% else %}
+                <svg class="uz-ad-image-icon" viewBox="0 0 775 775" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M209.896 678.125C290.15 678.125 355.208 613.066 355.208 532.812C355.208 452.559 290.15 387.5 209.896 387.5C129.642 387.5 64.5833 452.559 64.5833 532.812C64.5833 613.066 129.642 678.125 209.896 678.125Z" stroke="currentColor" stroke-width="48.4375" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M613.542 678.125C667.044 678.125 710.417 634.753 710.417 581.25C710.417 527.747 667.044 484.375 613.542 484.375C560.039 484.375 516.667 527.747 516.667 581.25C516.667 634.753 560.039 678.125 613.542 678.125Z" stroke="currentColor" stroke-width="48.4375" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M64.5833 339.059C101.195 311.596 144.839 295.068 190.459 291.392C236.079 287.716 281.807 297.042 322.344 318.288C362.881 339.535 396.568 371.834 419.501 411.441C442.434 451.048 453.675 496.343 451.922 542.077C451.179 561.581 450.824 571.366 455.571 576.306C460.318 581.247 469.133 581.247 486.732 581.247H516.667M419.792 290.622L520.089 309.416C595.652 323.624 633.466 330.696 655.779 357.595C678.125 384.494 678.125 423.147 678.125 500.518M645.833 387.497H613.542" stroke="currentColor" stroke-width="48.4375" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M419.792 403.646V309.58C419.792 296.943 417.973 284.565 414.334 272.445L371.354 96.875M129.167 290.625V96.875M96.875 96.875H419.792M581.25 306.771V258.333C581.25 241.205 588.054 224.778 600.166 212.666C612.278 200.554 628.705 193.75 645.833 193.75M226.042 290.625V96.875" stroke="currentColor" stroke-width="48.4375" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                {% endif %}
               </div>
               <div class="uz-ad-meta">
                 <div class="uz-ad-meta-left">
@@ -212,6 +207,13 @@
                   </svg>
                   <span>{{ ad.views_count }}</span>
                 </div>
+              </div>
+            </div>
+            <div class="uz-ad-content">
+              <div>
+                <h3 class="uz-ad-title">{{ ad.title|truncatechars:15 }}</h3>
+                <p class="uz-ad-subtitle">{{ ad.get_ad_type_display }}</p>
+                <p class="uz-ad-description">{{ ad.description|truncatechars:23 }}</p>
               </div>
             </div>
         </a>
@@ -329,20 +331,43 @@
     </a>
   </nav>
 
+  <!-- CSRF Token для JavaScript -->
+  {% csrf_token %}
+  <script>
+    // Устанавливаем CSRF токен в глобальную переменную для удобства
+    window.csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+                       (function() {
+                         const value = `; ${document.cookie}`;
+                         const parts = value.split(`; csrftoken=`);
+                         if (parts.length === 2) return parts.pop().split(';').shift();
+                         return null;
+                       })();
+  </script>
+
   <script>
     function getCookie(name) {
-      let cookieValue = null;
-      if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-          const cookie = cookies[i].trim();
-          if (cookie.substring(0, name.length + 1) === (name + '=')) {
-            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-            break;
-          }
-        }
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) return parts.pop().split(';').shift();
+      return null;
+    }
+    
+    // Альтернативный способ получения CSRF токена
+    function getCSRFToken() {
+      // Сначала пытаемся получить из глобальной переменной (если установлена)
+      if (window.csrftoken) return window.csrftoken;
+      
+      // Затем пытаемся получить из скрытого поля (если есть форма на странице)
+      const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
+      if (csrfInput && csrfInput.value) {
+        return csrfInput.value;
       }
-      return cookieValue;
+      
+      // В последнюю очередь пытаемся получить из cookies
+      let token = getCookie('csrftoken');
+      if (token) return token;
+      
+      return null;
     }
     
     // Функционал избранного
@@ -357,14 +382,21 @@
       
       const button = event.currentTarget;
       const url = "{% url 'uzmat:toggle_favorite' ad_id=0 %}".replace('0', adId);
-      const csrftoken = getCookie('csrftoken');
+      const csrftoken = getCSRFToken();
+      
+      if (!csrftoken) {
+        console.error('CSRF token not found');
+        alert('Ошибка: CSRF токен не найден. Перезагрузите страницу и попробуйте снова.');
+        return;
+      }
       
       fetch(url, {
         method: 'POST',
         headers: {
           'X-CSRFToken': csrftoken,
-          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
         },
+        credentials: 'same-origin',
       })
       .then(response => {
         if (!response.ok) {
@@ -375,14 +407,16 @@
       .then(data => {
         if (data.is_favorited !== undefined) {
           if (data.is_favorited) {
-            button.style.color = 'var(--uz-primary)';
-            if (button.querySelector('path')) {
-              button.querySelector('path').setAttribute('fill', 'currentColor');
+            button.classList.add('active');
+            const path = button.querySelector('path');
+            if (path) {
+              path.setAttribute('fill', 'currentColor');
             }
           } else {
-            button.style.color = '';
-            if (button.querySelector('path')) {
-              button.querySelector('path').removeAttribute('fill');
+            button.classList.remove('active');
+            const path = button.querySelector('path');
+            if (path) {
+              path.removeAttribute('fill');
             }
           }
         }

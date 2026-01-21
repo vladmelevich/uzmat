@@ -1725,10 +1725,10 @@ select.uz-input {
   /* margin-bottom управляется через .uz-bento-grid > .uz-ad-card */
 }
 
-/* Цена в правом верхнем углу карточки */
+/* Цена в правом нижнем углу карточки */
 .uz-ad-price-top {
   position: absolute;
-  top: 12px;
+  bottom: 12px;
   right: 12px;
   font-size: 16px;
   font-weight: 700;
@@ -1738,6 +1738,59 @@ select.uz-input {
   border-radius: 4px;
   z-index: 10;
   pointer-events: none;
+}
+
+/* Избранное в правом верхнем углу карточки */
+.uz-ad-favorite-top {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: rgba(255, 255, 255, 0.9);
+  border: none;
+  border-radius: 50%;
+  padding: 0;
+  z-index: 15;
+}
+
+.uz-ad-favorite-top:hover {
+  transform: scale(1.1);
+  background: rgba(255, 255, 255, 1);
+}
+
+.uz-ad-favorite-top svg {
+  width: 18px;
+  height: 18px;
+  color: var(--uz-text-muted);
+  transition: all 0.2s;
+}
+
+.uz-ad-favorite-top:hover svg {
+  color: var(--uz-danger);
+}
+
+.uz-ad-favorite-top.active svg {
+  fill: var(--uz-danger);
+  color: var(--uz-danger);
+}
+
+.uz-ad-favorite-top.active svg path {
+  fill: var(--uz-danger);
+  color: var(--uz-danger);
+}
+
+[data-theme="dark"] .uz-ad-favorite-top {
+  background: rgba(31, 41, 55, 0.9);
+}
+
+[data-theme="dark"] .uz-ad-favorite-top:hover {
+  background: rgba(31, 41, 55, 1);
 }
 
 [data-theme="dark"] .uz-ad-price-top {
@@ -1759,6 +1812,11 @@ select.uz-input {
   align-items: stretch;
 }
 
+.uz-ad-image-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
 
 .uz-ad-image {
   width: 200px;
@@ -1787,6 +1845,11 @@ select.uz-input {
     flex-direction: row;
   }
 
+  .uz-ad-image-wrapper {
+    width: 120px;
+    min-width: 120px;
+  }
+
   .uz-ad-image {
     width: 120px;
     min-width: 120px;
@@ -1795,7 +1858,7 @@ select.uz-input {
   }
   
   .uz-ad-content {
-    padding: 12px;
+    padding: 8px 12px 12px 12px;
   }
   
   .uz-ad-title {
@@ -1819,22 +1882,14 @@ select.uz-input {
   }
   
   .uz-ad-price-top {
-    top: 8px;
+    bottom: 8px;
     right: 8px;
     font-size: 14px;
     padding: 3px 6px;
   }
   
   .uz-ad-favorite-image {
-    width: 28px;
-    height: 28px;
-    bottom: 6px;
-    right: 6px;
-  }
-  
-  .uz-ad-favorite-image svg {
-    width: 16px;
-    height: 16px;
+    display: none !important;
   }
 }
 
@@ -1843,6 +1898,11 @@ select.uz-input {
     /* margin-bottom управляется через .uz-bento-grid > .uz-ad-card */
   }
   
+  .uz-ad-image-wrapper {
+    width: 100px;
+    min-width: 100px;
+  }
+
   .uz-ad-image {
     width: 100px;
     min-width: 100px;
@@ -1851,7 +1911,7 @@ select.uz-input {
   }
   
   .uz-ad-content {
-    padding: 10px;
+    padding: 6px 10px 10px 10px;
   }
   
   .uz-ad-title {
@@ -1877,20 +1937,14 @@ select.uz-input {
   }
   
   .uz-ad-price-top {
+    bottom: 8px;
+    right: 8px;
     font-size: 13px;
     padding: 2px 5px;
   }
   
   .uz-ad-favorite-image {
-    width: 24px;
-    height: 24px;
-    bottom: 4px;
-    right: 4px;
-  }
-  
-  .uz-ad-favorite-image svg {
-    width: 14px;
-    height: 14px;
+    display: none !important;
   }
 }
 
@@ -1936,56 +1990,13 @@ select.uz-input {
   display: none;
 }
 
-/* Иконка избранного в правом нижнем углу изображения */
+/* Иконка избранного в правом нижнем углу изображения (скрыта, теперь используется .uz-ad-favorite-top) */
 .uz-ad-favorite-image {
-  position: absolute;
-  bottom: 8px;
-  right: 8px;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s;
-  background: rgba(255, 255, 255, 0.9);
-  border: none;
-  border-radius: 50%;
-  padding: 0;
-  z-index: 5;
-}
-
-.uz-ad-favorite-image:hover {
-  transform: scale(1.1);
-  background: rgba(255, 255, 255, 1);
-}
-
-.uz-ad-favorite-image svg {
-  width: 18px;
-  height: 18px;
-  color: var(--uz-text-muted);
-  transition: all 0.2s;
-}
-
-.uz-ad-favorite-image:hover svg {
-  color: var(--uz-danger);
-}
-
-.uz-ad-favorite-image.active svg {
-  fill: var(--uz-danger);
-  color: var(--uz-danger);
-}
-
-[data-theme="dark"] .uz-ad-favorite-image {
-  background: rgba(31, 41, 55, 0.9);
-}
-
-[data-theme="dark"] .uz-ad-favorite-image:hover {
-  background: rgba(31, 41, 55, 1);
+  display: none !important;
 }
 
 .uz-ad-content {
-  padding: 20px;
+  padding: 14px 20px 20px 20px;
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -2038,26 +2049,33 @@ select.uz-input {
 
 .uz-ad-meta {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
+  gap: 16px;
   font-size: 13px;
   color: var(--uz-text-muted);
-  margin-top: auto;
-  padding-top: 12px;
-  border-top: 1px solid var(--uz-border);
+  padding: 8px 12px 8px 8px;
   flex-shrink: 0; /* Предотвращаем сжатие мета-информации */
+  background: var(--uz-bg-card);
+  white-space: nowrap;
+  width: 100%;
+  min-width: 0;
 }
 
 .uz-ad-meta-left {
   display: flex;
   align-items: center;
   gap: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .uz-ad-meta-right {
   display: flex;
   align-items: center;
   gap: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .uz-ad-meta-icon {

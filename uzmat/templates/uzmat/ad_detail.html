@@ -167,6 +167,7 @@
   </header>
 
   <main class="uz-container">
+    {% now "UTC" as now_dt %}
 
     <!-- Breadcrumbs -->
     <nav class="uz-breadcrumbs" itemscope itemtype="https://schema.org/BreadcrumbList">
@@ -300,6 +301,21 @@
                 </svg>
                 Удалить
               </a>
+              {% if not ad.is_promoted or not ad.promotion_until or ad.promotion_until <= now_dt %}
+              <a href="{% url 'uzmat:promote_info' slug=ad.slug %}" class="uz-btn uz-btn-primary" style="display: inline-flex; align-items: center; gap: 8px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                </svg>
+                Продвигать объявление
+              </a>
+              {% else %}
+              <div class="uz-btn uz-btn-primary" style="display: inline-flex; align-items: center; gap: 8px; background: rgba(59,130,246,0.75); cursor: default;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                Уже в горячих
+              </div>
+              {% endif %}
             </div>
           </div>
           {% endif %}
@@ -782,18 +798,28 @@
     });
     
     function getCookie(name) {
-      let cookieValue = null;
-      if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-          const cookie = cookies[i].trim();
-          if (cookie.substring(0, name.length + 1) === (name + '=')) {
-            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-            break;
-          }
-        }
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) return parts.pop().split(';').shift();
+      return null;
+    }
+    
+    // Альтернативный способ получения CSRF токена
+    function getCSRFToken() {
+      // Сначала пытаемся получить из глобальной переменной (если установлена)
+      if (window.csrftoken) return window.csrftoken;
+      
+      // Затем пытаемся получить из скрытого поля (если есть форма на странице)
+      const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
+      if (csrfInput && csrfInput.value) {
+        return csrfInput.value;
       }
-      return cookieValue;
+      
+      // В последнюю очередь пытаемся получить из cookies
+      let token = getCookie('csrftoken');
+      if (token) return token;
+      
+      return null;
     }
     
     function toggleFavoriteDetail(adId) {
@@ -804,14 +830,21 @@
       
       const button = document.getElementById('favorite-btn');
       const url = "{% url 'uzmat:toggle_favorite' ad_id=0 %}".replace('0', adId);
-      const csrftoken = getCookie('csrftoken');
+      const csrftoken = getCSRFToken();
+      
+      if (!csrftoken) {
+        console.error('CSRF token not found');
+        alert('Ошибка: CSRF токен не найден. Перезагрузите страницу и попробуйте снова.');
+        return;
+      }
       
       fetch(url, {
         method: 'POST',
         headers: {
           'X-CSRFToken': csrftoken,
-          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
         },
+        credentials: 'same-origin',
       })
       .then(response => {
         if (!response.ok) {
@@ -1056,6 +1089,19 @@
     });
   </script>
   {% endif %}
+
+  <!-- CSRF Token для JavaScript -->
+  {% csrf_token %}
+  <script>
+    // Устанавливаем CSRF токен в глобальную переменную для удобства
+    window.csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+                       (function() {
+                         const value = `; ${document.cookie}`;
+                         const parts = value.split(`; csrftoken=`);
+                         if (parts.length === 2) return parts.pop().split(';').shift();
+                         return null;
+                       })();
+  </script>
 
 </body>
 

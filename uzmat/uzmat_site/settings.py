@@ -20,7 +20,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-uzmat-premium-site-2024-secret-key-change-in-production')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+# По умолчанию False для безопасности в production
+# Для разработки установите DEBUG=True в .env файле
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
 # Разрешенные хосты (из переменной окружения или по умолчанию)
 ALLOWED_HOSTS_STR = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,109.199.127.149,uzmat.uz,www.uzmat.uz')
@@ -215,7 +217,7 @@ DATA_UPLOAD_MAX_NUMBER_FIELDS = 1000
 # Session settings (запоминание пользователя)
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 30  # 30 дней
 SESSION_SAVE_EVERY_REQUEST = True
-SESSION_COOKIE_SECURE = False  # Временно для HTTP, после активации Cloudflare изменить на True
+SESSION_COOKIE_SECURE = not DEBUG  # True в production (HTTPS), False в development
 SESSION_COOKIE_HTTPONLY = True  # Защита от XSS
 SESSION_COOKIE_SAMESITE = 'Lax'  # Защита от CSRF
 
@@ -239,7 +241,7 @@ REST_FRAMEWORK = {
 # Включаем HTTP для uzmat.uz (SSL еще не настроен)
 CSRF_TRUSTED_ORIGINS_STR = os.environ.get('CSRF_TRUSTED_ORIGINS', 'http://localhost:8000,http://127.0.0.1:8000,http://109.199.127.149,http://uzmat.uz,http://www.uzmat.uz,https://uzmat.uz,https://www.uzmat.uz')
 CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in CSRF_TRUSTED_ORIGINS_STR.split(',') if origin.strip()]
-CSRF_COOKIE_SECURE = False  # Временно для HTTP, после активации Cloudflare изменить на True
+CSRF_COOKIE_SECURE = not DEBUG  # True в production (HTTPS), False в development
 CSRF_COOKIE_HTTPONLY = True
 CSRF_COOKIE_SAMESITE = 'Lax'
 CSRF_USE_SESSIONS = False  # Используем cookies для CSRF токена
@@ -320,7 +322,7 @@ CACHES = {
 
 # Версия статических файлов (меняйте при обновлении CSS/JS для сброса кэша)
 # При изменении CSS/JS увеличьте версию, чтобы браузеры загрузили новые файлы
-STATIC_VERSION = os.environ.get('STATIC_VERSION', '2.5.8')
+STATIC_VERSION = os.environ.get('STATIC_VERSION', '2.6.0')
 
 # Telegram Bot Settings
 TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN', '8294717234:AAGpeaIppFMSqnmZOjte-YbIOK3a9ZC-QF0')

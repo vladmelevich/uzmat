@@ -43,11 +43,16 @@ nano .env
 ```
 
 **Важно заполнить в .env:**
-- `SECRET_KEY` - сгенерируйте новый ключ
-- `DEBUG=False` - для production
-- `ALLOWED_HOSTS` - добавьте IP сервера
+- `SECRET_KEY` - сгенерируйте новый ключ (команда: `python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"`)
+- `DEBUG=False` - для production (обязательно!)
+- `ALLOWED_HOSTS` - добавьте IP сервера и домен (например: `localhost,127.0.0.1,109.199.127.149,uzmat.uz,www.uzmat.uz`)
+- `CSRF_TRUSTED_ORIGINS` - добавьте домен с http и https (например: `https://uzmat.uz,https://www.uzmat.uz`)
+- `SITE_URL` - полный URL сайта для корректных ссылок в Telegram (например: `https://uzmat.uz`)
 - `DB_PASSWORD` - надежный пароль для БД
 - `MYSQL_ROOT_PASSWORD` - надежный пароль для root MySQL
+- `TELEGRAM_BOT_TOKEN` - токен бота от @BotFather в Telegram
+- `TELEGRAM_CHANNEL_ID` - ID канала (например: `@Uzmat_uz`)
+- `TELEGRAM_ENABLED=True` - включить отправку в Telegram
 
 ### 4. Первый запуск
 
